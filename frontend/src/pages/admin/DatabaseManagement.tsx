@@ -1,140 +1,150 @@
-import { Download, Upload, Trash2, RefreshCw, AlertTriangle, Database, Table, FileText, Clock, Zap, Shield } from 'lucide-react';
-import '../../admin-theme.css';
+import { useState } from 'react';
+import { Database, Download, RefreshCw, Shield, TerminalSquare, Upload } from 'lucide-react';
 import { Button } from '../../components/ui';
 import { showToast } from '../../components/ui/toast';
+import api from '../../services/api';
+import '../../admin-theme.css';
+
+interface BackupGuideResponse {
+    status: string;
+    message: string;
+    backupCommand: string;
+    restoreCommand: string;
+    timestamp: string;
+}
+
+const fallbackBackupCommand =
+    'docker exec time_manager_mysql mysqldump -u tm_user -ptm_password time_manager > backup.sql';
+const fallbackRestoreCommand =
+    'docker exec -i time_manager_mysql mysql -u tm_user -ptm_password time_manager < backup.sql';
 
 export function DatabaseManagement() {
-    const stats = {
-        totalSize: '245 MB',
-        tables: 12,
-        records: 15420,
-        lastBackup: '2 giờ trước',
+    const [checking, setChecking] = useState(false);
+    const [guide, setGuide] = useState<BackupGuideResponse | null>(null);
+
+    const handleValidateBackupGuide = async () => {
+        setChecking(true);
+
+        try {
+            const response = await api.post('/admin/backup');
+            setGuide(response.data.data);
+            showToast.info('Manual backup flow', response.data.data.message);
+        } catch {
+            showToast.error('Request failed', 'Could not validate the backup runbook.');
+        } finally {
+            setChecking(false);
+        }
     };
 
-    const handleBackup = () => {
-        showToast.success('Thành công', 'Đang tạo bản sao lưu...');
-    };
-
-    const handleRestore = () => {
-        if (!confirm('Bạn có chắc muốn khôi phục database? Dữ liệu hiện tại sẽ bị ghi đè.')) return;
-        showToast.success('Thành công', 'Đang khôi phục database...');
-    };
-
-    const handleOptimize = () => {
-        showToast.success('Thành công', 'Đang tối ưu hóa database...');
-    };
-
-    const handleClearCache = () => {
-        showToast.success('Thành công', 'Đã xóa cache');
-    };
-
-    const statCards = [
-        { label: 'Dung lượng', value: stats.totalSize, icon: Database, iconColor1: '#00E5FF', iconColor2: '#0A84FF', iconShadow: '#00E5FF' },
-        { label: 'Bảng', value: stats.tables, icon: Table, iconColor1: '#8B5CF6', iconColor2: '#EC4899', iconShadow: '#8B5CF6' },
-        { label: 'Bản ghi', value: stats.records.toLocaleString(), icon: FileText, iconColor1: '#22C55E', iconColor2: '#10B981', iconShadow: '#22C55E' },
-        { label: 'Backup cuối', value: stats.lastBackup, icon: Clock, iconColor1: '#F59E0B', iconColor2: '#EF4444', iconShadow: '#F59E0B' },
-    ];
+    const backupCommand = guide?.backupCommand ?? fallbackBackupCommand;
+    const restoreCommand = guide?.restoreCommand ?? fallbackRestoreCommand;
 
     return (
         <div className="admin-theme admin-container p-6 md:p-8">
-            {/* Header */}
             <div className="mb-8">
-                <h1 className="admin-title mb-2">
-                    Quản lý Database
-                </h1>
-                <p className="admin-title-sub">Sao lưu, khôi phục và tối ưu hóa database</p>
+                <h1 className="admin-title mb-2">Database Operations</h1>
+                <p className="admin-title-sub">Production-safe runbook for backup, restore and maintenance.</p>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                {statCards.map((stat, index) => (
-                    <div
-                        key={index}
-                        className="admin-stat-card"
-                        style={{ '--icon-color-1': stat.iconColor1, '--icon-color-2': stat.iconColor2, '--icon-shadow': stat.iconShadow } as React.CSSProperties}
-                    >
-                        <div className="stat-icon">
-                            <stat.icon className="w-5 h-5 text-white" />
-                        </div>
-                        <p className="stat-title">{stat.label}</p>
-                        <p className="stat-value">{stat.value}</p>
-                    </div>
-                ))}
-            </div>
-
-            {/* Backup & Restore */}
-            <div className="admin-glass-card p-6 mb-6">
-                <h2 className="text-lg md:text-xl font-bold mb-4 flex items-center gap-2">
-                    <Zap className="w-5 h-5" />
-                    Sao lưu & Khôi phục
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button
-                        size="lg"
-                        onClick={handleBackup}
-                        className="admin-btn admin-btn-primary"
-                    >
-                        <Download className="w-5 h-5 mr-2" />
-                        Tạo bản sao lưu
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={handleRestore}
-                        className="admin-btn admin-btn-secondary"
-                    >
-                        <Upload className="w-5 h-5 mr-2" />
-                        Khôi phục từ file
-                    </Button>
-                </div>
-            </div>
-
-            {/* Maintenance */}
-            <div className="admin-glass-card p-6 mb-6">
-                <h2 className="text-lg md:text-xl font-bold mb-4 flex items-center gap-2">
-                    <Shield className="w-5 h-5" />
-                    Bảo trì
-                </h2>
-                <div className="space-y-3">
-                    <Button
-                        variant="outline"
-                        className="admin-btn admin-btn-secondary w-full justify-start"
-                        onClick={handleOptimize}
-                    >
-                        <RefreshCw className="w-5 h-5 mr-2" />
-                        Tối ưu hóa database
-                    </Button>
-                    <Button
-                        variant="outline"
-                        className="admin-btn admin-btn-secondary w-full justify-start"
-                        onClick={handleClearCache}
-                    >
-                        <Trash2 className="w-5 h-5 mr-2" />
-                        Xóa cache
-                    </Button>
-                </div>
-            </div>
-
-            {/* Danger Zone */}
-            <div className="rounded-2xl border border-red-500/30 bg-[rgba(239,68,68,0.05)] backdrop-blur-xl p-6">
-                <div className="flex items-start gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-pink-500 flex items-center justify-center shadow-lg">
-                        <AlertTriangle className="w-5 h-5 text-white" />
+            <div className="admin-glass-card mb-6 p-6">
+                <div className="mb-4 flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 shadow-lg">
+                        <Shield className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-lg md:text-xl font-bold mb-2" style={{ color: 'var(--admin-neon-red)' }}>Vùng nguy hiểm</h2>
-                        <p className="text-sm">
-                            Các thao tác này không thể hoàn tác. Hãy chắc chắn bạn biết mình đang làm gì.
+                        <h2 className="text-lg font-bold">Production note</h2>
+                        <p className="text-sm opacity-80">
+                            Automated SQL dumps are intentionally not exposed from the API. Database export and restore
+                            remain manual operations to avoid accidental destructive actions from the admin panel.
                         </p>
                     </div>
                 </div>
-                <Button
-                    variant="outline"
-                    className="admin-btn admin-btn-danger"
-                >
-                    <Trash2 className="w-5 h-5 mr-2" />
-                    Xóa toàn bộ dữ liệu
-                </Button>
+
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="text-sm opacity-80">
+                        {guide
+                            ? `Last validation: ${new Date(guide.timestamp).toLocaleString()}`
+                            : 'Validate the runbook endpoint once after deployment.'}
+                    </div>
+                    <Button
+                        size="lg"
+                        onClick={() => void handleValidateBackupGuide()}
+                        className="admin-btn admin-btn-primary"
+                        disabled={checking}
+                    >
+                        <RefreshCw className={`mr-2 h-5 w-5 ${checking ? 'animate-spin' : ''}`} />
+                        {checking ? 'Checking...' : 'Validate backup runbook'}
+                    </Button>
+                </div>
+            </div>
+
+            <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="admin-glass-card p-6">
+                    <div className="mb-4 flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg">
+                            <Download className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold">Backup command</h2>
+                            <p className="text-sm opacity-70">Run from an operator shell with database access.</p>
+                        </div>
+                    </div>
+                    <pre className="overflow-x-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-sm leading-6 text-cyan-200">
+                        <code>{backupCommand}</code>
+                    </pre>
+                </div>
+
+                <div className="admin-glass-card p-6">
+                    <div className="mb-4 flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg">
+                            <Upload className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold">Restore command</h2>
+                            <p className="text-sm opacity-70">Use only after confirming the target database.</p>
+                        </div>
+                    </div>
+                    <pre className="overflow-x-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-sm leading-6 text-amber-200">
+                        <code>{restoreCommand}</code>
+                    </pre>
+                </div>
+            </div>
+
+            <div className="admin-glass-card p-6">
+                <div className="mb-5 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-lg">
+                        <Database className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold">Maintenance checklist</h2>
+                        <p className="text-sm opacity-70">Recommended steps before and after every production change.</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                            <TerminalSquare className="h-4 w-4" />
+                            Before deploy
+                        </div>
+                        <ul className="space-y-2 text-sm opacity-80">
+                            <li>1. Run a fresh SQL backup.</li>
+                            <li>2. Verify `npx prisma migrate deploy` succeeds in staging.</li>
+                            <li>3. Confirm `/health` returns `ok: true`.</li>
+                        </ul>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                            <RefreshCw className="h-4 w-4" />
+                            After deploy
+                        </div>
+                        <ul className="space-y-2 text-sm opacity-80">
+                            <li>1. Open the web app and verify login, tasks and admin routes.</li>
+                            <li>2. Run Android smoke tests against the production API.</li>
+                            <li>3. Keep the latest backup file with the release notes.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     );

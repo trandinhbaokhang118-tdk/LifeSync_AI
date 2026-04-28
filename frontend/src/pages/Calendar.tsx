@@ -10,7 +10,7 @@ import { PageHeader } from '../components/layout';
 import { Button, Input, Modal } from '../components/ui';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { timeBlocksService } from '../services/time-blocks.service';
-import type { TimeBlock, CreateTimeBlockRequest } from '../types';
+import type { ApiError, CreateTimeBlockRequest, TimeBlock } from '../types';
 
 const timeBlockSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -62,7 +62,7 @@ export function Calendar() {
             toast.success('Time block created');
             closeModal();
         },
-        onError: (error: any) => {
+        onError: (error: { response?: { data?: ApiError } }) => {
             const message = error.response?.data?.error?.message || 'Failed to create time block';
             toast.error(message);
         },

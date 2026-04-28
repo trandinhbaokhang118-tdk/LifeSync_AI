@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
@@ -7,9 +7,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto, LoginDto, SendOtpDto, VerifyOtpDto } from './dto';
 import axios from 'axios';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
+    private readonly logger = new Logger(AuthService.name);
     private otpStore = new Map<string, { otp: string; expiresAt: Date }>();
 
     constructor(
@@ -57,6 +59,7 @@ export class AuthService {
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             },
+            access: this.getAccessProfile(user.role),
         };
     }
 
@@ -174,13 +177,15 @@ export class AuthService {
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             },
+            access: this.getAccessProfile(user.role),
         };
     }
 
     private async sendSms(phone: string, otp: string) {
         // Integration with SMS service (Twilio, Vonage, etc.)
-        // For demo purposes, just log it
-        console.log(`[SMS] Sending OTP ${otp} to ${phone}`);
+        // For demo purposes, log a redacted notice only to avoid leaking OTPs.
+        void otp;
+        this.logger.log(`OTP requested for ${this.maskPhoneNumber(phone)}. SMS provider not configured.`);
 
         // Example with Twilio (uncomment and configure):
         // const accountSid = this.configService.get('TWILIO_ACCOUNT_SID');
@@ -193,6 +198,14 @@ export class AuthService {
         //     from: fromNumber,
         //     to: phone,
         // });
+    }
+
+    private maskPhoneNumber(phone: string): string {
+        if (phone.length <= 4) {
+            return '****';
+        }
+
+        return `${'*'.repeat(Math.max(phone.length - 4, 0))}${phone.slice(-4)}`;
     }
 
     getGoogleAuthUrl(): string {
@@ -224,7 +237,7 @@ export class AuthService {
             headers: { Authorization: `Bearer ${access_token}` },
         });
 
-        const { email, name, picture } = userResponse.data;
+        const { email, name } = userResponse.data;
 
         // Find or create user
         let user = await this.prisma.user.findFirst({ where: { email } });
@@ -252,6 +265,7 @@ export class AuthService {
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             },
+            access: this.getAccessProfile(user.role),
         };
     }
 
@@ -323,6 +337,7 @@ export class AuthService {
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt,
             },
+            access: this.getAccessProfile(user.role),
         };
     }
 
@@ -395,6 +410,23 @@ export class AuthService {
             });
         }
 
-        return user;
+        return {
+            ...user,
+            access: this.getAccessProfile(user.role),
+        };
+    }
+
+    private getAccessProfile(role: Role | string) {
+        const isAdmin = role === Role.ADMIN;
+
+        return {
+            portal: isAdmin ? 'admin' : 'user',
+            defaultRoute: isAdmin ? '/admin' : '/app',
+            allowedRoutePrefixes: isAdmin ? ['/admin'] : ['/app'],
+            restrictedRoutePrefixes: isAdmin ? ['/app'] : ['/admin'],
+            description: isAdmin
+                ? 'Admin accounts can only access the administration portal and system management features.'
+                : 'User accounts can only access personal productivity and subscription features.',
+        };
     }
 }

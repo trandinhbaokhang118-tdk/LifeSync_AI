@@ -196,10 +196,18 @@ export class TasksService {
         return this.findOne(taskId, userId);
     }
 
-    private formatTask(task: any) {
+    private formatTask(task: Prisma.TaskGetPayload<{
+        include: {
+            tags: {
+                include: {
+                    tag: true;
+                };
+            };
+        };
+    }>) {
         return {
             ...task,
-            tags: task.tags?.map((t: any) => t.tag) || [],
+            tags: task.tags?.map(({ tag }) => tag) || [],
         };
     }
 }

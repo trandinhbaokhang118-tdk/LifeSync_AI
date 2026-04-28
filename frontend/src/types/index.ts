@@ -2,6 +2,9 @@
 export type SubscriptionTier = 'FREE' | 'PRO' | 'PLUS';
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'TRIALING';
 export type PaymentProvider = 'STRIPE' | 'VNPAY' | 'MOMO' | 'ZALOPAY';
+export type HealthProvider = 'apple_health' | 'google_fit';
+export type HealthConnectionMode = 'native' | 'preview';
+export type HealthPlatform = 'ios' | 'android' | 'web';
 
 export interface User {
     id: string;
@@ -62,7 +65,7 @@ export interface CreateTaskRequest {
     tagIds?: string[];
 }
 
-export interface UpdateTaskRequest extends Partial<CreateTaskRequest> { }
+export type UpdateTaskRequest = Partial<CreateTaskRequest>;
 
 // Tag types
 export interface Tag {
@@ -219,6 +222,34 @@ export interface FitnessProfile {
     updatedAt: string;
 }
 
+export interface HealthDeviceConnection {
+    provider: HealthProvider;
+    label: string;
+    platform: HealthPlatform;
+    connectionMode: HealthConnectionMode;
+    connectedAt: string;
+    lastSyncedAt?: string;
+    syncCount: number;
+    metrics: string[];
+    note: string;
+}
+
+export interface ExerciseRoutePoint {
+    lat: number;
+    lng: number;
+}
+
+export interface ExerciseRoutePayload {
+    startLat: number;
+    startLng: number;
+    endLat: number;
+    endLng: number;
+    totalDistance: number;
+    duration: number;
+    elevationGain?: number;
+    path?: ExerciseRoutePoint[];
+}
+
 export interface Exercise {
     id: string;
     userId: string;
@@ -270,6 +301,12 @@ export interface WeeklyStats {
 export interface GpsRoute {
     id: string;
     exerciseId: string;
+    name?: string;
+    category?: string;
+    distance?: number | null;
+    caloriesBurned?: number | null;
+    avgPace?: number | null;
+    performedAt?: string;
     polyline?: string;
     startLat: number;
     startLng: number;

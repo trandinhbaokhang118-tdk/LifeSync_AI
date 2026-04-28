@@ -1,5 +1,54 @@
-import { IsString, IsOptional, IsNumber, IsDateString } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsDateString, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+
+class ExerciseRoutePointDto {
+  @ApiProperty()
+  @IsNumber()
+  lat: number;
+
+  @ApiProperty()
+  @IsNumber()
+  lng: number;
+}
+
+class CreateExerciseRouteDto {
+  @ApiProperty()
+  @IsNumber()
+  startLat: number;
+
+  @ApiProperty()
+  @IsNumber()
+  startLng: number;
+
+  @ApiProperty()
+  @IsNumber()
+  endLat: number;
+
+  @ApiProperty()
+  @IsNumber()
+  endLng: number;
+
+  @ApiProperty()
+  @IsNumber()
+  totalDistance: number;
+
+  @ApiProperty()
+  @IsNumber()
+  duration: number;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
+  elevationGain?: number;
+
+  @ApiProperty({ required: false, type: [ExerciseRoutePointDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ExerciseRoutePointDto)
+  @IsOptional()
+  path?: ExerciseRoutePointDto[];
+}
 
 export class CreateExerciseDto {
   @ApiProperty()
@@ -58,4 +107,10 @@ export class CreateExerciseDto {
   @IsDateString()
   @IsOptional()
   performedAt?: string;
+
+  @ApiProperty({ required: false, type: CreateExerciseRouteDto })
+  @ValidateNested()
+  @Type(() => CreateExerciseRouteDto)
+  @IsOptional()
+  route?: CreateExerciseRouteDto;
 }

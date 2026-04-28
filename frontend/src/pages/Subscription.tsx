@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { cn } from '../lib/utils';
+import { showToast } from '../components/ui/toast';
 import { subscriptionsService } from '../services/subscriptions.service';
 import { useAuthStore } from '../store/auth.store';
-import { cn } from '../lib/utils';
 import type {
-    SubscriptionPlan,
-    Subscription,
-    SubscriptionTier,
     PaymentProvider,
+    Subscription,
+    SubscriptionPlan,
     SubscriptionStatus,
+    SubscriptionTier,
 } from '../types';
 
 type SubscriptionWithUser = Subscription & {
@@ -21,6 +22,8 @@ const providerLabels: Record<PaymentProvider, string> = {
     ZALOPAY: 'ZaloPay',
 };
 
+const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
+
 export function Subscription() {
     const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
     const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
@@ -28,7 +31,6 @@ export function Subscription() {
     const [processing, setProcessing] = useState(false);
     const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('STRIPE');
     const [activeTab, setActiveTab] = useState<'my' | 'admin'>('my');
-
     const [allSubscriptions, setAllSubscriptions] = useState<SubscriptionWithUser[]>([]);
     const [adminLoading, setAdminLoading] = useState(false);
     const [editingSubscription, setEditingSubscription] = useState<string | null>(null);
@@ -37,14 +39,14 @@ export function Subscription() {
     const isAdmin = user?.role === 'ADMIN';
 
     useEffect(() => {
-        loadData();
+        void loadData();
     }, []);
 
     useEffect(() => {
         if (activeTab === 'admin' && isAdmin && allSubscriptions.length === 0) {
-            loadAllSubscriptions();
+            void loadAllSubscriptions();
         }
-    }, [activeTab, isAdmin, allSubscriptions.length]);
+    }, [activeTab, allSubscriptions.length, isAdmin]);
 
     const loadData = async () => {
         try {
@@ -53,9 +55,9 @@ export function Subscription() {
                 subscriptionsService.getSubscription(),
             ]);
             setPlans(plansData);
-            setCurrentSubscription(subscriptionData as Subscription);
+            setCurrentSubscription(subscriptionData);
         } catch (error) {
-            console.error('Failed to load subscription data:', error);
+            showToast.error('Load failed', getErrorMessage(error, 'Could not load subscription data.'));
         } finally {
             setLoading(false);
         }
@@ -67,15 +69,24 @@ export function Subscription() {
             const data = await subscriptionsService.getAllSubscriptions();
             setAllSubscriptions(data);
         } catch (error) {
-            console.error('Failed to load all subscriptions:', error);
-            alert('Failed to load subscriptions. Are you an admin?');
+            showToast.error('Load failed', getErrorMessage(error, 'Could not load admin subscription data.'));
         } finally {
             setAdminLoading(false);
         }
     };
 
     const handleUpgrade = async (tier: SubscriptionTier) => {
-        if (tier === 'FREE' || currentSubscription?.tier === tier) return;
+        if (tier === 'FREE' || currentSubscription?.tier === tier) {
+            return;
+        }
+
+        if (!paymentsEnabled) {
+            showToast.info(
+                'Billing disabled',
+                'Online billing is disabled in this deployment. Assign paid plans from the Admin tab if needed.',
+            );
+            return;
+        }
 
         setProcessing(true);
         try {
@@ -84,27 +95,34 @@ export function Subscription() {
                 provider: selectedProvider,
             });
 
-            alert(`Checkout created! In production, you would be redirected to:\n${result.checkoutUrl}`);
-            loadData();
+            if (result.checkoutUrl) {
+                window.location.assign(result.checkoutUrl);
+                return;
+            }
+
+            showToast.warning('Checkout unavailable', 'No checkout URL was returned by the server.');
         } catch (error) {
-            console.error('Checkout failed:', error);
-            alert('Failed to create checkout. Please try again.');
+            showToast.error(
+                'Checkout unavailable',
+                getErrorMessage(error, 'Could not create a checkout session.'),
+            );
         } finally {
             setProcessing(false);
         }
     };
 
     const handleCancel = async () => {
-        if (!confirm('Are you sure you want to cancel your subscription?')) return;
+        if (!window.confirm('Cancel the current subscription?')) {
+            return;
+        }
 
         setProcessing(true);
         try {
             await subscriptionsService.cancelSubscription();
-            alert('Subscription canceled successfully.');
-            loadData();
+            showToast.success('Subscription updated', 'The subscription was canceled successfully.');
+            await loadData();
         } catch (error) {
-            console.error('Cancel failed:', error);
-            alert('Failed to cancel subscription.');
+            showToast.error('Cancel failed', getErrorMessage(error, 'Could not cancel the subscription.'));
         } finally {
             setProcessing(false);
         }
@@ -112,16 +130,15 @@ export function Subscription() {
 
     const handleUpdateSubscription = async (
         userId: string,
-        data: { tier?: SubscriptionTier; status?: SubscriptionStatus }
+        data: { tier?: SubscriptionTier; status?: SubscriptionStatus },
     ) => {
         try {
             await subscriptionsService.updateSubscription(userId, data);
-            alert('Subscription updated successfully.');
+            showToast.success('Subscription updated', 'Manual subscription update saved.');
             setEditingSubscription(null);
-            loadAllSubscriptions();
+            await loadAllSubscriptions();
         } catch (error) {
-            console.error('Update failed:', error);
-            alert('Failed to update subscription.');
+            showToast.error('Update failed', getErrorMessage(error, 'Could not update this subscription.'));
         }
     };
 
@@ -153,11 +170,13 @@ export function Subscription() {
         return (
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-[var(--text)]">All subscriptions</h2>
-                    <button
-                        onClick={loadAllSubscriptions}
-                        className="btn-neon px-4 py-2 text-sm"
-                    >
+                    <div>
+                        <h2 className="text-xl font-bold text-[var(--text)]">Manual subscription management</h2>
+                        <p className="text-sm text-[var(--text-2)]">
+                            Use this table to assign or correct plans while online billing is disabled.
+                        </p>
+                    </div>
+                    <button onClick={() => void loadAllSubscriptions()} className="btn-neon px-4 py-2 text-sm">
                         Refresh
                     </button>
                 </div>
@@ -208,10 +227,13 @@ export function Subscription() {
                                                 {editingSubscription === subscriptionUserId && canEdit ? (
                                                     <select
                                                         defaultValue={sub.tier}
-                                                        onChange={(e) => {
-                                                            if (!subscriptionUserId) return;
-                                                            handleUpdateSubscription(subscriptionUserId, {
-                                                                tier: e.target.value as SubscriptionTier,
+                                                        onChange={(event) => {
+                                                            if (!subscriptionUserId) {
+                                                                return;
+                                                            }
+
+                                                            void handleUpdateSubscription(subscriptionUserId, {
+                                                                tier: event.target.value as SubscriptionTier,
                                                                 status: sub.status,
                                                             });
                                                         }}
@@ -222,7 +244,12 @@ export function Subscription() {
                                                         <option value="PLUS">PLUS</option>
                                                     </select>
                                                 ) : (
-                                                    <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', getTierBadgeClass(sub.tier))}>
+                                                    <span
+                                                        className={cn(
+                                                            'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                                                            getTierBadgeClass(sub.tier),
+                                                        )}
+                                                    >
                                                         {sub.tier}
                                                     </span>
                                                 )}
@@ -231,11 +258,14 @@ export function Subscription() {
                                                 {editingSubscription === subscriptionUserId && canEdit ? (
                                                     <select
                                                         defaultValue={sub.status}
-                                                        onChange={(e) => {
-                                                            if (!subscriptionUserId) return;
-                                                            handleUpdateSubscription(subscriptionUserId, {
+                                                        onChange={(event) => {
+                                                            if (!subscriptionUserId) {
+                                                                return;
+                                                            }
+
+                                                            void handleUpdateSubscription(subscriptionUserId, {
                                                                 tier: sub.tier,
-                                                                status: e.target.value as SubscriptionStatus,
+                                                                status: event.target.value as SubscriptionStatus,
                                                             });
                                                         }}
                                                         className="input h-10 rounded-lg px-3 text-sm"
@@ -246,7 +276,12 @@ export function Subscription() {
                                                         <option value="PAST_DUE">PAST_DUE</option>
                                                     </select>
                                                 ) : (
-                                                    <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', getStatusBadgeClass(sub.status))}>
+                                                    <span
+                                                        className={cn(
+                                                            'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
+                                                            getStatusBadgeClass(sub.status),
+                                                        )}
+                                                    >
                                                         {sub.status}
                                                     </span>
                                                 )}
@@ -296,13 +331,31 @@ export function Subscription() {
             <div className="mb-10 text-center">
                 <h1 className="mb-3 text-4xl font-bold text-[var(--text)]">
                     <span className="bg-[image:var(--primary-gradient)] bg-clip-text text-transparent">
-                        Upgrade your plan
+                        Subscription plans
                     </span>
                 </h1>
                 <p className="text-lg text-[var(--text-2)]">
-                    Choose the right tier for productivity, fitness and premium tools.
+                    Pick the right tier for productivity, fitness and premium tools.
                 </p>
             </div>
+
+            {!paymentsEnabled && (
+                <div className="challenge-banner mb-8 p-6">
+                    <div className="relative z-10 flex flex-col gap-3">
+                        <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--primary)]">
+                            Billing status
+                        </p>
+                        <p className="text-xl font-semibold text-[var(--text)]">
+                            Online billing is disabled in this deployment.
+                        </p>
+                        <p className="max-w-3xl text-sm text-[var(--text-2)]">
+                            The product is safe to hand off and deploy without a payment gateway. If you need paid
+                            plans immediately, assign them manually from the Admin tab until provider integration is
+                            completed.
+                        </p>
+                    </div>
+                </div>
+            )}
 
             {currentTier !== 'FREE' && (
                 <div className="challenge-banner mb-8 p-6">
@@ -319,7 +372,7 @@ export function Subscription() {
                             )}
                         </div>
                         <button
-                            onClick={handleCancel}
+                            onClick={() => void handleCancel()}
                             disabled={processing}
                             className="rounded-lg border border-red-500/30 px-4 py-2 font-medium text-red-500 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -331,22 +384,28 @@ export function Subscription() {
 
             <div className="mb-10">
                 <h3 className="mb-4 text-sm font-medium text-[var(--text)]">Payment method</h3>
-                <div className="flex flex-wrap gap-3">
-                    {(Object.keys(providerLabels) as PaymentProvider[]).map((provider) => (
-                        <button
-                            key={provider}
-                            onClick={() => setSelectedProvider(provider)}
-                            className={cn(
-                                'rounded-full border px-5 py-3 text-sm font-medium transition-all duration-300',
-                                selectedProvider === provider
-                                    ? 'border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] text-[var(--primary)] shadow-[var(--shadow-md)]'
-                                    : 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-2)] hover:border-[var(--surface-highlight-border)] hover:text-[var(--text)]'
-                            )}
-                        >
-                            {providerLabels[provider]}
-                        </button>
-                    ))}
-                </div>
+                {paymentsEnabled ? (
+                    <div className="flex flex-wrap gap-3">
+                        {(Object.keys(providerLabels) as PaymentProvider[]).map((provider) => (
+                            <button
+                                key={provider}
+                                onClick={() => setSelectedProvider(provider)}
+                                className={cn(
+                                    'rounded-full border px-5 py-3 text-sm font-medium transition-all duration-300',
+                                    selectedProvider === provider
+                                        ? 'border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] text-[var(--primary)] shadow-[var(--shadow-md)]'
+                                        : 'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-2)] hover:border-[var(--surface-highlight-border)] hover:text-[var(--text)]',
+                                )}
+                            >
+                                {providerLabels[provider]}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-1)] p-4 text-sm text-[var(--text-2)]">
+                        Payment providers are intentionally hidden until billing is fully integrated.
+                    </div>
+                )}
             </div>
 
             <div className="grid gap-6 md:grid-cols-3">
@@ -357,7 +416,7 @@ export function Subscription() {
                     const price =
                         selectedProvider === 'STRIPE'
                             ? `$${(plan.priceUSD / 100).toFixed(2)}`
-                            : `${plan.priceVND.toLocaleString('vi-VN')}₫`;
+                            : `${plan.priceVND.toLocaleString('vi-VN')} VND`;
 
                     return (
                         <div
@@ -365,7 +424,7 @@ export function Subscription() {
                             className={cn(
                                 'surface-card-hover relative p-6',
                                 isPro && 'border-[var(--surface-highlight-border)] shadow-[var(--primary-glow)]',
-                                isPlus && 'border-sky-400/40 shadow-[0_16px_40px_rgba(59,130,246,0.18)]'
+                                isPlus && 'border-sky-400/40 shadow-[0_16px_40px_rgba(59,130,246,0.18)]',
                             )}
                         >
                             {isPlus && (
@@ -395,7 +454,7 @@ export function Subscription() {
                                 {plan.features.map((feature, index) => (
                                     <li key={index} className="flex items-center gap-3 text-sm text-[var(--text-2)]">
                                         <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--surface-highlight)] text-[var(--primary)]">
-                                            ✓
+                                            +
                                         </span>
                                         {feature}
                                     </li>
@@ -403,23 +462,37 @@ export function Subscription() {
                             </ul>
 
                             <button
-                                onClick={() => handleUpgrade(plan.tier as SubscriptionTier)}
-                                disabled={isCurrentPlan || processing}
+                                onClick={() => void handleUpgrade(plan.tier as SubscriptionTier)}
+                                disabled={isCurrentPlan || processing || !paymentsEnabled}
                                 className={cn(
                                     'w-full rounded-lg border px-4 py-3 font-semibold transition-all duration-300',
                                     isCurrentPlan &&
                                         'cursor-not-allowed border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-3)]',
-                                    !isCurrentPlan && isPro && 'border-transparent bg-[image:var(--primary-gradient)] text-[var(--btn-primary-text)] shadow-[var(--primary-glow)] hover:shadow-[var(--primary-glow-hover)]',
                                     !isCurrentPlan &&
+                                        !paymentsEnabled &&
+                                        'cursor-not-allowed border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-3)]',
+                                    !isCurrentPlan &&
+                                        paymentsEnabled &&
+                                        isPro &&
+                                        'border-transparent bg-[image:var(--primary-gradient)] text-[var(--btn-primary-text)] shadow-[var(--primary-glow)] hover:shadow-[var(--primary-glow-hover)]',
+                                    !isCurrentPlan &&
+                                        paymentsEnabled &&
                                         isPlus &&
                                         'border-transparent bg-gradient-to-r from-sky-500 via-blue-500 to-violet-500 text-white shadow-lg hover:shadow-xl',
                                     !isCurrentPlan &&
+                                        paymentsEnabled &&
                                         !isPro &&
                                         !isPlus &&
-                                        'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)] hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]'
+                                        'border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)] hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]',
                                 )}
                             >
-                                {isCurrentPlan ? 'Current plan' : processing ? 'Processing...' : 'Upgrade'}
+                                {isCurrentPlan
+                                    ? 'Current plan'
+                                    : processing
+                                      ? 'Processing...'
+                                      : paymentsEnabled
+                                        ? 'Upgrade'
+                                        : 'Billing disabled'}
                             </button>
                         </div>
                     );
@@ -439,7 +512,7 @@ export function Subscription() {
                                 'px-6 py-3 text-sm font-medium transition-all duration-300',
                                 activeTab === 'my'
                                     ? 'border-b-2 border-[var(--primary)] text-[var(--primary)]'
-                                    : 'text-[var(--text-2)] hover:text-[var(--text)]'
+                                    : 'text-[var(--text-2)] hover:text-[var(--text)]',
                             )}
                         >
                             My subscription
@@ -450,7 +523,7 @@ export function Subscription() {
                                 'px-6 py-3 text-sm font-medium transition-all duration-300',
                                 activeTab === 'admin'
                                     ? 'border-b-2 border-[var(--primary)] text-[var(--primary)]'
-                                    : 'text-[var(--text-2)] hover:text-[var(--text)]'
+                                    : 'text-[var(--text-2)] hover:text-[var(--text)]',
                             )}
                         >
                             Admin
@@ -462,6 +535,19 @@ export function Subscription() {
             </div>
         </div>
     );
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+    if (typeof error === 'object' && error !== null && 'response' in error) {
+        const response = (error as { response?: { data?: { error?: { message?: string } } } }).response;
+        return response?.data?.error?.message ?? fallback;
+    }
+
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    return fallback;
 }
 
 function getTierBadgeClass(tier: SubscriptionTier) {

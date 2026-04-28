@@ -14,14 +14,18 @@ export default [
                 sourceType: 'module',
             },
             globals: {
-                node: true,
-                jest: true,
+                __dirname: 'readonly',
+                console: 'readonly',
+                Express: 'readonly',
+                fetch: 'readonly',
+                process: 'readonly',
             },
         },
         plugins: {
             '@typescript-eslint': tseslint,
         },
         rules: {
+            'no-undef': 'off',
             '@typescript-eslint/interface-name-prefix': 'off',
             '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/explicit-module-boundary-types': 'off',

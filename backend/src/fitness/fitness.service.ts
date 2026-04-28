@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, SubscriptionStatus, SubscriptionTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateFitnessProfileDto } from './dto/update-fitness-profile.dto';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
@@ -33,10 +34,14 @@ export class FitnessService {
     });
   }
 
-  async connectHealthDevice(userId: string, provider: 'apple_health' | 'google_fit') {
-    return this.prisma.fitnessProfile.update({
+  async connectHealthDevice(userId: string, _provider: 'apple_health' | 'google_fit') {
+    return this.prisma.fitnessProfile.upsert({
       where: { userId },
-      data: { healthConnect: true },
+      create: {
+        userId,
+        healthConnect: true,
+      },
+      update: { healthConnect: true },
     });
   }
 
@@ -57,13 +62,31 @@ export class FitnessService {
         avgPace: dto.avgPace,
         intensity: dto.intensity || 'moderate',
         notes: dto.notes,
-        performedAt: dto.performedAt || new Date(),
+        performedAt: dto.performedAt ? new Date(dto.performedAt) : new Date(),
+        route: dto.route
+          ? {
+              create: {
+                startLat: dto.route.startLat,
+                startLng: dto.route.startLng,
+                endLat: dto.route.endLat,
+                endLng: dto.route.endLng,
+                totalDistance: dto.route.totalDistance,
+                elevationGain: dto.route.elevationGain,
+                duration: dto.route.duration,
+                polyline:
+                  dto.route.path && dto.route.path.length > 1
+                    ? this.encodePolyline(dto.route.path)
+                    : undefined,
+              },
+            }
+          : undefined,
       },
+      include: { route: true },
     });
   }
 
   async getExercises(userId: string, startDate?: Date, endDate?: Date, category?: string) {
-    const where: any = { userId };
+    const where: Prisma.ExerciseWhereInput = { userId };
 
     if (startDate || endDate) {
       where.performedAt = {};
@@ -235,20 +258,49 @@ export class FitnessService {
       where: { userId },
     });
 
-    if (!subscription || subscription.status !== 'ACTIVE') {
+    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
       return false;
     }
 
     // Define feature requirements
-    const featureTiers: Record<string, string[]> = {
-      'fitness-basic': ['PRO', 'PLUS'],
-      'fitness-full': ['PLUS'],
-      'gps-tracking': ['PLUS'],
-      'health-connect': ['PLUS'],
-      'data-export': ['PLUS'],
+    const featureTiers: Record<string, SubscriptionTier[]> = {
+      'fitness-basic': [SubscriptionTier.PRO, SubscriptionTier.PLUS],
+      'fitness-full': [SubscriptionTier.PLUS],
+      'gps-tracking': [SubscriptionTier.PLUS],
+      'health-connect': [SubscriptionTier.PLUS],
+      'data-export': [SubscriptionTier.PLUS],
     };
 
     const requiredTiers = featureTiers[feature] || [];
     return requiredTiers.includes(subscription.tier);
+  }
+
+  private encodePolyline(points: Array<{ lat: number; lng: number }>): string {
+    let result = '';
+    let prevLat = 0;
+    let prevLng = 0;
+
+    for (const point of points) {
+      const lat = Math.round(point.lat * 1e5);
+      const lng = Math.round(point.lng * 1e5);
+      result += this.encodeValue(lat - prevLat) + this.encodeValue(lng - prevLng);
+      prevLat = lat;
+      prevLng = lng;
+    }
+
+    return result;
+  }
+
+  private encodeValue(value: number): string {
+    let current = value < 0 ? ~(value << 1) : value << 1;
+    let result = '';
+
+    while (current >= 0x20) {
+      result += String.fromCharCode((0x20 | (current & 0x1f)) + 63);
+      current >>= 5;
+    }
+
+    result += String.fromCharCode(current + 63);
+    return result;
   }
 }

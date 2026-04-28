@@ -13,7 +13,13 @@ import AIChatbot from '../chatbot/AIChatbot';
 import { cn } from '../../lib/utils';
 
 export function AppLayout() {
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+
+        return localStorage.getItem('sidebarCollapsed') === 'true';
+    });
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Close mobile menu on resize
@@ -25,14 +31,6 @@ export function AppLayout() {
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
-
-    // Load sidebar state from localStorage
-    useEffect(() => {
-        const saved = localStorage.getItem('sidebarCollapsed');
-        if (saved) {
-            setSidebarCollapsed(saved === 'true');
-        }
     }, []);
 
     const toggleSidebar = () => {

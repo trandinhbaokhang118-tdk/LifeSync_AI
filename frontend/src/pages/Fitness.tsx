@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Flame, Clock3, Footprints, Settings, ArrowRight, Play } from 'lucide-react';
+import { ArrowRight, Clock3, Flame, Footprints, MapPin, Play, Settings, Target } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { showToast } from '../components/ui';
+import { healthDevicesService } from '../services/health-devices.service';
 import { fitnessService } from '../services/fitness.service';
-import type { FitnessProfile, DailyActivity, WeeklyStats, Exercise } from '../types';
+import type { DailyActivity, Exercise, FitnessProfile, HealthProvider, WeeklyStats } from '../types';
+
+type QuickStartMode = 'running' | 'walking' | 'cycling' | 'hiking';
 
 const ActivityIcon = ({ category, size = 20 }: { category: string; size?: number }) => {
     const icons: Record<string, string> = {
@@ -20,18 +24,27 @@ const ActivityIcon = ({ category, size = 20 }: { category: string; size?: number
     return <span style={{ fontSize: size }}>{icons[category] || '💪'}</span>;
 };
 
+const workoutQuickStarts: Array<{ mode: QuickStartMode; label: string; note: string }> = [
+    { mode: 'running', label: 'Run', note: 'Tempo or easy distance' },
+    { mode: 'walking', label: 'Walk', note: 'Reset energy gently' },
+    { mode: 'cycling', label: 'Ride', note: 'Aerobic outdoor block' },
+    { mode: 'hiking', label: 'Hike', note: 'Longer endurance climb' },
+];
+
 export function Fitness() {
     const [profile, setProfile] = useState<FitnessProfile | null>(null);
     const [todayActivity, setTodayActivity] = useState<DailyActivity | null>(null);
     const [weeklyStats, setWeeklyStats] = useState<WeeklyStats | null>(null);
+    const [allExercises, setAllExercises] = useState<Exercise[]>([]);
     const [recentExercises, setRecentExercises] = useState<Exercise[]>([]);
     const [loading, setLoading] = useState(true);
+    const [connectingProvider, setConnectingProvider] = useState<HealthProvider | null>(null);
 
     useEffect(() => {
-        loadData();
+        void loadData();
     }, []);
 
-    const loadData = async () => {
+    async function loadData() {
         try {
             const [profileData, activityData, statsData, exercisesData] = await Promise.all([
                 fitnessService.getProfile(),
@@ -42,13 +55,39 @@ export function Fitness() {
             setProfile(profileData);
             setTodayActivity(activityData);
             setWeeklyStats(statsData);
+            setAllExercises(exercisesData);
             setRecentExercises(exercisesData.slice(0, 5));
         } catch (error) {
             console.error('Failed to load fitness data:', error);
+            showToast.error('Could not load Fitness', 'The page is still here, but its activity data did not arrive cleanly.');
         } finally {
             setLoading(false);
         }
-    };
+    }
+
+    async function handleConnectHealth(provider: HealthProvider) {
+        if (connectingProvider || profile?.healthConnect) {
+            return;
+        }
+
+        setConnectingProvider(provider);
+        try {
+            const updatedProfile = await fitnessService.connectHealthDevice(provider);
+            setProfile(updatedProfile);
+            healthDevicesService.connect(provider);
+            showToast.success(
+                'Health sync connected',
+                provider === 'apple_health'
+                    ? 'Apple Health is now linked. You can open Device Connections to sync activity data.'
+                    : 'Google Fit is now linked. You can open Device Connections to sync activity data.'
+            );
+        } catch (error) {
+            console.error('Failed to connect health provider:', error);
+            showToast.error('Could not connect health sync', 'Try again after the backend is available.');
+        } finally {
+            setConnectingProvider(null);
+        }
+    }
 
     if (loading) {
         return (
@@ -64,26 +103,45 @@ export function Fitness() {
     const stepGoal = profile?.stepGoal ?? 0;
     const steps = todayActivity?.steps ?? 0;
     const stepsProgress = stepGoal > 0 ? Math.min((steps / stepGoal) * 100, 100) : 0;
+    const challenge = buildMonthlyChallenge(allExercises);
+    const weeklyDistance = weeklyStats?.totalDistance ?? 0;
+    const todaySessions = allExercises.filter((exercise) => isSameCalendarDay(exercise.performedAt, new Date())).length;
 
     return (
         <div className="page-shell pb-24">
             <div className="mx-auto max-w-5xl space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold md:text-3xl">
                             <span className="bg-[image:var(--primary-gradient)] bg-clip-text text-transparent">
                                 Fitness
                             </span>
                         </h1>
-                        <p className="text-[var(--text-2)]">Track your activities with the project neon-ocean vibe.</p>
+                        <p className="text-[var(--text-2)]">Track movement, start the next workout fast, and keep your month moving forward.</p>
                     </div>
-                    <Link
-                        to="/app/fitness/profile"
-                        className="surface-soft flex h-11 w-11 items-center justify-center transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]"
-                        aria-label="Open fitness profile"
-                    >
-                        <Settings className="h-5 w-5" />
-                    </Link>
+                    <div className="flex flex-wrap gap-2">
+                        <Link
+                            to="/app/fitness/history"
+                            className="surface-soft inline-flex h-11 items-center gap-2 px-4 text-sm font-medium transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]"
+                        >
+                            Workout history
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                        <Link
+                            to="/app/fitness/devices"
+                            className="surface-soft inline-flex h-11 items-center gap-2 px-4 text-sm font-medium transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]"
+                        >
+                            Device sync
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                        <Link
+                            to="/app/fitness/profile"
+                            className="surface-soft flex h-11 w-11 items-center justify-center transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]"
+                            aria-label="Open fitness profile"
+                        >
+                            <Settings className="h-5 w-5" />
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -112,26 +170,114 @@ export function Fitness() {
                     />
                 </div>
 
+                <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                    <div className="fitness-card p-5">
+                        <div className="mb-3 flex items-center justify-between">
+                            <span className="text-sm font-medium text-[var(--text)]">Daily steps goal</span>
+                            <span className="text-sm font-semibold text-[var(--primary)]">{Math.round(stepsProgress)}%</span>
+                        </div>
+                        <div className="h-3 overflow-hidden rounded-full bg-[var(--panel-soft)]">
+                            <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${stepsProgress}%`,
+                                    background: 'var(--primary-gradient)',
+                                    boxShadow: 'var(--primary-glow)',
+                                }}
+                            />
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-xs text-[var(--text-2)]">
+                            <span>
+                                {steps.toLocaleString()} / {stepGoal.toLocaleString()} steps
+                            </span>
+                            <span>{todaySessions} workout{todaySessions === 1 ? '' : 's'} today</span>
+                        </div>
+                    </div>
+
+                    <div className="fitness-card p-5">
+                        <div className="mb-3 flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-[var(--text)]">Weekly momentum</p>
+                                <p className="text-xs text-[var(--text-2)]">Live view from synced days and recorded workouts.</p>
+                            </div>
+                            <span className="rounded-full border border-[var(--surface-highlight-border)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
+                                {weeklyDistance.toFixed(1)} km
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-sm">
+                            <MiniMetric label="Sessions" value={String(allExercises.slice(0, 7).length)} />
+                            <MiniMetric label="Avg HR" value={String(weeklyStats?.avgHeartRate || 0)} />
+                            <MiniMetric label="Active" value={`${weeklyStats?.totalActiveMinutes || 0}m`} />
+                        </div>
+                    </div>
+                </div>
+
                 <div className="fitness-card p-5">
-                    <div className="mb-3 flex items-center justify-between">
-                        <span className="text-sm font-medium text-[var(--text)]">Daily steps goal</span>
-                        <span className="text-sm font-semibold text-[var(--primary)]">
-                            {Math.round(stepsProgress)}%
+                    <div className="mb-4 flex items-center justify-between">
+                        <div>
+                            <h3 className="font-semibold text-[var(--text)]">Start a workout</h3>
+                            <p className="text-sm text-[var(--text-2)]">Jump straight into Track Lab with the session type already selected.</p>
+                        </div>
+                        <span className="rounded-full border border-[var(--surface-highlight-border)] px-3 py-1 text-xs font-semibold text-[var(--primary)]">
+                            Quick launch
                         </span>
                     </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-[var(--panel-soft)]">
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        {workoutQuickStarts.map((item) => (
+                            <Link
+                                key={item.mode}
+                                to="/app/gps-tracking"
+                                state={{ preferredMode: item.mode, autoStart: true }}
+                                className="surface-soft group rounded-2xl p-4 transition-colors hover:border-[var(--surface-highlight-border)]"
+                            >
+                                <div className="mb-3 flex items-center justify-between">
+                                    <span className="text-2xl">
+                                        <ActivityIcon category={item.mode} size={24} />
+                                    </span>
+                                    <Play className="h-4 w-4 text-[var(--primary)] transition-transform group-hover:translate-x-0.5" />
+                                </div>
+                                <p className="font-medium text-[var(--text)]">{item.label}</p>
+                                <p className="mt-1 text-xs leading-5 text-[var(--text-2)]">{item.note}</p>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="challenge-banner p-5">
+                    <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <div className="mb-2 flex items-center gap-2 text-[var(--primary)]">
+                                <Target className="h-4 w-4" />
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em]">Monthly challenge</span>
+                            </div>
+                            <h3 className="font-semibold text-[var(--text)]">{challenge.title}</h3>
+                            <p className="mt-1 text-sm text-[var(--text-2)]">{challenge.note}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-xl font-bold text-[var(--primary)]">{challenge.progressLabel}</p>
+                            <p className="text-xs text-[var(--text-2)]">{challenge.remainingLabel}</p>
+                        </div>
+                    </div>
+                    <div className="relative z-10 mt-4 h-2 overflow-hidden rounded-full bg-[var(--panel-soft)]">
                         <div
                             className="h-full rounded-full transition-all duration-500"
-                            style={{
-                                width: `${stepsProgress}%`,
-                                background: 'var(--primary-gradient)',
-                                boxShadow: 'var(--primary-glow)',
-                            }}
+                            style={{ width: `${challenge.progressPercent}%`, background: 'var(--primary-gradient)' }}
                         />
                     </div>
-                    <p className="mt-2 text-xs text-[var(--text-2)]">
-                        {steps.toLocaleString()} / {stepGoal.toLocaleString()} steps
-                    </p>
+                    <div className="relative z-10 mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex flex-wrap gap-2 text-xs text-[var(--text-2)]">
+                            <span className="rounded-full border border-white/10 px-3 py-1">{challenge.sessions} sessions this month</span>
+                            <span className="rounded-full border border-white/10 px-3 py-1">{challenge.avgDistanceLabel}</span>
+                        </div>
+                        <Link
+                            to="/app/gps-tracking"
+                            state={{ preferredMode: challenge.preferredMode }}
+                            className="inline-flex items-center gap-2 text-sm font-medium text-[var(--primary)] transition-colors hover:text-[var(--text)]"
+                        >
+                            Keep challenge moving
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="fitness-card p-5">
@@ -164,30 +310,7 @@ export function Fitness() {
                     <div className="mt-4 flex justify-around border-t border-[var(--divider)] pt-4">
                         <WeeklyStat label="Total steps" value={(weeklyStats?.totalSteps || 0).toLocaleString()} />
                         <WeeklyStat label="Calories" value={String(weeklyStats?.totalCalories || 0)} tone="warning" />
-                        <WeeklyStat
-                            label="Minutes"
-                            value={String(weeklyStats?.totalActiveMinutes || 0)}
-                            tone="success"
-                        />
-                    </div>
-                </div>
-
-                <div className="challenge-banner p-5">
-                    <div className="relative z-10 flex items-center justify-between">
-                        <div>
-                            <h3 className="font-semibold text-[var(--text)]">Monthly challenge</h3>
-                            <p className="text-sm text-[var(--text-2)]">Run 50km this month</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-xl font-bold text-[var(--primary)]">32km</p>
-                            <p className="text-xs text-[var(--text-2)]">of 50km</p>
-                        </div>
-                    </div>
-                    <div className="relative z-10 mt-3 h-2 overflow-hidden rounded-full bg-[var(--panel-soft)]">
-                        <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: '64%', background: 'var(--primary-gradient)' }}
-                        />
+                        <WeeklyStat label="Minutes" value={String(weeklyStats?.totalActiveMinutes || 0)} tone="success" />
                     </div>
                 </div>
 
@@ -195,7 +318,7 @@ export function Fitness() {
                     <div className="mb-4 flex items-center justify-between">
                         <h3 className="font-semibold text-[var(--text)]">Recent activities</h3>
                         <Link
-                            to="/app/gps-tracking"
+                            to="/app/fitness/history"
                             className="flex items-center gap-1 text-sm text-[var(--primary)] transition-colors hover:text-[var(--text)]"
                         >
                             View all
@@ -209,7 +332,7 @@ export function Fitness() {
                             <p className="text-[var(--text-2)]">No activities yet</p>
                             <Link
                                 to="/app/gps-tracking"
-                                state={{ autoStart: true }}
+                                state={{ autoStart: true, preferredMode: 'running' }}
                                 className="btn-neon mt-4 inline-flex items-center gap-2"
                             >
                                 <Play className="h-4 w-4" />
@@ -219,8 +342,9 @@ export function Fitness() {
                     ) : (
                         <div className="space-y-3">
                             {recentExercises.map((exercise) => (
-                                <div
+                                <Link
                                     key={exercise.id}
+                                    to={`/app/fitness/workouts/${exercise.id}`}
                                     className="surface-soft flex items-center justify-between p-3 transition-colors hover:border-[var(--surface-highlight-border)]"
                                 >
                                     <div className="flex items-center gap-3">
@@ -239,13 +363,9 @@ export function Fitness() {
                                     </div>
                                     <div className="text-right">
                                         <p className="font-semibold text-[var(--primary)]">{exercise.duration} min</p>
-                                        {exercise.distance && (
-                                            <p className="text-xs text-[var(--text-2)]">
-                                                {exercise.distance.toFixed(1)} km
-                                            </p>
-                                        )}
+                                        {exercise.distance && <p className="text-xs text-[var(--text-2)]">{exercise.distance.toFixed(1)} km</p>}
                                     </div>
-                                </div>
+                                </Link>
                             ))}
                         </div>
                     )}
@@ -254,15 +374,41 @@ export function Fitness() {
                 <div className="fitness-card p-5">
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <h3 className="font-semibold text-[var(--text)]">Health Connect</h3>
-                            <p className="text-sm text-[var(--text-2)]">Sync with Apple Health or Google Fit</p>
+                            <div className="mb-2 flex items-center gap-2">
+                                <h3 className="font-semibold text-[var(--text)]">Health Connect</h3>
+                                {profile?.healthConnect && (
+                                    <span className="rounded-full border border-[var(--surface-highlight-border)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--primary)]">
+                                        Connected
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-sm text-[var(--text-2)]">
+                                Sync with Apple Health or Google Fit so daily movement and recovery signals land here faster.
+                            </p>
+                            <Link
+                                to="/app/fitness/devices"
+                                className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-[var(--primary)] transition-colors hover:text-[var(--text)]"
+                            >
+                                Manage device connections
+                                <ArrowRight className="h-4 w-4" />
+                            </Link>
                         </div>
-                        <div className="flex gap-2">
-                            <button className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]">
-                                Apple Health
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => void handleConnectHealth('apple_health')}
+                                disabled={Boolean(connectingProvider) || profile?.healthConnect}
+                                className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {connectingProvider === 'apple_health' ? 'Connecting...' : 'Apple Health'}
                             </button>
-                            <button className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)]">
-                                Google Fit
+                            <button
+                                type="button"
+                                onClick={() => void handleConnectHealth('google_fit')}
+                                disabled={Boolean(connectingProvider) || profile?.healthConnect}
+                                className="rounded-lg border border-[var(--border)] bg-[var(--surface-3)] px-3 py-2 text-sm text-[var(--text)] transition-colors hover:border-[var(--surface-highlight-border)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {connectingProvider === 'google_fit' ? 'Connecting...' : 'Google Fit'}
                             </button>
                         </div>
                     </div>
@@ -318,4 +464,90 @@ function WeeklyStat({
             <p className="text-xs text-[var(--text-2)]">{label}</p>
         </div>
     );
+}
+
+function MiniMetric({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-3)] px-4 py-3">
+            <p className="text-lg font-semibold text-[var(--text)]">{value}</p>
+            <p className="text-xs text-[var(--text-2)]">{label}</p>
+        </div>
+    );
+}
+
+function buildMonthlyChallenge(exercises: Exercise[]) {
+    const monthExercises = exercises.filter((exercise) => isSameCalendarMonth(exercise.performedAt, new Date()));
+    const runningDistance = sumDistance(monthExercises, ['running']);
+    const cyclingDistance = sumDistance(monthExercises, ['cycling']);
+    const walkingDistance = sumDistance(monthExercises, ['walking']);
+    const hikingDistance = sumDistance(monthExercises, ['hiking']);
+    const movementDistance = walkingDistance + hikingDistance;
+
+    let title = 'Run 50 km this month';
+    let target = 50;
+    let progress = runningDistance;
+    let preferredMode: QuickStartMode = 'running';
+
+    if (cyclingDistance > runningDistance && cyclingDistance >= 25) {
+        title = 'Ride 200 km this month';
+        target = 200;
+        progress = cyclingDistance;
+        preferredMode = 'cycling';
+    } else if (movementDistance > runningDistance && movementDistance >= 12) {
+        title = 'Move 80 km this month';
+        target = 80;
+        progress = movementDistance;
+        preferredMode = walkingDistance >= hikingDistance ? 'walking' : 'hiking';
+    }
+
+    const sessions = monthExercises.filter((exercise) => matchesMode(exercise.category, preferredMode)).length;
+    const progressPercent = Math.max(4, Math.min((progress / target) * 100, 100));
+    const remaining = Math.max(target - progress, 0);
+    const avgDistance = sessions > 0 ? progress / sessions : 0;
+
+    return {
+        title,
+        progressPercent,
+        progressLabel: `${progress.toFixed(1)} / ${target} km`,
+        remainingLabel: remaining > 0 ? `${remaining.toFixed(1)} km remaining` : 'Challenge completed',
+        note:
+            sessions > 0
+                ? `Built from your ${sessions} matching session${sessions === 1 ? '' : 's'} this month, so the goal moves with real training data.`
+                : 'Start the first session for this goal and the challenge card will begin updating automatically.',
+        avgDistanceLabel: sessions > 0 ? `${avgDistance.toFixed(1)} km avg/session` : 'No matching sessions yet',
+        sessions,
+        preferredMode,
+    };
+}
+
+function matchesMode(category: string, mode: QuickStartMode) {
+    if (mode === 'walking') {
+        return category === 'walking';
+    }
+
+    if (mode === 'hiking') {
+        return category === 'hiking';
+    }
+
+    return category === mode;
+}
+
+function sumDistance(exercises: Exercise[], categories: string[]) {
+    return exercises
+        .filter((exercise) => categories.includes(exercise.category))
+        .reduce((total, exercise) => total + (exercise.distance || 0), 0);
+}
+
+function isSameCalendarDay(isoDate: string, today: Date) {
+    const value = new Date(isoDate);
+    return (
+        value.getFullYear() === today.getFullYear() &&
+        value.getMonth() === today.getMonth() &&
+        value.getDate() === today.getDate()
+    );
+}
+
+function isSameCalendarMonth(isoDate: string, today: Date) {
+    const value = new Date(isoDate);
+    return value.getFullYear() === today.getFullYear() && value.getMonth() === today.getMonth();
 }

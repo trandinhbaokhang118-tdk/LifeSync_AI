@@ -1,8 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Home, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Home } from 'lucide-react';
 import { Button } from '../components/ui';
+import { getDefaultRouteForUser } from '../lib/auth';
+import { useAuthStore } from '../store/auth.store';
 
 export function NotFound() {
+    const { user, isAuthenticated } = useAuthStore();
+    const homePath = isAuthenticated ? getDefaultRouteForUser(user) : '/';
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
             <div className="text-center">
@@ -21,7 +26,7 @@ export function NotFound() {
                         <ArrowLeft className="w-4 h-4" />
                         Go back
                     </Button>
-                    <Link to="/app">
+                    <Link to={homePath}>
                         <Button>
                             <Home className="w-4 h-4" />
                             Go to Dashboard

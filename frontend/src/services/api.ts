@@ -1,7 +1,14 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types';
+import { API_URL } from '../lib/api-config';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+function isLoginRoute(pathname: string) {
+    return pathname === '/login' || pathname === '/admin/login';
+}
+
+function getLoginRoute(pathname: string) {
+    return pathname.startsWith('/admin') ? '/admin/login' : '/login';
+}
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -40,9 +47,10 @@ api.interceptors.response.use(
         // If 401 and not already retrying, try to refresh token
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
+            const currentPath = window.location.pathname;
 
             // Don't redirect if already on login page
-            if (window.location.pathname === '/login') {
+            if (isLoginRoute(currentPath)) {
                 return Promise.reject(error);
             }
 
@@ -68,20 +76,19 @@ api.interceptors.response.use(
                     localStorage.removeItem('refreshToken');
                     localStorage.removeItem('auth-storage');
 
-                    // Only redirect if not already on login page
-                    if (window.location.pathname !== '/login') {
-                        window.location.href = '/login';
+                    if (!isLoginRoute(currentPath)) {
+                        window.location.href = getLoginRoute(currentPath);
                     }
                     return Promise.reject(refreshError);
                 }
             } else {
                 // No refresh token, clear storage
                 localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
                 localStorage.removeItem('auth-storage');
 
-                // Only redirect if not already on login page
-                if (window.location.pathname !== '/login') {
-                    window.location.href = '/login';
+                if (!isLoginRoute(currentPath)) {
+                    window.location.href = getLoginRoute(currentPath);
                 }
             }
         }

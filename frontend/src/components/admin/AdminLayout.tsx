@@ -1,11 +1,17 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import '../../admin-theme.css';
 import { LayoutDashboard, Users, Settings, Activity, Database, Shield, LogOut, Zap } from 'lucide-react';
 import { useAuthStore } from '../../store/auth.store';
 import { Button } from '../ui';
 
 export function AdminLayout() {
+    const navigate = useNavigate();
     const { user, logout } = useAuthStore();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/admin/login', { replace: true });
+    };
 
     const navItems = [
         { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -83,7 +89,7 @@ export function AdminLayout() {
                             variant="outline"
                             size="sm"
                             className="w-full border-gray-300 dark:border-white/10 hover:border-red-500/50 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 text-gray-600 dark:text-gray-400"
-                            onClick={logout}
+                            onClick={handleLogout}
                         >
                             <LogOut className="w-4 h-4 mr-2" />
                             Đăng xuất

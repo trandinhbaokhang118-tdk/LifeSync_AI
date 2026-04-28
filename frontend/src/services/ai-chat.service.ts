@@ -1,39 +1,36 @@
-import axios from 'axios';
+import api from './api';
+import type { ApiResponse } from '../types';
 
-const API_URL = 'http://localhost:3000/ai-chat';
+export interface ChatContextMessage {
+    role: string;
+    content: string;
+}
+
+export interface ChatAction {
+    type: 'create_task' | 'update_task' | 'schedule' | 'reminder';
+    data: Record<string, unknown>;
+}
 
 export interface ChatMessage {
     message: string;
-    context?: Array<{ role: string; content: string }>;
+    context?: ChatContextMessage[];
 }
 
 export interface ChatResponse {
     message: string;
     suggestions?: string[];
-    actions?: Array<{
-        type: 'create_task' | 'update_task' | 'schedule' | 'reminder';
-        data: any;
-    }>;
+    actions?: ChatAction[];
 }
 
 class AIChatService {
-    private getAuthHeader() {
-        const token = localStorage.getItem('token');
-        return { Authorization: `Bearer ${token}` };
-    }
-
     async sendMessage(data: ChatMessage): Promise<ChatResponse> {
-        const response = await axios.post(`${API_URL}/message`, data, {
-            headers: this.getAuthHeader(),
-        });
-        return response.data;
+        const response = await api.post<ApiResponse<ChatResponse>>('/ai-chat/message', data);
+        return response.data.data;
     }
 
     async getSuggestions(): Promise<{ suggestions: string[] }> {
-        const response = await axios.post(`${API_URL}/suggestions`, {}, {
-            headers: this.getAuthHeader(),
-        });
-        return response.data;
+        const response = await api.post<ApiResponse<{ suggestions: string[] }>>('/ai-chat/suggestions', {});
+        return response.data.data;
     }
 }
 

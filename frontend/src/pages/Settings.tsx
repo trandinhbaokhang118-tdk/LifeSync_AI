@@ -18,6 +18,7 @@ import { showToast } from '../components/ui/toast';
 import { useAuthStore } from '../store/auth.store';
 import { useDarkMode } from '../hooks/useDarkMode';
 import api from '../services/api';
+import type { ApiError } from '../types';
 
 // Validation schemas
 const profileSchema = z.object({
@@ -85,8 +86,8 @@ export function Settings() {
             showToast.success('Đổi mật khẩu thành công');
             passwordForm.reset();
         },
-        onError: (error: any) => {
-            const message = error.response?.data?.message || 'Không thể đổi mật khẩu';
+        onError: (error: { response?: { data?: ApiError } }) => {
+            const message = error.response?.data?.error?.message || 'Không thể đổi mật khẩu';
             showToast.error(message);
         },
     });

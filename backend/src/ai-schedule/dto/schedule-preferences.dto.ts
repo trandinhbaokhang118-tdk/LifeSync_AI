@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsEnum, IsArray, IsNumber, Min, Max, ValidateNested, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, IsNumber, Min, Max, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class LocationDto {

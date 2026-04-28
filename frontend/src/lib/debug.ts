@@ -1,4 +1,5 @@
 // Debug utilities for development
+import { API_URL } from './api-config';
 
 export const debugAuth = () => {
     const accessToken = localStorage.getItem('accessToken');
@@ -24,7 +25,6 @@ export const debugAuth = () => {
 };
 
 export const debugAPI = async () => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const accessToken = localStorage.getItem('accessToken');
 
     console.group('🌐 API Debug Info');
@@ -49,6 +49,11 @@ export const debugAPI = async () => {
 
 // Add to window for easy access in console
 if (typeof window !== 'undefined') {
-    (window as any).debugAuth = debugAuth;
-    (window as any).debugAPI = debugAPI;
+    const debugWindow = window as Window & typeof globalThis & {
+        debugAuth?: typeof debugAuth;
+        debugAPI?: typeof debugAPI;
+    };
+
+    debugWindow.debugAuth = debugAuth;
+    debugWindow.debugAPI = debugAPI;
 }

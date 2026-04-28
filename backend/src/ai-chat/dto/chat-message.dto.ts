@@ -1,5 +1,15 @@
 import { IsString, IsNotEmpty, IsOptional, IsArray } from 'class-validator';
 
+export interface ChatContextMessage {
+    role: string;
+    content: string;
+}
+
+export interface ChatAction {
+    type: 'create_task' | 'update_task' | 'schedule' | 'reminder';
+    data: Record<string, unknown>;
+}
+
 export class ChatMessageDto {
     @IsString()
     @IsNotEmpty()
@@ -7,14 +17,11 @@ export class ChatMessageDto {
 
     @IsArray()
     @IsOptional()
-    context?: Array<{ role: string; content: string }>;
+    context?: ChatContextMessage[];
 }
 
 export class ChatResponseDto {
     message: string;
     suggestions?: string[];
-    actions?: Array<{
-        type: 'create_task' | 'update_task' | 'schedule' | 'reminder';
-        data: any;
-    }>;
+    actions?: ChatAction[];
 }

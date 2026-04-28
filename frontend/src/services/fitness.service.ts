@@ -1,5 +1,13 @@
 import api from './api';
-import type { FitnessProfile, Exercise, DailyActivity, WeeklyStats, ApiResponse } from '../types';
+import type {
+    ApiResponse,
+    DailyActivity,
+    Exercise,
+    ExerciseRoutePayload,
+    FitnessProfile,
+    HealthProvider,
+    WeeklyStats,
+} from '../types';
 
 export const fitnessService = {
     // Profile
@@ -13,13 +21,13 @@ export const fitnessService = {
         return response.data.data;
     },
 
-    async connectHealthDevice(provider: 'apple_health' | 'google_fit'): Promise<FitnessProfile> {
+    async connectHealthDevice(provider: HealthProvider): Promise<FitnessProfile> {
         const response = await api.post<ApiResponse<FitnessProfile>>('/fitness/profile/connect', { provider });
         return response.data.data;
     },
 
     // Exercises
-    async createExercise(data: Partial<Exercise>): Promise<Exercise> {
+    async createExercise(data: Omit<Partial<Exercise>, 'route'> & { route?: ExerciseRoutePayload }): Promise<Exercise> {
         const response = await api.post<ApiResponse<Exercise>>('/fitness/exercises', data);
         return response.data.data;
     },

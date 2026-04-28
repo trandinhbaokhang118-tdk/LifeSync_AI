@@ -17,6 +17,10 @@ dist/
 build/
 frontend/dist/
 backend/dist/
+frontend/android/**/build/
+frontend/android/local.properties
+frontend/android/key.properties
+frontend/android/*.keystore
 
 # Logs
 logs/

@@ -2,30 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User, Loader2, MessageCircle, Mail, Phone } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import axios from 'axios';
+import { aiChatService, type ChatAction } from '../../services/ai-chat.service';
 
 interface Message {
     id: string;
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
-}
-
-interface ChatResponse {
-    data?: {
-        message: string;
-        suggestions?: string[];
-        actions?: Array<{
-            type: string;
-            data: any;
-        }>;
-    };
-    message?: string;
-    suggestions?: string[];
-    actions?: Array<{
-        type: string;
-        data: any;
-    }>;
 }
 
 export default function AIChatbot() {
@@ -43,10 +26,10 @@ export default function AIChatbot() {
             loadInitialSuggestions();
             addWelcomeMessage();
         }
-    }, [isOpen]);
+    }, [isOpen, messages.length]);
 
     useEffect(() => {
-        scrollToBottom();
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
     useEffect(() => {
@@ -55,15 +38,12 @@ export default function AIChatbot() {
         }
     }, [isOpen]);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
     const addWelcomeMessage = () => {
         const welcomeMsg: Message = {
             id: Date.now().toString(),
             role: 'assistant',
-            content: 'Xin chào! 👋 Tôi là trợ lý AI của Time Manager. Tôi có thể giúp bạn quản lý công việc, lên lịch và tối ưu thời gian. Bạn cần tôi giúp gì?',
+            content:
+                'Xin chào! Tôi là trợ lý AI của Time Manager. Tôi có thể giúp bạn quản lý công việc, lên lịch và tối ưu thời gian. Bạn cần tôi giúp gì?',
             timestamp: new Date(),
         };
         setMessages([welcomeMsg]);
@@ -71,13 +51,7 @@ export default function AIChatbot() {
 
     const loadInitialSuggestions = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            const response = await axios.post(
-                'http://localhost:3000/ai-chat/suggestions',
-                {},
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
-            const suggestionsData = response.data.data || response.data;
+            const suggestionsData = await aiChatService.getSuggestions();
             setSuggestions(suggestionsData.suggestions || []);
         } catch (error) {
             console.error('Failed to load suggestions:', error);
@@ -94,31 +68,20 @@ export default function AIChatbot() {
             timestamp: new Date(),
         };
 
-        setMessages(prev => [...prev, userMessage]);
+        setMessages((prev) => [...prev, userMessage]);
         setInput('');
         setIsLoading(true);
 
         try {
-            const token = localStorage.getItem('accessToken'); // Fix: accessToken thay vì token
-            console.log('🤖 Sending message:', text);
-            console.log('🔑 Token:', token ? 'exists' : 'missing');
-
-            const response = await axios.post<ChatResponse>(
-                'http://localhost:3000/ai-chat/message',
+            const chatData = await aiChatService.sendMessage(
                 {
                     message: text,
-                    context: messages.slice(-5).map(m => ({
-                        role: m.role,
-                        content: m.content,
+                    context: messages.slice(-5).map((message) => ({
+                        role: message.role,
+                        content: message.content,
                     })),
                 },
-                { headers: { Authorization: `Bearer ${token}` } }
             );
-
-            console.log('✅ Response:', response.data);
-
-            // Backend trả về { data: { message, suggestions, actions } }
-            const chatData = response.data.data || response.data;
 
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
@@ -127,7 +90,7 @@ export default function AIChatbot() {
                 timestamp: new Date(),
             };
 
-            setMessages(prev => [...prev, assistantMessage]);
+            setMessages((prev) => [...prev, assistantMessage]);
 
             if (chatData.suggestions) {
                 setSuggestions(chatData.suggestions);
@@ -136,26 +99,22 @@ export default function AIChatbot() {
             if (chatData.actions && chatData.actions.length > 0) {
                 handleActions(chatData.actions);
             }
-        } catch (error: any) {
-            console.error('❌ Chat error:', error);
-            console.error('❌ Error response:', error.response?.data);
-            console.error('❌ Error status:', error.response?.status);
-
+        } catch {
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
                 content: 'Xin lỗi, tôi gặp sự cố. Vui lòng thử lại sau.',
                 timestamp: new Date(),
             };
-            setMessages(prev => [...prev, errorMessage]);
+            setMessages((prev) => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleActions = (actions: any[]) => {
-        actions.forEach(action => {
-            console.log('AI Action:', action);
+    const handleActions = (actions: ChatAction[]) => {
+        actions.forEach(() => {
+            // Reserved for future UI-side automation hooks.
         });
     };
 
@@ -192,24 +151,26 @@ export default function AIChatbot() {
             icon: Mail,
             label: 'Email',
             color: 'from-red-500 to-pink-500',
-            action: () => window.location.href = 'mailto:support@timemanager.com',
+            action: () => {
+                window.location.href = 'mailto:support@timemanager.com';
+            },
         },
         {
             icon: Phone,
             label: 'Hotline',
             color: 'from-green-500 to-emerald-500',
-            action: () => window.location.href = 'tel:+84123456789',
+            action: () => {
+                window.location.href = 'tel:+84123456789';
+            },
         },
     ];
 
     return (
         <>
-            {/* Floating Contact Buttons */}
             {!isOpen && (
                 <div className="fixed bottom-6 right-6 z-50">
-                    {/* Contact Menu */}
                     {showContactMenu && (
-                        <div className="absolute bottom-20 right-0 flex flex-col gap-3 mb-2">
+                        <div className="absolute bottom-20 right-0 mb-2 flex flex-col gap-3">
                             {contactMethods.map((method, index) => {
                                 const IconComponent = method.icon;
                                 return (
@@ -222,7 +183,7 @@ export default function AIChatbot() {
                                         }}
                                     >
                                         <span
-                                            className="text-sm font-medium px-3 py-1.5 rounded-full whitespace-nowrap shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium opacity-0 shadow-lg transition-opacity group-hover:opacity-100"
                                             style={{
                                                 background: 'var(--surface-2)',
                                                 color: 'var(--text)',
@@ -232,9 +193,9 @@ export default function AIChatbot() {
                                             {method.label}
                                         </span>
                                         <div
-                                            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg bg-gradient-to-br ${method.color} hover:shadow-2xl transition-shadow`}
+                                            className={`flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${method.color} shadow-lg transition-shadow hover:shadow-2xl`}
                                         >
-                                            <IconComponent className="w-6 h-6 text-white" />
+                                            <IconComponent className="h-6 w-6 text-white" />
                                         </div>
                                     </button>
                                 );
@@ -242,10 +203,9 @@ export default function AIChatbot() {
                         </div>
                     )}
 
-                    {/* Main Button */}
                     <button
                         onClick={() => setShowContactMenu(!showContactMenu)}
-                        className="relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 group shadow-2xl hover:shadow-3xl"
+                        className="group relative flex h-16 w-16 items-center justify-center rounded-full shadow-2xl transition-all duration-300 hover:shadow-3xl"
                         style={{
                             background: 'var(--primary-gradient)',
                             boxShadow: '0 8px 32px rgba(18, 194, 255, 0.4)',
@@ -253,16 +213,16 @@ export default function AIChatbot() {
                     >
                         <div className="relative z-10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-90">
                             {showContactMenu ? (
-                                <X className="w-7 h-7 text-white" />
+                                <X className="h-7 w-7 text-white" />
                             ) : (
-                                <MessageCircle className="w-7 h-7 text-white" />
+                                <MessageCircle className="h-7 w-7 text-white" />
                             )}
                         </div>
                         {!showContactMenu && (
                             <>
-                                <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" />
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-pulse">
-                                    <span className="absolute inset-0 rounded-full bg-red-500 animate-ping" />
+                                <div className="absolute inset-0 animate-ping rounded-full bg-white/20" />
+                                <div className="absolute -right-1 -top-1 h-4 w-4 animate-pulse rounded-full border-2 border-white bg-red-500">
+                                    <span className="absolute inset-0 animate-ping rounded-full bg-red-500" />
                                 </div>
                             </>
                         )}
@@ -270,10 +230,9 @@ export default function AIChatbot() {
                 </div>
             )}
 
-            {/* Chat Window */}
             {isOpen && (
                 <div
-                    className="fixed bottom-6 right-6 z-50 flex flex-col rounded-3xl overflow-hidden"
+                    className="fixed bottom-6 right-6 z-50 flex flex-col overflow-hidden rounded-3xl"
                     style={{
                         width: '400px',
                         height: '600px',
@@ -285,82 +244,84 @@ export default function AIChatbot() {
                         animation: 'slideUp 0.3s ease-out',
                     }}
                 >
-                    {/* Header */}
                     <div
-                        className="flex items-center justify-between p-4 relative overflow-hidden"
+                        className="relative flex items-center justify-between overflow-hidden p-4"
                         style={{
                             background: 'var(--primary-gradient)',
                             color: 'white',
                         }}
                     >
                         <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-                        <div className="flex items-center gap-3 relative z-10">
+                        <div className="relative z-10 flex items-center gap-3">
                             <div className="relative">
-                                <div className="w-11 h-11 rounded-full bg-white/30 flex items-center justify-center backdrop-blur-sm border-2 border-white/50">
-                                    <Bot className="w-6 h-6" />
+                                <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/50 bg-white/30 backdrop-blur-sm">
+                                    <Bot className="h-6 w-6" />
                                 </div>
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-white">
-                                    <span className="absolute inset-0 rounded-full bg-green-400 animate-ping" />
+                                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-400">
+                                    <span className="absolute inset-0 animate-ping rounded-full bg-green-400" />
                                 </div>
                             </div>
                             <div>
-                                <h3 className="font-semibold text-base">AI Assistant</h3>
-                                <p className="text-xs opacity-90 flex items-center gap-1">
-                                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                                <h3 className="text-base font-semibold">AI Assistant</h3>
+                                <p className="flex items-center gap-1 text-xs opacity-90">
+                                    <span className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
                                     Đang hoạt động
                                 </p>
                             </div>
                         </div>
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="w-9 h-9 rounded-full hover:bg-white/20 flex items-center justify-center transition-all hover:rotate-90 relative z-10"
+                            className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-all hover:rotate-90 hover:bg-white/20"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="h-5 w-5" />
                         </button>
                     </div>
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 space-y-4 overflow-y-auto p-4">
                         {messages.map((message) => (
                             <div
                                 key={message.id}
                                 className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
                             >
                                 <div
-                                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-md"
+                                    className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full shadow-md"
                                     style={{
-                                        background: message.role === 'user'
-                                            ? 'var(--primary-gradient)'
-                                            : 'var(--surface-3)',
+                                        background:
+                                            message.role === 'user'
+                                                ? 'var(--primary-gradient)'
+                                                : 'var(--surface-3)',
                                     }}
                                 >
                                     {message.role === 'user' ? (
-                                        <User className="w-5 h-5 text-white" />
+                                        <User className="h-5 w-5 text-white" />
                                     ) : (
-                                        <Bot className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+                                        <Bot className="h-5 w-5" style={{ color: 'var(--primary)' }} />
                                     )}
                                 </div>
                                 <div
-                                    className={`flex-1 rounded-2xl p-3 shadow-sm ${message.role === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'
-                                        }`}
+                                    className={`flex-1 rounded-2xl p-3 shadow-sm ${
+                                        message.role === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'
+                                    }`}
                                     style={{
-                                        background: message.role === 'user'
-                                            ? 'var(--primary)'
-                                            : 'var(--surface-3)',
+                                        background:
+                                            message.role === 'user' ? 'var(--primary)' : 'var(--surface-3)',
                                         color: message.role === 'user' ? 'white' : 'var(--text)',
                                     }}
                                 >
-                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                                        {message.content}
+                                    </p>
                                     <span
-                                        className="text-xs mt-1 block"
+                                        className="mt-1 block text-xs"
                                         style={{
                                             opacity: 0.7,
-                                            color: message.role === 'user' ? 'white' : 'var(--text-3)',
+                                            color:
+                                                message.role === 'user' ? 'white' : 'var(--text-3)',
                                         }}
                                     >
                                         {message.timestamp.toLocaleTimeString('vi-VN', {
                                             hour: '2-digit',
-                                            minute: '2-digit'
+                                            minute: '2-digit',
                                         })}
                                     </span>
                                 </div>
@@ -370,16 +331,19 @@ export default function AIChatbot() {
                         {isLoading && (
                             <div className="flex gap-3">
                                 <div
-                                    className="w-9 h-9 rounded-full flex items-center justify-center shadow-md"
+                                    className="flex h-9 w-9 items-center justify-center rounded-full shadow-md"
                                     style={{ background: 'var(--surface-3)' }}
                                 >
-                                    <Bot className="w-5 h-5" style={{ color: 'var(--primary)' }} />
+                                    <Bot className="h-5 w-5" style={{ color: 'var(--primary)' }} />
                                 </div>
                                 <div
                                     className="rounded-2xl rounded-tl-sm p-3 shadow-sm"
                                     style={{ background: 'var(--surface-3)' }}
                                 >
-                                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--primary)' }} />
+                                    <Loader2
+                                        className="h-5 w-5 animate-spin"
+                                        style={{ color: 'var(--primary)' }}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -387,7 +351,6 @@ export default function AIChatbot() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Suggestions */}
                     {suggestions.length > 0 && (
                         <div className="px-4 pb-2">
                             <div className="flex flex-wrap gap-2">
@@ -395,7 +358,7 @@ export default function AIChatbot() {
                                     <button
                                         key={index}
                                         onClick={() => handleSuggestionClick(suggestion)}
-                                        className="text-xs px-3 py-1.5 rounded-full transition-all hover:scale-105 shadow-sm"
+                                        className="rounded-full px-3 py-1.5 text-xs shadow-sm transition-all hover:scale-105"
                                         style={{
                                             background: 'var(--surface-3)',
                                             border: '1px solid var(--border)',
@@ -409,8 +372,11 @@ export default function AIChatbot() {
                         </div>
                     )}
 
-                    {/* Input */}
-                    <form onSubmit={handleSubmit} className="p-4 border-t" style={{ borderColor: 'var(--border)' }}>
+                    <form
+                        onSubmit={handleSubmit}
+                        className="border-t p-4"
+                        style={{ borderColor: 'var(--border)' }}
+                    >
                         <div className="flex gap-2">
                             <Input
                                 ref={inputRef}
@@ -425,14 +391,16 @@ export default function AIChatbot() {
                                 disabled={!input.trim() || isLoading}
                                 className="px-4"
                                 style={{
-                                    background: input.trim() ? 'var(--primary-gradient)' : 'var(--surface-3)',
+                                    background: input.trim()
+                                        ? 'var(--primary-gradient)'
+                                        : 'var(--surface-3)',
                                     color: 'white',
                                 }}
                             >
                                 {isLoading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <Loader2 className="h-5 w-5 animate-spin" />
                                 ) : (
-                                    <Send className="w-5 h-5" />
+                                    <Send className="h-5 w-5" />
                                 )}
                             </Button>
                         </div>

@@ -1,9 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { TasksService } from '../tasks/tasks.service';
-import { ChatMessageDto, ChatResponseDto } from './dto/chat-message.dto';
-import axios from 'axios';
+import { ChatAction, ChatContextMessage, ChatMessageDto, ChatResponseDto } from './dto/chat-message.dto';
+import axios, { AxiosError } from 'axios';
+
+interface TaskPromptItem {
+    title: string;
+    status: string;
+    priority: string;
+}
 
 @Injectable()
 export class AIChatService {
@@ -13,7 +18,6 @@ export class AIChatService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly tasksService: TasksService,
         private readonly configService: ConfigService,
     ) {
         this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY') || '';
@@ -52,7 +56,7 @@ export class AIChatService {
         }
     }
 
-    private buildSystemPrompt(tasks: any[]): string {
+    private buildSystemPrompt(tasks: TaskPromptItem[]): string {
         const tasksSummary = tasks.map(t =>
             `- ${t.title} (${t.status}, priority: ${t.priority})`
         ).join('\n');
@@ -77,7 +81,11 @@ Quy tắc:
 - Luôn đề xuất 2-3 actions tiếp theo khi liên quan đến task management`;
     }
 
-    private async callOpenAI(systemPrompt: string, userMessage: string, context?: any[]): Promise<string> {
+    private async callOpenAI(
+        systemPrompt: string,
+        userMessage: string,
+        context?: ChatContextMessage[],
+    ): Promise<string> {
         if (!this.openaiApiKey) {
             return this.getFallbackResponse(userMessage);
         }
@@ -97,7 +105,7 @@ Quy tắc:
 
             const model = isOpenRouter ? 'openai/gpt-3.5-turbo' : this.openaiModel;
 
-            const headers: any = {
+            const headers: Record<string, string> = {
                 'Authorization': `Bearer ${this.openaiApiKey}`,
                 'Content-Type': 'application/json',
             };
@@ -123,10 +131,10 @@ Quy tắc:
 
             return response.data.choices[0].message.content;
         } catch (error) {
-            this.logger.error('OpenAI API error:', error);
-            if (error.response) {
-                this.logger.error('Response data:', error.response.data);
-                this.logger.error('Response status:', error.response.status);
+            const axiosError = error as AxiosError;
+            this.logger.error(`OpenAI API error: ${axiosError.message}`);
+            if (axiosError.response) {
+                this.logger.error(`Response status: ${axiosError.response.status}`);
             }
             return this.getFallbackResponse(userMessage);
         }
@@ -148,8 +156,8 @@ Quy tắc:
         return 'Xin chào! Tôi là trợ lý AI của Time Manager. Tôi có thể giúp bạn:\n- Tạo và quản lý tasks\n- Lên lịch công việc\n- Phân tích năng suất\n- Đề xuất tối ưu thời gian\n\nBạn cần tôi giúp gì?';
     }
 
-    private extractActions(response: string): any[] {
-        const actions = [];
+    private extractActions(response: string): ChatAction[] {
+        const actions: ChatAction[] = [];
 
         // Extract CREATE_TASK action
         const createMatch = response.match(/\[ACTION:CREATE_TASK\]\s*({[^}]+})/);
@@ -157,7 +165,7 @@ Quy tắc:
             try {
                 const data = JSON.parse(createMatch[1]);
                 actions.push({ type: 'create_task', data });
-            } catch (e) {
+            } catch {
                 this.logger.warn('Failed to parse CREATE_TASK action');
             }
         }
@@ -168,7 +176,7 @@ Quy tắc:
             try {
                 const data = JSON.parse(updateMatch[1]);
                 actions.push({ type: 'update_task', data });
-            } catch (e) {
+            } catch {
                 this.logger.warn('Failed to parse UPDATE_TASK action');
             }
         }

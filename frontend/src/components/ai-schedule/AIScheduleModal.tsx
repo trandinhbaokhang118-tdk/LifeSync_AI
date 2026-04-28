@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select';
 import { showToast } from '../ui/toast';
 import { tasksService } from '../../services/tasks.service';
+import type { Task } from '../../types';
 
 interface AIScheduleModalProps {
     open: boolean;
@@ -23,6 +24,15 @@ interface SchedulePreferences {
     breakDuration: number;
 }
 
+interface ScheduleSuggestion {
+    taskId: string;
+    title: string;
+    suggestedStart: string;
+    suggestedEnd: string;
+    reason: string;
+    confidence: number;
+}
+
 export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
     const [step, setStep] = useState<'form' | 'analyzing' | 'results'>('form');
     const [preferences, setPreferences] = useState<SchedulePreferences>({
@@ -35,7 +45,7 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
         breakDuration: 15,
     });
 
-    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [suggestions, setSuggestions] = useState<ScheduleSuggestion[]>([]);
 
     const { data: tasks } = useQuery({
         queryKey: ['tasks', { status: 'TODO', limit: 50 }],
@@ -79,7 +89,7 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
             }
             showToast.success('Đã áp dụng', 'Lịch trình đã được cập nhật!');
             onOpenChange(false);
-        } catch (error) {
+        } catch {
             showToast.error('Lỗi', 'Không thể áp dụng lịch trình');
         }
     };
@@ -169,7 +179,12 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
                                 <label className="label">Thời gian tập trung tốt nhất</label>
                                 <Select
                                     value={preferences.bestFocusTime}
-                                    onValueChange={(v: any) => setPreferences({ ...preferences, bestFocusTime: v })}
+                                    onValueChange={(value) =>
+                                        setPreferences({
+                                            ...preferences,
+                                            bestFocusTime: value as SchedulePreferences['bestFocusTime'],
+                                        })
+                                    }
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
@@ -283,8 +298,8 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
 }
 
 // Simple scheduling algorithm
-function scheduleTasksSimple(tasks: any[], preferences: SchedulePreferences) {
-    const suggestions = [];
+function scheduleTasksSimple(tasks: Task[], preferences: SchedulePreferences): ScheduleSuggestion[] {
+    const suggestions: ScheduleSuggestion[] = [];
     const now = new Date();
     let currentDate = new Date(now);
     currentDate.setHours(parseInt(preferences.workStartTime.split(':')[0]), parseInt(preferences.workStartTime.split(':')[1]), 0, 0);

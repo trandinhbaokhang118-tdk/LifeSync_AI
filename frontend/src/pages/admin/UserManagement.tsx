@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { UserPlus, Edit, Trash2, Shield, Users, Crown } from 'lucide-react';
 import '../../admin-theme.css';
 import { showToast } from '../../components/ui/toast';
@@ -20,14 +20,14 @@ export function UserManagement() {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        fetchUsers();
+        void fetchUsers();
     }, []);
 
     const fetchUsers = async () => {
         try {
             const response = await api.get('/admin/users');
             setUsers(response.data.data);
-        } catch (error) {
+        } catch {
             showToast.error('Lỗi', 'Không thể tải danh sách người dùng');
         } finally {
             setLoading(false);
@@ -39,9 +39,9 @@ export function UserManagement() {
 
         try {
             await api.delete(`/admin/users/${userId}`);
-            setUsers(users.filter((u) => u.id !== userId));
+            setUsers((currentUsers) => currentUsers.filter((u) => u.id !== userId));
             showToast.success('Thành công', 'Đã xóa người dùng');
-        } catch (error) {
+        } catch {
             showToast.error('Lỗi', 'Không thể xóa người dùng');
         }
     };
@@ -51,9 +51,11 @@ export function UserManagement() {
 
         try {
             await api.patch(`/admin/users/${userId}/role`, { role: newRole });
-            setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole as 'USER' | 'ADMIN' } : u)));
+            setUsers((currentUsers) =>
+                currentUsers.map((u) => (u.id === userId ? { ...u, role: newRole as 'USER' | 'ADMIN' } : u)),
+            );
             showToast.success('Thành công', `Đã cập nhật quyền thành ${newRole}`);
-        } catch (error) {
+        } catch {
             showToast.error('Lỗi', 'Không thể cập nhật quyền');
         }
     };
@@ -61,7 +63,7 @@ export function UserManagement() {
     const filteredUsers = users.filter(
         (user) =>
             user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchQuery.toLowerCase())
+            user.email.toLowerCase().includes(searchQuery.toLowerCase()),
     );
 
     if (loading) {
@@ -77,7 +79,6 @@ export function UserManagement() {
 
     return (
         <div className="admin-theme admin-container p-6 md:p-8">
-            {/* Header */}
             <div className="flex items-center justify-between mb-8">
                 <div>
                     <h1 className="admin-title mb-2">Quản lý người dùng</h1>
@@ -89,7 +90,6 @@ export function UserManagement() {
                 </button>
             </div>
 
-            {/* Search */}
             <div className="admin-glass-card p-4 mb-6">
                 <input
                     className="admin-input"
@@ -99,7 +99,6 @@ export function UserManagement() {
                 />
             </div>
 
-            {/* Users Table */}
             <div className="admin-glass-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="admin-table">
@@ -132,9 +131,7 @@ export function UserManagement() {
                                             {user.role === 'ADMIN' ? 'Admin' : 'User'}
                                         </span>
                                     </td>
-                                    <td>
-                                        {new Date(user.createdAt).toLocaleDateString('vi-VN')}
-                                    </td>
+                                    <td>{new Date(user.createdAt).toLocaleDateString('vi-VN')}</td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                                             <button
@@ -143,9 +140,7 @@ export function UserManagement() {
                                             >
                                                 <Shield className="w-4 h-4" />
                                             </button>
-                                            <button
-                                                className="admin-btn admin-btn-secondary"
-                                            >
+                                            <button className="admin-btn admin-btn-secondary">
                                                 <Edit className="w-4 h-4" />
                                             </button>
                                             <button

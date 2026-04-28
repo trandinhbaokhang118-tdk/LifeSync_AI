@@ -1,9 +1,10 @@
 import { Controller, Post, Body, UseGuards, HttpCode, HttpStatus, Get, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto, SendOtpDto, VerifyOtpDto } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { Request, Response } from 'express';
+import { CurrentUser, CurrentUserData } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -51,9 +52,8 @@ export class AuthController {
     @ApiBearerAuth()
     @ApiOperation({ summary: 'Get current user' })
     @ApiResponse({ status: 200, description: 'User retrieved successfully' })
-    async getCurrentUser(@Req() req: Request) {
-        const userId = (req as any).user.userId;
-        return this.authService.getCurrentUser(userId);
+    async getCurrentUser(@CurrentUser() user: CurrentUserData) {
+        return this.authService.getCurrentUser(user.id);
     }
 
     @Post('send-otp')
@@ -86,21 +86,22 @@ export class AuthController {
         try {
             const code = req.query.code as string;
             const error = req.query.error as string;
+            const frontendUrl = process.env.FRONTEND_URL;
 
-            if (error) {
-                return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=google_auth_failed`);
-            }
-
-            if (!code) {
-                return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=google_auth_failed`);
+            if (error || !code) {
+                return res.redirect(`${frontendUrl}/auth/callback?error=google_auth_failed`);
             }
 
             const result = await this.authService.googleLogin(code);
-            // Redirect to frontend with token
-            res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${result.accessToken}`);
+            const query = new URLSearchParams({
+                token: result.accessToken,
+                refreshToken: result.refreshToken,
+            });
+
+            return res.redirect(`${frontendUrl}/auth/callback?${query.toString()}`);
         } catch (error) {
             console.error('Google OAuth error:', error);
-            res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=google_auth_failed`);
+            return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=google_auth_failed`);
         }
     }
 
@@ -117,21 +118,22 @@ export class AuthController {
         try {
             const code = req.query.code as string;
             const error = req.query.error as string;
+            const frontendUrl = process.env.FRONTEND_URL;
 
-            if (error) {
-                return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=facebook_auth_failed`);
-            }
-
-            if (!code) {
-                return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=facebook_auth_failed`);
+            if (error || !code) {
+                return res.redirect(`${frontendUrl}/auth/callback?error=facebook_auth_failed`);
             }
 
             const result = await this.authService.facebookLogin(code);
-            // Redirect to frontend with token
-            res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${result.accessToken}`);
+            const query = new URLSearchParams({
+                token: result.accessToken,
+                refreshToken: result.refreshToken,
+            });
+
+            return res.redirect(`${frontendUrl}/auth/callback?${query.toString()}`);
         } catch (error) {
             console.error('Facebook OAuth error:', error);
-            res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=facebook_auth_failed`);
+            return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?error=facebook_auth_failed`);
         }
     }
 }

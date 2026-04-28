@@ -30,8 +30,8 @@ export class GpsService {
     const exercise = await this.prisma.exercise.create({
       data: {
         userId,
-        name: dto.activityType || 'Outdoor Activity',
-        category: dto.category || 'cardio',
+        name: this.buildExerciseTitle(dto.activityType),
+        category: dto.category || dto.activityType || 'cardio',
         subCategory: dto.activityType,
         duration: 0,
         distance: 0,
@@ -165,7 +165,7 @@ export class GpsService {
     const caloriesBurned = Math.round(totalDistance * 60);
 
     // Update exercise record
-    const updatedExercise = await this.prisma.exercise.update({
+    await this.prisma.exercise.update({
       where: { id: sessionId },
       data: {
         duration: durationMinutes,
@@ -213,25 +213,41 @@ export class GpsService {
       take: limit,
     });
 
-    return exercises.map((e) => ({
-      id: e.id,
-      name: e.name,
-      category: e.category,
-      duration: e.duration,
-      distance: e.distance,
-      caloriesBurned: e.caloriesBurned,
-      performedAt: e.performedAt,
-      route: e.route,
-    }));
+    return exercises
+      .filter((exercise) => exercise.route)
+      .map((exercise) => ({
+        id: exercise.route!.id,
+        exerciseId: exercise.id,
+        name: exercise.name,
+        category: exercise.category,
+        distance: exercise.distance,
+        caloriesBurned: exercise.caloriesBurned,
+        performedAt: exercise.performedAt,
+        polyline: exercise.route!.polyline,
+        startLat: exercise.route!.startLat,
+        startLng: exercise.route!.startLng,
+        endLat: exercise.route!.endLat,
+        endLng: exercise.route!.endLng,
+        totalDistance: exercise.route!.totalDistance,
+        elevationGain: exercise.route!.elevationGain,
+        duration: exercise.route!.duration ?? exercise.duration * 60,
+        path: exercise.route!.polyline ? this.decodePolyline(exercise.route!.polyline) : [],
+      }));
   }
 
   async getRoute(userId: string, routeId: string) {
     const exercise = await this.prisma.exercise.findFirst({
-      where: { id: routeId, userId },
+      where: {
+        userId,
+        OR: [
+          { id: routeId },
+          { route: { is: { id: routeId } } },
+        ],
+      },
       include: { route: true },
     });
 
-    if (!exercise) {
+    if (!exercise || !exercise.route) {
       throw new NotFoundException('Route not found');
     }
 
@@ -242,18 +258,23 @@ export class GpsService {
     }
 
     return {
-      id: exercise.id,
+      id: exercise.route.id,
+      exerciseId: exercise.id,
       name: exercise.name,
       category: exercise.category,
-      duration: exercise.duration,
       distance: exercise.distance,
       caloriesBurned: exercise.caloriesBurned,
-      avgPace: exercise.avgPace,
       performedAt: exercise.performedAt,
-      route: {
-        ...exercise.route,
-        path,
-      },
+      polyline: exercise.route.polyline,
+      startLat: exercise.route.startLat,
+      startLng: exercise.route.startLng,
+      endLat: exercise.route.endLat,
+      endLng: exercise.route.endLng,
+      totalDistance: exercise.route.totalDistance,
+      elevationGain: exercise.route.elevationGain,
+      duration: exercise.route.duration ?? exercise.duration * 60,
+      path,
+      avgPace: exercise.avgPace,
     };
   }
 
@@ -267,6 +288,16 @@ export class GpsService {
     }
 
     return subscription.tier === 'PLUS';
+  }
+
+  private buildExerciseTitle(activityType?: string): string {
+    if (!activityType) {
+      return 'Outdoor Activity';
+    }
+
+    const normalized = activityType.trim().toLowerCase();
+    const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    return `${label} Track Lab Session`;
   }
 
   // Haversine formula for distance calculation (km)

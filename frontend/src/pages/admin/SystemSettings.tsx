@@ -1,173 +1,100 @@
-import { useState } from 'react';
-import { Save, Database, Globe, Settings } from 'lucide-react';
-import { Button, Input } from '../../components/ui';
-import { showToast } from '../../components/ui/toast';
+import { CreditCard, Database, Globe, Shield } from 'lucide-react';
 import '../../admin-theme.css';
+import { API_URL } from '../../lib/api-config';
+
+const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
 
 export function SystemSettings() {
-    const [settings, setSettings] = useState({
-        siteName: 'TimeManager',
-        siteUrl: 'http://localhost:5173',
-        adminEmail: 'admin@timemanager.com',
-        maxTasksPerUser: 1000,
-        sessionTimeout: 30,
-        enableRegistration: true,
-        enableEmailNotifications: true,
-        enablePushNotifications: false,
-        maintenanceMode: false,
-    });
+    const frontendOrigin = window.location.origin;
+    const apiBaseUrl = API_URL;
 
-    const handleSave = () => {
-        showToast.success('Thành công', 'Đã lưu cài đặt hệ thống');
-    };
+    const runtimeCards = [
+        {
+            title: 'Frontend origin',
+            value: frontendOrigin,
+            description: 'Current host serving the admin panel.',
+            icon: Globe,
+            iconClassName: 'from-cyan-500 to-blue-500',
+        },
+        {
+            title: 'API base URL',
+            value: apiBaseUrl,
+            description: 'Resolved from web/native environment settings for the current platform.',
+            icon: Database,
+            iconClassName: 'from-violet-500 to-fuchsia-600',
+        },
+        {
+            title: 'Billing',
+            value: paymentsEnabled ? 'Enabled' : 'Disabled',
+            description: paymentsEnabled
+                ? 'Checkout is exposed to the UI.'
+                : 'Safe default for handoff until a real gateway is integrated.',
+            icon: CreditCard,
+            iconClassName: 'from-amber-500 to-orange-600',
+        },
+        {
+            title: 'Admin mode',
+            value: 'Read-only runbook',
+            description: 'Production changes belong in .env files and hosting configuration.',
+            icon: Shield,
+            iconClassName: 'from-emerald-500 to-green-600',
+        },
+    ];
 
     return (
         <div className="admin-theme admin-container p-6 md:p-8">
-            {/* Header */}
             <div className="mb-8">
-                <h1 className="admin-title mb-2">
-                    Cài đặt hệ thống
-                </h1>
-                <p className="admin-title-sub">Quản lý cấu hình và tùy chọn hệ thống</p>
+                <h1 className="admin-title mb-2">Deployment Settings</h1>
+                <p className="admin-title-sub">Operational reference for the current build.</p>
             </div>
 
-            {/* General Settings */}
-            <div className="admin-glass-card p-6 mb-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg">
-                        <Globe className="w-5 h-5 text-white" />
-                    </div>
-                    <h2 className="text-lg font-bold">Cài đặt chung</h2>
-                </div>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Tên website</label>
-                        <Input
-                            className="admin-input"
-                            value={settings.siteName}
-                            onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">URL website</label>
-                        <Input
-                            className="admin-input"
-                            value={settings.siteUrl}
-                            onChange={(e) => setSettings({ ...settings, siteUrl: e.target.value })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Email admin</label>
-                        <Input
-                            className="admin-input"
-                            type="email"
-                            value={settings.adminEmail}
-                            onChange={(e) => setSettings({ ...settings, adminEmail: e.target.value })}
-                        />
-                    </div>
-                </div>
+            <div className="mb-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">Read-only</p>
+                <h2 className="mt-2 text-2xl font-bold">Configuration changes are applied outside this page.</h2>
+                <p className="mt-3 max-w-3xl text-sm opacity-80">
+                    Update backend `.env`, frontend `.env`, or your Render environment variables, then redeploy. The
+                    admin UI intentionally avoids fake save actions for production settings.
+                </p>
             </div>
 
-            {/* System Limits */}
-            <div className="admin-glass-card p-6 mb-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-                        <Database className="w-5 h-5 text-white" />
+            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {runtimeCards.map((card) => (
+                    <div key={card.title} className="admin-glass-card p-6">
+                        <div
+                            className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${card.iconClassName} shadow-lg`}
+                        >
+                            <card.icon className="h-5 w-5 text-white" />
+                        </div>
+                        <p className="text-sm opacity-70">{card.title}</p>
+                        <p className="mt-2 break-all text-lg font-semibold">{card.value}</p>
+                        <p className="mt-2 text-sm opacity-75">{card.description}</p>
                     </div>
-                    <h2 className="text-lg font-bold">Giới hạn hệ thống</h2>
-                </div>
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Số công việc tối đa mỗi người dùng</label>
-                        <Input
-                            className="admin-input"
-                            type="number"
-                            value={settings.maxTasksPerUser}
-                            onChange={(e) => setSettings({ ...settings, maxTasksPerUser: parseInt(e.target.value) })}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Thời gian timeout phiên (phút)</label>
-                        <Input
-                            className="admin-input"
-                            type="number"
-                            value={settings.sessionTimeout}
-                            onChange={(e) => setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) })}
-                        />
-                    </div>
-                </div>
+                ))}
             </div>
 
-            {/* Features */}
-            <div className="admin-glass-card p-6 mb-6">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
-                        <Settings className="w-5 h-5 text-white" />
-                    </div>
-                    <h2 className="text-lg font-bold">Tính năng</h2>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="admin-glass-card p-6">
+                    <h2 className="mb-4 text-lg font-bold">Backend environment checklist</h2>
+                    <ul className="space-y-3 text-sm opacity-85">
+                        <li>`DATABASE_URL` points to production MySQL.</li>
+                        <li>`JWT_SECRET` is rotated from the local example value.</li>
+                        <li>`FRONTEND_URL` matches the public web domain.</li>
+                        <li>`PAYMENTS_ENABLED` stays `false` until gateway integration is complete.</li>
+                        <li>OAuth callback URLs match the deployed backend domain.</li>
+                    </ul>
                 </div>
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 rounded-xl transition-all duration-200">
-                        <div>
-                            <p className="font-medium">Cho phép đăng ký</p>
-                            <p className="text-sm opacity-70">Người dùng mới có thể tự đăng ký tài khoản</p>
-                        </div>
-                        <button
-                            role="switch"
-                            aria-checked={settings.enableRegistration}
-                            className={`admin-toggle ${settings.enableRegistration ? 'active' : ''}`}
-                            onClick={() => setSettings({ ...settings, enableRegistration: !settings.enableRegistration })}
-                        />
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-xl transition-all duration-200">
-                        <div>
-                            <p className="font-medium">Thông báo email</p>
-                            <p className="text-sm opacity-70">Gửi thông báo qua email</p>
-                        </div>
-                        <button
-                            role="switch"
-                            aria-checked={settings.enableEmailNotifications}
-                            className={`admin-toggle ${settings.enableEmailNotifications ? 'active' : ''}`}
-                            onClick={() => setSettings({ ...settings, enableEmailNotifications: !settings.enableEmailNotifications })}
-                        />
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-xl transition-all duration-200">
-                        <div>
-                            <p className="font-medium">Push notifications</p>
-                            <p className="text-sm opacity-70">Thông báo đẩy trên trình duyệt</p>
-                        </div>
-                        <button
-                            role="switch"
-                            aria-checked={settings.enablePushNotifications}
-                            className={`admin-toggle ${settings.enablePushNotifications ? 'active' : ''}`}
-                            onClick={() => setSettings({ ...settings, enablePushNotifications: !settings.enablePushNotifications })}
-                        />
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-xl transition-all duration-200 border border-red-500/20">
-                        <div>
-                            <p className="font-medium" style={{ color: 'var(--admin-neon-red)' }}>Chế độ bảo trì</p>
-                            <p className="text-sm opacity-70">Tạm khóa hệ thống cho người dùng</p>
-                        </div>
-                        <button
-                            role="switch"
-                            aria-checked={settings.maintenanceMode}
-                            className={`admin-toggle ${settings.maintenanceMode ? 'active' : ''}`}
-                            onClick={() => setSettings({ ...settings, maintenanceMode: !settings.maintenanceMode })}
-                        />
-                    </div>
-                </div>
-            </div>
 
-            {/* Save Button */}
-            <div className="flex justify-end">
-                <Button
-                    size="lg"
-                    onClick={handleSave}
-                    className="admin-btn admin-btn-primary"
-                >
-                    <Save className="w-5 h-5 mr-2" />
-                    Lưu cài đặt
-                </Button>
+                <div className="admin-glass-card p-6">
+                    <h2 className="mb-4 text-lg font-bold">Frontend release checklist</h2>
+                    <ul className="space-y-3 text-sm opacity-85">
+                        <li>`VITE_WEB_API_URL` or `VITE_API_URL` points to the web backend URL.</li>
+                        <li>`VITE_ANDROID_API_URL` or `VITE_NATIVE_API_URL` is set for Android devices/emulators.</li>
+                        <li>`VITE_PAYMENTS_ENABLED` matches the backend billing state.</li>
+                        <li>Run `npm run build` before shipping the web app.</li>
+                        <li>Run `npx cap sync android` before creating an Android release.</li>
+                        <li>Provide signing files only on trusted release machines.</li>
+                    </ul>
+                </div>
             </div>
         </div>
     );

@@ -38,7 +38,7 @@ type LabRange = 7 | 30;
 type LabTab = 'recovery' | 'stress' | 'hydration';
 type TimelineKind = 'sleep' | 'deep-work' | 'meeting' | 'move' | 'workout' | 'recovery';
 type TrackingPhase = 'idle' | 'starting' | 'recording' | 'finishing' | 'finished';
-type TrackingMode = 'walking' | 'running' | 'cycling';
+type TrackingMode = 'walking' | 'running' | 'cycling' | 'hiking';
 
 interface TimelineBlock {
     id: string;
@@ -106,16 +106,24 @@ interface WorkoutSummary {
     path: LiveTrackPoint[];
 }
 
+interface SavedWorkoutReflection extends WorkoutSummary {
+    rating?: number;
+    notes?: string;
+    photos?: TrackReflectionPhoto[];
+    savedAt?: string;
+}
+
 export function GpsTracking() {
     const queryClient = useQueryClient();
     const location = useLocation();
-    const navigationState = location.state as { autoStart?: boolean } | null;
+    const navigationState = location.state as { autoStart?: boolean; preferredMode?: TrackingMode } | null;
     const autoStartRequested = Boolean(navigationState?.autoStart);
+    const preferredMode = navigationState?.preferredMode;
 
     const [labTab, setLabTab] = useState<LabTab>('recovery');
     const [labRange, setLabRange] = useState<LabRange>(7);
     const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
-    const [trackingMode, setTrackingMode] = useState<TrackingMode>('walking');
+    const [trackingMode, setTrackingMode] = useState<TrackingMode>(preferredMode ?? 'walking');
     const [trackingPhase, setTrackingPhase] = useState<TrackingPhase>('idle');
     const [currentSession, setCurrentSession] = useState<TrackingSession | null>(null);
     const [livePoints, setLivePoints] = useState<LiveTrackPoint[]>([]);
@@ -129,6 +137,7 @@ export function GpsTracking() {
     const [sessionNotes, setSessionNotes] = useState('');
     const [photoPreviews, setPhotoPreviews] = useState<TrackReflectionPhoto[]>([]);
     const [savedReflectionAt, setSavedReflectionAt] = useState<string | null>(null);
+    const [completedWorkoutId, setCompletedWorkoutId] = useState<string | null>(null);
 
     const watchIdRef = useRef<number | null>(null);
     const timerRef = useRef<number | null>(null);
@@ -239,9 +248,7 @@ export function GpsTracking() {
         retry: false,
     });
 
-    const hasPremiumAccess = Boolean(
-        premiumAccess?.hasAccess || subscription?.tier === 'PRO' || subscription?.tier === 'PLUS'
-    );
+    const hasPremiumAccess = Boolean(premiumAccess?.hasAccess || subscription?.tier === 'PLUS');
 
     const model = buildTrackModel({ todayActivity, weeklyStats, exercises, timeBlocks, routes });
     const rangeSeries = labRange === 7 ? model.series.slice(-7) : model.series;
@@ -274,8 +281,61 @@ export function GpsTracking() {
     }, [activeBlockId, model.timeline]);
 
     useEffect(() => {
+        if (!preferredMode || trackingPhase === 'recording' || trackingPhase === 'finishing') {
+            return;
+        }
+
+        setTrackingMode(preferredMode);
+    }, [preferredMode, trackingPhase]);
+
+    useEffect(() => {
         pointsRef.current = livePoints;
     }, [livePoints]);
+
+    useEffect(() => {
+        if (autoStartRequested) {
+            return;
+        }
+
+        try {
+            const savedRaw = localStorage.getItem('track-lab-last-workout');
+            if (!savedRaw) {
+                return;
+            }
+
+            const saved = JSON.parse(savedRaw) as SavedWorkoutReflection;
+            if (!saved?.startedAt || !Array.isArray(saved.path)) {
+                return;
+            }
+
+            setLastSummary({
+                title: saved.title,
+                mode: saved.mode,
+                durationSeconds: saved.durationSeconds,
+                distanceKm: saved.distanceKm,
+                calories: saved.calories,
+                avgPace: saved.avgPace,
+                avgHeartRate: saved.avgHeartRate,
+                energyScore: saved.energyScore,
+                stressState: saved.stressState,
+                syncMode: saved.syncMode,
+                startedAt: saved.startedAt,
+                completedAt: saved.completedAt,
+                path: saved.path,
+            });
+            setTrackingMode(saved.mode);
+            setWorkoutRating(saved.rating ?? 0);
+            setSessionNotes(saved.notes ?? '');
+            setPhotoPreviews(saved.photos ?? []);
+            setSavedReflectionAt(saved.savedAt ?? null);
+            setTrackingPhase('finished');
+            setSyncSource(saved.syncMode.toLowerCase().includes('cloud') ? 'cloud' : 'local');
+            setCompletedWorkoutId(null);
+            setGpsStatus('Loaded your last saved finish recap from this device.');
+        } catch (error) {
+            console.error('Failed to restore saved reflection:', error);
+        }
+    }, [autoStartRequested]);
 
     useEffect(() => {
         return () => {
@@ -283,6 +343,7 @@ export function GpsTracking() {
         };
     }, []);
 
+    // handleStartRecording is intentionally omitted to avoid auto-start loops from recreated closures.
     useEffect(() => {
         if (!autoStartRequested || autoStartRef.current || checkingAccess || trackingPhase !== 'idle') {
             return;
@@ -290,6 +351,7 @@ export function GpsTracking() {
 
         autoStartRef.current = true;
         void handleStartRecording();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [autoStartRequested, checkingAccess, trackingPhase]);
 
     function stopTrackingEngines() {
@@ -396,6 +458,7 @@ export function GpsTracking() {
         setSessionNotes('');
         setPhotoPreviews([]);
         setSavedReflectionAt(null);
+        setCompletedWorkoutId(null);
     }
 
     async function handleStartRecording() {
@@ -414,6 +477,7 @@ export function GpsTracking() {
         setSessionNotes('');
         setPhotoPreviews([]);
         setSavedReflectionAt(null);
+        setCompletedWorkoutId(null);
         setGpsStatus('Preparing route capture and looking for a stable location fix...');
 
         const seed = await resolveStartingPoint(trackingMode);
@@ -524,10 +588,12 @@ export function GpsTracking() {
 
         setLastSummary(summary);
         sessionIdRef.current = null;
+        const routePayload = buildRoutePayload(summary.path, summary.distanceKm, summary.durationSeconds);
+        let workoutId = syncSource === 'cloud' ? endedSession?.sessionId ?? null : null;
 
         if (syncSource === 'local') {
             try {
-                await fitnessService.createExercise({
+                const createdExercise = await fitnessService.createExercise({
                     name: summary.title,
                     category: trackingMode,
                     subCategory: 'track-lab',
@@ -539,14 +605,25 @@ export function GpsTracking() {
                     intensity: getTrackingIntensity(trackingMode),
                     notes: `[Track Lab] ${summary.syncMode}`,
                     performedAt: summary.startedAt,
+                    route: routePayload,
                 });
+                workoutId = createdExercise.id;
             } catch (error) {
                 console.error('Failed to save local workout summary:', error);
                 showToast.warning('Workout recap is ready', 'The visual recap was built, but the activity summary could not be saved to Fitness.');
             }
         }
 
+        try {
+            const syncedActivity = await syncWorkoutIntoDailyActivity(summary, todayActivity, isoDay);
+            queryClient.setQueryData(['track-lab', 'daily-activity', isoDay], syncedActivity);
+        } catch (error) {
+            console.error('Failed to sync workout into daily activity:', error);
+            showToast.warning('Workout was saved', 'The session recap is ready, but today activity totals could not be refreshed.');
+        }
+
         await queryClient.invalidateQueries({ queryKey: ['track-lab'] });
+        setCompletedWorkoutId(workoutId);
         setTrackingPhase('finished');
         setGpsStatus('Workout finished. Rate it, add photos and save the recap below.');
         showToast.success('Workout completed', 'Your route snapshot and finish recap are ready.');
@@ -818,8 +895,8 @@ export function GpsTracking() {
                                     </span>
                                 </div>
 
-                                <div className="mb-4 grid grid-cols-3 gap-2">
-                                    {(['walking', 'running', 'cycling'] as TrackingMode[]).map((mode) => (
+                                <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                    {(['walking', 'running', 'cycling', 'hiking'] as TrackingMode[]).map((mode) => (
                                         <button
                                             key={mode}
                                             type="button"
@@ -832,7 +909,7 @@ export function GpsTracking() {
                                                     : 'border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-2)] hover:border-[var(--surface-highlight-border)] hover:text-[var(--text)]'
                                             )}
                                         >
-                                            {capitalize(mode)}
+                                            {getTrackingModeLabel(mode)}
                                         </button>
                                     ))}
                                 </div>
@@ -908,6 +985,20 @@ export function GpsTracking() {
                                     <RecordStatCard label="Distance" value={`${lastSummary.distanceKm.toFixed(2)} km`} note="Final route distance" />
                                     <RecordStatCard label="Calories" value={`${Math.round(lastSummary.calories)}`} note="Estimated burn" />
                                     <RecordStatCard label="Avg pace" value={formatWorkoutPace(lastSummary.avgPace)} note={`${lastSummary.avgHeartRate} bpm avg`} />
+                                </div>
+
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    {completedWorkoutId && (
+                                        <Button asChild variant="outline">
+                                            <Link to={`/app/fitness/workouts/${completedWorkoutId}`}>
+                                                Open workout detail
+                                                <ArrowRight className="h-4 w-4" />
+                                            </Link>
+                                        </Button>
+                                    )}
+                                    <Button asChild variant="ghost">
+                                        <Link to="/app/fitness/history">Open workout history</Link>
+                                    </Button>
                                 </div>
                             </div>
 
@@ -1638,7 +1729,7 @@ function createTrackPointFromPosition(position: GeolocationPosition): LiveTrackP
 }
 
 function simulateNextTrackPoint(current: LiveTrackPoint, step: number, mode: TrackingMode): LiveTrackPoint {
-    const factor = mode === 'cycling' ? 0.0012 : mode === 'running' ? 0.00062 : 0.00034;
+    const factor = mode === 'cycling' ? 0.0012 : mode === 'running' ? 0.00062 : mode === 'hiking' ? 0.0004 : 0.00034;
     const latOffset = Math.sin(step / 1.8) * factor + factor * 0.85;
     const lngOffset = Math.cos(step / 2.2) * factor + factor * 0.4;
 
@@ -1693,13 +1784,13 @@ function degToRad(value: number) {
 }
 
 function estimateCaloriesBurned(mode: TrackingMode, elapsedSeconds: number, distanceKm: number) {
-    const perKm = mode === 'cycling' ? 42 : mode === 'running' ? 63 : 32;
+    const perKm = mode === 'cycling' ? 42 : mode === 'running' ? 63 : mode === 'hiking' ? 54 : 32;
     const timeLift = elapsedSeconds / 45;
     return Math.max(Math.round(distanceKm * perKm + timeLift), 0);
 }
 
 function estimateLiveHeartRate(mode: TrackingMode, currentSpeed: number, elapsedSeconds: number, readiness: number) {
-    const base = mode === 'cycling' ? 112 : mode === 'running' ? 126 : 96;
+    const base = mode === 'cycling' ? 112 : mode === 'running' ? 126 : mode === 'hiking' ? 118 : 96;
     const speedLift = currentSpeed * 1.8;
     const readinessOffset = Math.max(0, 72 - readiness) * 0.22;
     const warmup = Math.min(elapsedSeconds / 30, 18);
@@ -1711,7 +1802,11 @@ function estimateLiveEnergy(readiness: number, elapsedSeconds: number, distanceK
 }
 
 function describeLiveStress(mode: TrackingMode, currentSpeed: number, readiness: number, elapsedSeconds: number) {
-    const stressScore = currentSpeed + elapsedSeconds / 180 + Math.max(65 - readiness, 0) * 0.35 + (mode === 'running' ? 4 : 0);
+    const stressScore =
+        currentSpeed +
+        elapsedSeconds / 180 +
+        Math.max(65 - readiness, 0) * 0.35 +
+        (mode === 'running' ? 4 : mode === 'hiking' ? 2 : 0);
     if (stressScore >= 24) return 'Pushed';
     if (stressScore >= 14) return 'Focused';
     return 'Calm';
@@ -1743,7 +1838,7 @@ function buildWorkoutSummary({
     startedAt: string;
 }): WorkoutSummary {
     return {
-        title: `${capitalize(mode)} Track Lab Session`,
+        title: `${getTrackingModeLabel(mode)} Track Lab Session`,
         mode,
         durationSeconds: elapsedSeconds,
         distanceKm: roundDecimal(distanceKm, 2),
@@ -1757,6 +1852,45 @@ function buildWorkoutSummary({
         completedAt: new Date().toISOString(),
         path,
     };
+}
+
+function buildRoutePayload(path: LiveTrackPoint[], distanceKm: number, durationSeconds: number) {
+    if (path.length === 0) {
+        return undefined;
+    }
+
+    const start = path[0];
+    const end = path[path.length - 1];
+
+    return {
+        startLat: start.lat,
+        startLng: start.lng,
+        endLat: end.lat,
+        endLng: end.lng,
+        totalDistance: roundDecimal(distanceKm, 2),
+        duration: Math.max(durationSeconds, 1),
+        path: path.map((point) => ({ lat: point.lat, lng: point.lng })),
+    };
+}
+
+async function syncWorkoutIntoDailyActivity(
+    summary: WorkoutSummary,
+    currentActivity: DailyActivity | null | undefined,
+    activityDate: string
+) {
+    const durationMinutes = Math.max(1, Math.round(summary.durationSeconds / 60));
+    const existingMinutes = currentActivity?.activeMinutes ?? 0;
+
+    return fitnessService.syncActivity({
+        date: activityDate,
+        steps: (currentActivity?.steps ?? 0) + estimateWorkoutSteps(summary.mode, summary.distanceKm),
+        distance: roundDecimal((currentActivity?.distance ?? 0) + summary.distanceKm, 2),
+        calories: (currentActivity?.calories ?? 0) + Math.round(summary.calories),
+        activeMinutes: existingMinutes + durationMinutes,
+        sleepMinutes: currentActivity?.sleepMinutes,
+        heartRateAvg: blendHeartRate(currentActivity?.heartRateAvg, existingMinutes, summary.avgHeartRate, durationMinutes),
+        source: `track-lab:${summary.mode}`,
+    });
 }
 
 function projectTrackPoints(points: Array<{ lat: number; lng: number }>) {
@@ -1803,13 +1937,43 @@ function formatWorkoutPace(pace: number | null) {
 function getTrackingSeedSpeed(mode: TrackingMode) {
     if (mode === 'cycling') return 21;
     if (mode === 'running') return 9.2;
+    if (mode === 'hiking') return 5.7;
     return 4.8;
 }
 
 function getTrackingIntensity(mode: TrackingMode) {
     if (mode === 'cycling') return 'moderate';
     if (mode === 'running') return 'high';
+    if (mode === 'hiking') return 'moderate';
     return 'light';
+}
+
+function getTrackingModeLabel(mode: TrackingMode) {
+    if (mode === 'cycling') return 'Ride';
+    if (mode === 'running') return 'Run';
+    if (mode === 'hiking') return 'Hike';
+    return 'Walk';
+}
+
+function estimateWorkoutSteps(mode: TrackingMode, distanceKm: number) {
+    const stepsPerKm = mode === 'running' ? 1320 : mode === 'hiking' ? 1680 : mode === 'walking' ? 1450 : 0;
+    return Math.round(distanceKm * stepsPerKm);
+}
+
+function blendHeartRate(
+    previousHeartRate: number | undefined,
+    previousMinutes: number,
+    sessionHeartRate: number,
+    sessionMinutes: number
+) {
+    if (!previousHeartRate || previousMinutes <= 0) {
+        return sessionHeartRate;
+    }
+
+    const weightedAverage =
+        (previousHeartRate * previousMinutes + sessionHeartRate * sessionMinutes) /
+        (previousMinutes + sessionMinutes);
+    return Math.round(weightedAverage);
 }
 
 function getFallbackTrackSeed(mode: TrackingMode) {
@@ -2055,10 +2219,12 @@ function buildSessions(exercises: Exercise[], routes: GpsRoute[]): SessionSnapsh
         const load: SessionSnapshot['load'] = effort >= 75 ? 'Heavy' : effort >= 48 ? 'Light' : 'Recovery';
         return {
             id: `route-${route.id}`,
-            sport: `Route session ${index + 1}`,
+            sport: route.name || `${getTrackingModeLabel((route.category as TrackingMode) || 'walking')} route`,
             duration,
             effort,
-            when: 'Route',
+            when: route.performedAt
+                ? new Date(route.performedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                : `Route ${index + 1}`,
             load,
             tag: load === 'Heavy' ? 'Tập nặng' : load === 'Light' ? 'Tập nhẹ' : 'Phục hồi',
         };

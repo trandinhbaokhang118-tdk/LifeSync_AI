@@ -6,8 +6,8 @@ services:
     plan: free
     rootDir: backend
     buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npm run start:prod
-    healthCheckPath: /
+    startCommand: npx prisma migrate deploy && npm run start:prod
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
@@ -29,6 +29,8 @@ services:
         value: https://time-manager-frontend.onrender.com
       - key: OPENAI_API_KEY
         sync: false
+      - key: PAYMENTS_ENABLED
+        value: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -66,3 +68,5 @@ services:
           envVarKey: RENDER_EXTERNAL_URL
       - key: NODE_ENV
         value: production
+      - key: VITE_PAYMENTS_ENABLED
+        value: false

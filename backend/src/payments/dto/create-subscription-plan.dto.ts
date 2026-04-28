@@ -1,10 +1,11 @@
-import { IsString, IsOptional, IsNumber, IsEnum, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsArray, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { SubscriptionTier } from '@prisma/client';
 
 export class CreateSubscriptionPlanDto {
-  @ApiProperty()
-  @IsString()
-  tier: string;
+  @ApiProperty({ enum: SubscriptionTier })
+  @IsEnum(SubscriptionTier)
+  tier: SubscriptionTier;
 
   @ApiProperty()
   @IsString()
@@ -28,9 +29,10 @@ export class CreateSubscriptionPlanDto {
   @IsOptional()
   interval?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: [String] })
+  @IsArray()
   @IsOptional()
-  features?: any;
+  features?: string[];
 
   @ApiProperty({ required: false, default: true })
   @IsBoolean()

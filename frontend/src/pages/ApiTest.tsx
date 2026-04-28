@@ -1,23 +1,36 @@
 import { useState } from 'react';
+import type { AxiosError } from 'axios';
 import { Button } from '../components/ui';
 import { dashboardService } from '../services/dashboard.service';
 import { tasksService } from '../services/tasks.service';
 import { notificationsService } from '../services/notifications.service';
 
-export function ApiTest() {
-    const [testResults, setTestResults] = useState<Record<string, any>>({});
+interface TestResult {
+    success: boolean;
+    data?: unknown;
+    error?: string;
+    details?: unknown;
+}
 
-    const testEndpoint = async (name: string, fn: () => Promise<any>) => {
+export function ApiTest() {
+    const [testResults, setTestResults] = useState<Record<string, TestResult>>({});
+
+    const testEndpoint = async (name: string, fn: () => Promise<unknown>) => {
         try {
             const result = await fn();
             setTestResults(prev => ({
                 ...prev,
                 [name]: { success: true, data: result }
             }));
-        } catch (error: any) {
+        } catch (error) {
+            const axiosError = error as AxiosError;
             setTestResults(prev => ({
                 ...prev,
-                [name]: { success: false, error: error.message, details: error.response?.data }
+                [name]: {
+                    success: false,
+                    error: axiosError.message,
+                    details: axiosError.response?.data,
+                }
             }));
         }
     };

@@ -1,5 +1,16 @@
 import api from './api';
-import type { Subscription, SubscriptionPlan, CreateCheckoutRequest, ApiResponse } from '../types';
+import type {
+    Subscription,
+    SubscriptionPlan,
+    CreateCheckoutRequest,
+    ApiResponse,
+    SubscriptionStatus,
+    SubscriptionTier,
+} from '../types';
+
+type AdminSubscription = Subscription & {
+    user: { id: string; email: string; name: string };
+};
 
 export const subscriptionsService = {
     async getPlans(): Promise<SubscriptionPlan[]> {
@@ -28,18 +39,21 @@ export const subscriptionsService = {
     },
 
     // Admin methods
-    async getAllSubscriptions(): Promise<(Subscription & { user: { id: string; email: string; name: string } })[]> {
-        const response = await api.get<ApiResponse<any[]>>('/payments/admin/subscriptions');
+    async getAllSubscriptions(): Promise<AdminSubscription[]> {
+        const response = await api.get<ApiResponse<AdminSubscription[]>>('/payments/admin/subscriptions');
         return response.data.data;
     },
 
-    async getUserSubscription(userId: string): Promise<Subscription> {
-        const response = await api.get<ApiResponse<any>>(`/payments/admin/subscriptions/${userId}`);
+    async getUserSubscription(userId: string): Promise<AdminSubscription | null> {
+        const response = await api.get<ApiResponse<AdminSubscription | null>>(`/payments/admin/subscriptions/${userId}`);
         return response.data.data;
     },
 
-    async updateSubscription(userId: string, data: { tier?: string; status?: string }): Promise<Subscription> {
-        const response = await api.put<ApiResponse<any>>(`/payments/admin/subscriptions/${userId}`, data);
+    async updateSubscription(
+        userId: string,
+        data: { tier?: SubscriptionTier; status?: SubscriptionStatus },
+    ): Promise<Subscription> {
+        const response = await api.put<ApiResponse<Subscription>>(`/payments/admin/subscriptions/${userId}`, data);
         return response.data.data;
     },
 };

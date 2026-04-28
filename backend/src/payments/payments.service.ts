@@ -1,11 +1,50 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  NotImplementedException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PaymentProvider, Prisma, SubscriptionStatus, SubscriptionTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
 
+interface PaymentWebhookPayload {
+  type?: string;
+  data?: {
+    object?: {
+      customer_email?: string;
+      customer_details?: {
+        email?: string;
+      };
+    };
+  };
+}
+
+interface UpdateSubscriptionInput {
+  tier?: SubscriptionTier;
+  status?: SubscriptionStatus;
+}
+
 @Injectable()
 export class PaymentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {}
+
+  private isPaymentsEnabled() {
+    return this.configService.get<string>('PAYMENTS_ENABLED') === 'true';
+  }
+
+  private assertPaymentsEnabled() {
+    if (!this.isPaymentsEnabled()) {
+      throw new ServiceUnavailableException(
+        'Online billing is disabled for this deployment. Set PAYMENTS_ENABLED=true only after integrating a real payment gateway.',
+      );
+    }
+  }
 
   async getPlans() {
     return this.prisma.subscriptionPlan.findMany({
@@ -15,8 +54,13 @@ export class PaymentsService {
   }
 
   async createPlan(dto: CreateSubscriptionPlanDto) {
+    const planData: Prisma.SubscriptionPlanCreateInput = {
+      ...dto,
+      features: dto.features ?? [],
+    };
+
     return this.prisma.subscriptionPlan.create({
-      data: dto as any,
+      data: planData,
     });
   }
 
@@ -40,6 +84,8 @@ export class PaymentsService {
   }
 
   async createCheckout(userId: string, dto: CreateCheckoutDto) {
+    this.assertPaymentsEnabled();
+
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
@@ -48,42 +94,9 @@ export class PaymentsService {
     });
     if (!plan) throw new NotFoundException('Plan not found');
 
-    // For demo purposes, return a mock checkout URL
-    // In production, integrate with Stripe/VNPay
-    const checkoutUrl = `https://checkout.stripe.com/demo?plan=${plan.tier}&user=${user.email}&amount=${dto.provider === 'STRIPE' ? plan.priceUSD : plan.priceVND}`;
-
-    // Create pending subscription
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-    await this.prisma.subscription.upsert({
-      where: { userId },
-      create: {
-        userId,
-        tier: dto.tier,
-        status: 'TRIALING',
-        provider: dto.provider,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-      },
-      update: {
-        tier: dto.tier,
-        status: 'TRIALING',
-        provider: dto.provider,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-      },
-    });
-
-    return {
-      checkoutUrl,
-      subscription: {
-        tier: dto.tier,
-        status: 'TRIALING',
-        currentPeriodEnd: periodEnd,
-      },
-    };
+    throw new NotImplementedException(
+      `Checkout for ${dto.provider} is not wired in this build. Connect the provider SDK/API before enabling online billing for plan ${plan.tier}.`,
+    );
   }
 
   async cancelSubscription(userId: string) {
@@ -104,35 +117,32 @@ export class PaymentsService {
     });
   }
 
-  async handleWebhook(provider: string, payload: any) {
-    // Handle payment provider webhooks
-    // In production, verify webhook signatures and process events
-
-    if (provider === 'STRIPE') {
-      const eventType = payload.type;
-      const data = payload.data?.object;
-
-      if (eventType === 'checkout.session.completed') {
-        const email = data?.customer_email || data?.customer_details?.email;
-        if (email) {
-          const user = await this.prisma.user.findUnique({ where: { email } });
-          if (user) {
-            await this.prisma.subscription.update({
-              where: { userId: user.id },
-              data: { status: 'ACTIVE' },
-            });
-          }
-        }
-      }
+  async handleWebhook(provider: PaymentProvider, payload: PaymentWebhookPayload) {
+    if (!this.isPaymentsEnabled()) {
+      return {
+        received: false,
+        processed: false,
+        message:
+          'Payment webhooks are ignored because online billing is disabled for this deployment.',
+      };
     }
 
-    return { received: true };
+    return {
+      received: true,
+      processed: false,
+      provider,
+      eventType: payload.type ?? 'unknown',
+      message:
+        'Webhook verification and provider event handling must be implemented before turning on billing in production.',
+    };
   }
 
   async verifyPayment(paymentId: string) {
-    // Verify payment with provider
-    // For demo, always return success
-    return { verified: true, paymentId };
+    this.assertPaymentsEnabled();
+
+    throw new NotImplementedException(
+      `Payment verification is not wired in this build. Payment ${paymentId} was not verified.`,
+    );
   }
 
   // Admin methods
@@ -150,10 +160,10 @@ export class PaymentsService {
     });
   }
 
-  async updateSubscription(userId: string, data: { tier?: 'FREE' | 'PRO' | 'PLUS'; status?: 'ACTIVE' | 'CANCELLED' | 'EXPIRED' }) {
+  async updateSubscription(userId: string, data: UpdateSubscriptionInput) {
     return this.prisma.subscription.update({
       where: { userId },
-      data: data as any,
+      data,
     });
   }
 
@@ -162,9 +172,9 @@ export class PaymentsService {
     const existingPlans = await this.prisma.subscriptionPlan.count();
     if (existingPlans > 0) return;
 
-    const plans = [
+    const plans: Prisma.SubscriptionPlanCreateManyInput[] = [
       {
-        tier: 'FREE',
+        tier: SubscriptionTier.FREE,
         name: 'Free',
         description: 'Basic features for everyone',
         priceVND: 0,
@@ -175,7 +185,7 @@ export class PaymentsService {
         sortOrder: 1,
       },
       {
-        tier: 'PRO',
+        tier: SubscriptionTier.PRO,
         name: 'Pro',
         description: 'Enhanced productivity',
         priceVND: 99000,
@@ -193,7 +203,7 @@ export class PaymentsService {
         sortOrder: 2,
       },
       {
-        tier: 'PLUS',
+        tier: SubscriptionTier.PLUS,
         name: 'Plus',
         description: 'Full experience with fitness',
         priceVND: 199000,
@@ -213,6 +223,6 @@ export class PaymentsService {
       },
     ];
 
-    await this.prisma.subscriptionPlan.createMany({ data: plans as any });
+    await this.prisma.subscriptionPlan.createMany({ data: plans });
   }
 }

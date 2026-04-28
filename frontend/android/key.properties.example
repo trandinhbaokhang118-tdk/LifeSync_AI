@@ -1,0 +1,4 @@
+storePassword=your-password
+keyPassword=your-password
+keyAlias=timemanager
+storeFile=timemanager-release.keystore

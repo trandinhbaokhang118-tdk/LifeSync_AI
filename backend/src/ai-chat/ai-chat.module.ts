@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
-import { TasksModule } from '../tasks/tasks.module';
 import { AIChatService } from './ai-chat.service';
 import { AIChatController } from './ai-chat.controller';
 
 @Module({
-    imports: [PrismaModule, TasksModule],
+    imports: [PrismaModule],
     controllers: [AIChatController],
     providers: [AIChatService],
     exports: [AIChatService],

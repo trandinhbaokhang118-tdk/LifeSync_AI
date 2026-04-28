@@ -3,327 +3,280 @@
 
 ## 1. Prerequisites
 
-### Required Software
-- **Node.js**: v18 LTS or higher
-- **Docker Desktop**: Latest version
-- **npm**: v9 or higher (comes with Node.js)
-- **Git**: For version control
+### Required software
+- Node.js 18 or newer
+- npm 9 or newer
+- Docker Desktop
+- Git
+- Android Studio + JDK 17 for Android release builds
 
-### Verify Installation
+### Quick verification
 ```bash
-node --version    # Should be v18+
-npm --version     # Should be v9+
-docker --version  # Should be v20+
+node --version
+npm --version
+docker --version
+java --version
 ```
 
-## 2. Local Development Setup
+## 2. Local Setup
 
-### 2.1 Clone Repository
+### 2.1 Clone repository
 ```bash
 git clone <repository-url>
 cd time-manager
 ```
 
-### 2.2 Start Database
+### 2.2 Start MySQL + phpMyAdmin
 ```bash
-# Start PostgreSQL container
 docker compose up -d
-
-# Verify container is running
 docker ps
-
-# Check database connection
-docker exec -it time_manager_postgres psql -U tm_user -d time_manager -c "SELECT version();"
+docker exec -it time_manager_mysql mysql -u tm_user -ptm_password -D time_manager -e "SELECT VERSION();"
 ```
 
-### 2.3 Setup Backend
+### 2.3 Configure backend
 ```bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Copy environment file
 copy .env.example .env    # Windows
 # cp .env.example .env    # Linux/Mac
 
-# Generate Prisma client
 npx prisma generate
-
-# Run database migrations
 npx prisma migrate dev
-
-# Seed demo data
 npm run prisma:seed
-
-# Start development server
+npm run create-admin      # Optional: create your own admin account
 npm run dev
 ```
 
-Backend will be available at: `http://localhost:3000`
-Swagger docs at: `http://localhost:3000/api-docs`
+Backend:
+- API: `http://localhost:3000`
+- Swagger: `http://localhost:3000/api-docs`
+- Health: `http://localhost:3000/health`
 
-### 2.4 Setup Frontend
+### 2.4 Configure frontend
 ```bash
 cd frontend
-
-# Install dependencies
-npm install
-
-# Copy environment file
 copy .env.example .env    # Windows
 # cp .env.example .env    # Linux/Mac
 
-# Start development server
+npm install
 npm run dev
 ```
 
-Frontend will be available at: `http://localhost:5173`
+Frontend:
+- Web app: `http://localhost:5173`
 
-## 3. Environment Configuration
+## 3. Environment Variables
 
-### Backend (.env)
+### Backend `.env`
 ```env
-# Database
-DATABASE_URL="postgresql://tm_user:tm_password@localhost:5432/time_manager?schema=public"
-
-# JWT Configuration
+DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/time_manager"
 JWT_SECRET="your-super-secret-jwt-key-change-in-production"
 JWT_EXPIRES_IN="15m"
 REFRESH_TOKEN_EXPIRES_IN="7d"
-
-# Server
 PORT=3000
 NODE_ENV=development
-
-# Frontend URL (for CORS)
 FRONTEND_URL="http://localhost:5173"
+OPENAI_API_KEY=""
+PAYMENTS_ENABLED="false"
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+GOOGLE_REDIRECT_URI="http://localhost:3000/auth/google/callback"
+FACEBOOK_APP_ID=""
+FACEBOOK_APP_SECRET=""
+FACEBOOK_REDIRECT_URI="http://localhost:3000/auth/facebook/callback"
 ```
 
-### Frontend (.env)
+### Frontend `.env`
 ```env
 VITE_API_URL="http://localhost:3000"
+VITE_PAYMENTS_ENABLED="false"
 ```
 
-## 4. Docker Commands
-
-### Start Services
-```bash
-# Start database
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Stop services
-docker compose down
-
-# Stop and remove volumes (reset database)
-docker compose down -v
-```
-
-### Database Management
-```bash
-# Connect to database
-docker exec -it time_manager_postgres psql -U tm_user -d time_manager
-
-# Backup database
-docker exec time_manager_postgres pg_dump -U tm_user time_manager > backup.sql
-
-# Restore database
-docker exec -i time_manager_postgres psql -U tm_user time_manager < backup.sql
-```
-
-## 5. Prisma Commands
-
-```bash
-cd backend
-
-# Generate Prisma client
-npx prisma generate
-
-# Create migration
-npx prisma migrate dev --name <migration_name>
-
-# Apply migrations (production)
-npx prisma migrate deploy
-
-# Reset database
-npx prisma migrate reset
-
-# Open Prisma Studio
-npx prisma studio
-
-# Seed database
-npm run prisma:seed
-```
-
-## 6. Build for Production
+## 4. Quality Gates Before Handoff
 
 ### Backend
 ```bash
 cd backend
-
-# Build
+npm run lint
+npx jest --runInBand
+npx jest --config ./test/jest-e2e.json --runInBand
 npm run build
-
-# Start production server
-npm run start:prod
 ```
 
 ### Frontend
 ```bash
 cd frontend
-
-# Build
+npm run lint
 npm run build
+```
 
-# Preview build
+## 5. Web Deployment
+
+### 5.1 Render deployment
+Repo includes [render.yaml](../backend/render.yaml) for:
+- `time-manager-api` (Node web service)
+- `time-manager-frontend` (static site)
+
+Important deployment notes:
+- Backend health check uses `/health`
+- Backend start command runs `npx prisma migrate deploy && npm run start:prod`
+- You must provide a valid MySQL `DATABASE_URL`
+- OAuth callback URLs must match the public backend URL
+
+### 5.2 Required production environment values
+
+Backend:
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `FRONTEND_URL`
+- `PAYMENTS_ENABLED=false` unless a real provider integration has been completed
+- `OPENAI_API_KEY` if AI chat is enabled
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` if Google login is enabled
+- `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_REDIRECT_URI` if Facebook login is enabled
+
+Frontend:
+- `VITE_API_URL`
+- `VITE_PAYMENTS_ENABLED=false` unless checkout is fully integrated
+
+Billing note:
+- This repository is safe to deploy with billing disabled.
+- Do not turn on `PAYMENTS_ENABLED` or `VITE_PAYMENTS_ENABLED` until Stripe/VNPay/MoMo/ZaloPay integration and webhook verification are implemented.
+
+### 5.3 Manual Node deployment
+```bash
+cd backend
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+npm run start:prod
+```
+
+```bash
+cd frontend
+npm install
+npm run build
 npm run preview
 ```
 
-## 7. Production Deployment
+## 6. Android App Deployment
 
-### 7.1 Environment Variables
-Set these in your production environment:
-
-**Backend:**
-- `DATABASE_URL`: Production database URL
-- `JWT_SECRET`: Strong random secret (32+ characters)
-- `JWT_EXPIRES_IN`: "15m"
-- `REFRESH_TOKEN_EXPIRES_IN`: "7d"
-- `PORT`: 3000
-- `NODE_ENV`: "production"
-- `FRONTEND_URL`: Production frontend URL
-
-**Frontend:**
-- `VITE_API_URL`: Production backend URL
-
-### 7.2 Database Setup
+### 6.1 Prepare Android project
 ```bash
-# Run migrations
-npx prisma migrate deploy
-
-# Seed initial data (optional)
-npm run prisma:seed
+cd frontend
+npm install
+npm run build
+npx cap sync android
 ```
 
-### 7.3 Process Manager (PM2)
-```bash
-# Install PM2
-npm install -g pm2
+### 6.2 Optional release signing
+Copy `frontend/android/key.properties.example` to `frontend/android/key.properties`:
+```properties
+storePassword=your-password
+keyPassword=your-password
+keyAlias=timemanager
+storeFile=timemanager-release.keystore
+```
 
-# Start backend
+Place `timemanager-release.keystore` inside `frontend/android/`.
+If Android Studio cannot find the SDK, copy `frontend/android/local.properties.example` to `frontend/android/local.properties` and update the SDK path.
+
+### 6.3 Build release APK / AAB
+From repo root:
+```bash
+build-apk.bat
+build-aab.bat
+```
+
+Outputs:
+- APK: `frontend/android/app/build/outputs/apk/release/app-release.apk`
+- AAB: `frontend/android/app/build/outputs/bundle/release/app-release.aab`
+
+### 6.4 Play Store checklist
+Before publishing:
+- Valid signing key
+- Privacy policy URL
+- Store listing assets
+- Google Play developer account
+- Real production API URL in mobile build
+
+## 7. Database Operations
+
+### Backup
+```bash
+docker exec time_manager_mysql mysqldump -u tm_user -ptm_password time_manager > backup.sql
+```
+
+### Restore
+```bash
+docker exec -i time_manager_mysql mysql -u tm_user -ptm_password time_manager < backup.sql
+```
+
+### Prisma helpers
+```bash
 cd backend
-pm2 start dist/main.js --name time-manager-api
-
-# View logs
-pm2 logs time-manager-api
-
-# Restart
-pm2 restart time-manager-api
+npx prisma generate
+npx prisma migrate dev --name <migration_name>
+npx prisma migrate deploy
+npx prisma studio
 ```
 
-### 7.4 Nginx Configuration (Example)
-```nginx
-# Backend API
-server {
-    listen 80;
-    server_name api.timemanager.com;
+## 8. Health Checks
 
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
+### Backend
+```bash
+curl http://localhost:3000/health
+```
 
-# Frontend
-server {
-    listen 80;
-    server_name timemanager.com;
-
-    root /var/www/time-manager/frontend/dist;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
+Expected response shape:
+```json
+{
+  "data": {
+    "ok": true,
+    "status": "ok",
+    "service": "time-manager-backend"
+  }
 }
 ```
 
-## 8. Troubleshooting
-
-### Database Connection Failed
+### Database
 ```bash
-# Check if container is running
-docker ps
-
-# Check container logs
-docker logs time_manager_postgres
-
-# Restart container
-docker compose restart
+docker exec time_manager_mysql mysqladmin ping -h localhost -u tm_user -ptm_password
 ```
 
-### Prisma Migration Failed
-```bash
-# Reset database and re-run migrations
-npx prisma migrate reset
+## 9. Troubleshooting
 
-# Or manually fix and re-run
+### Backend cannot connect to MySQL
+- Confirm `docker compose up -d` completed successfully
+- Check `DATABASE_URL`
+- Check MySQL container logs with `docker logs time_manager_mysql`
+
+### Prisma migration fails
+```bash
+cd backend
+npx prisma generate
 npx prisma migrate dev
 ```
 
-### Port Already in Use
-```bash
-# Find process using port
-netstat -ano | findstr :3000    # Windows
-lsof -i :3000                   # Linux/Mac
+### Frontend cannot reach backend
+- Verify `VITE_API_URL`
+- Verify backend CORS `FRONTEND_URL`
+- Confirm backend health endpoint responds
 
-# Kill process
-taskkill /PID <pid> /F          # Windows
-kill -9 <pid>                   # Linux/Mac
-```
+### Android release build fails
+- Install JDK 17
+- Verify Android SDK path in `frontend/android/local.properties`
+- Verify `key.properties` and keystore path for signed release builds
 
-### CORS Errors
-- Verify `FRONTEND_URL` in backend .env
-- Check browser console for specific error
-- Ensure both servers are running
+## 10. CI
 
-## 9. Health Checks
+GitHub Actions workflow is available at:
+- `.github/workflows/ci.yml`
 
-### Backend Health
-```bash
-curl http://localhost:3000/health
-# Expected: {"ok":true}
-```
-
-### Database Health
-```bash
-docker exec time_manager_postgres pg_isready -U tm_user
-# Expected: accepting connections
-```
-
-## 10. Monitoring
-
-### Logs
-```bash
-# Backend logs (development)
-npm run dev
-
-# Backend logs (production with PM2)
-pm2 logs time-manager-api
-
-# Database logs
-docker logs -f time_manager_postgres
-```
-
-### Prisma Studio
-```bash
-npx prisma studio
-# Opens at http://localhost:5555
-```
+It runs:
+- Backend lint
+- Backend unit tests
+- Backend e2e tests
+- Backend build
+- Frontend lint
+- Frontend build
