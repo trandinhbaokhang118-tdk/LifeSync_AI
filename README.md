@@ -59,8 +59,8 @@ LifeSync_AI là web quản lý thời gian và công việc, hỗ trợ đăng k
 
 ### 1. Clone repository
 ```bash
-git clone https://github.com/trandinhbaokhang118-tdk/TimeManager_React.git
-cd TimeManager_React
+git clone https://github.com/trandinhbaokhang118-tdk/LifeSync_AI.git
+cd LifeSync_AI
 ```
 
 ### 2. Cài đặt dependencies
@@ -163,7 +163,7 @@ stop-mysql-docker.bat      # Dừng MySQL Docker
 
 ### Database
 ```env
-DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/time_manager"
+DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/LifeSync_AI"
 ```
 
 ### JWT
