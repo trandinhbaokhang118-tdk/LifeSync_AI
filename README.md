@@ -1,8 +1,8 @@
-# ⏰ TimeManager - Ứng dụng Quản lý Thời gian Thông minh
+# ⏰ LifeSync_AI - Ứng dụng Quản lý Thời gian Thông minh
 
-TimeManager là web quản lý thời gian và công việc, hỗ trợ đăng ký/đăng nhập, quản lý Tasks, Tags, Calendar/Planner với time block và kéo thả, nhắc nhở/thông báo và thống kê. Ứng dụng dùng React + TypeScript, backend NestJS REST API, ORM Prisma và CSDL MySQL, xác thực JWT + Refresh Token.
+LifeSync_AI là web quản lý thời gian và công việc, hỗ trợ đăng ký/đăng nhập, quản lý Tasks, Tags, Calendar/Planner với time block và kéo thả, nhắc nhở/thông báo và thống kê. Ứng dụng dùng React + TypeScript, backend NestJS REST API, ORM Prisma và CSDL MySQL, xác thực JWT + Refresh Token.
 
-![TimeManager](https://img.shields.io/badge/React-18.3-blue) ![NestJS](https://img.shields.io/badge/NestJS-10.0-red) ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
+![LifeSync_AI](https://img.shields.io/badge/React-18.3-blue) ![NestJS](https://img.shields.io/badge/NestJS-10.0-red) ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 
 ## ✨ Tính năng
 
