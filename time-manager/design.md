@@ -1,8 +1,8 @@
-# Design Document: Time Manager
+﻿# Design Document: LifeSync AI
 
 ## Overview
 
-Time Manager là một ứng dụng web full-stack cho phép người dùng quản lý công việc, lên lịch thời gian, và theo dõi năng suất. Hệ thống được xây dựng với kiến trúc client-server, sử dụng:
+LifeSync AI là một ứng dụng web full-stack cho phép người dùng quản lý công việc, lên lịch thời gian, và theo dõi năng suất. Hệ thống được xây dựng với kiến trúc client-server, sử dụng:
 
 - **Backend**: Node.js + TypeScript với NestJS framework
 - **Frontend**: React + TypeScript với Vite

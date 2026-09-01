@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { cn } from '../lib/utils';
 import { showToast } from '../components/ui/toast';
 import { subscriptionsService } from '../services/subscriptions.service';
+import { redirectToCheckout } from '../services/payments.service';
 import { useAuthStore } from '../store/auth.store';
 import type {
     PaymentProvider,
@@ -17,6 +18,7 @@ type SubscriptionWithUser = Subscription & {
 
 const providerLabels: Record<PaymentProvider, string> = {
     STRIPE: 'Stripe',
+    SEPAY: 'SePay (VietinBank)',
     VNPAY: 'VNPay',
     MOMO: 'MoMo',
     ZALOPAY: 'ZaloPay',
@@ -29,7 +31,7 @@ export function Subscription() {
     const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
-    const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('STRIPE');
+    const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('SEPAY');
     const [activeTab, setActiveTab] = useState<'my' | 'admin'>('my');
     const [allSubscriptions, setAllSubscriptions] = useState<SubscriptionWithUser[]>([]);
     const [adminLoading, setAdminLoading] = useState(false);
@@ -96,7 +98,7 @@ export function Subscription() {
             });
 
             if (result.checkoutUrl) {
-                window.location.assign(result.checkoutUrl);
+                redirectToCheckout(result);
                 return;
             }
 

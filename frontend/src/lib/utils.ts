@@ -5,6 +5,26 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+export function normalizeVietnameseText(value: string) {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .toLowerCase()
+        .trim();
+}
+
+export function includesNormalizedVietnamese(value: string | null | undefined, query: string) {
+    const normalizedQuery = normalizeVietnameseText(query);
+
+    if (!normalizedQuery) {
+        return true;
+    }
+
+    return normalizeVietnameseText(value ?? '').includes(normalizedQuery);
+}
+
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions) {
     return new Intl.DateTimeFormat('vi-VN', {
         day: '2-digit',
@@ -31,6 +51,25 @@ export function formatDateTime(date: string | Date) {
     }).format(new Date(date));
 }
 
+const priorityAliases: Partial<Record<string, 'LOW' | 'MEDIUM' | 'HIGH'>> = {
+    high: 'HIGH',
+    cao: 'HIGH',
+    gap: 'HIGH',
+    khancap: 'HIGH',
+    urgent: 'HIGH',
+    medium: 'MEDIUM',
+    trung: 'MEDIUM',
+    trungbinh: 'MEDIUM',
+    vua: 'MEDIUM',
+    tb: 'MEDIUM',
+    low: 'LOW',
+    thap: 'LOW',
+};
+
+function normalizeCommandToken(value: string) {
+    return normalizeVietnameseText(value).replace(/[-_\s]+/g, '');
+}
+
 export function parseQuickAdd(input: string) {
     const result: {
         title: string;
@@ -39,23 +78,23 @@ export function parseQuickAdd(input: string) {
         priority?: 'LOW' | 'MEDIUM' | 'HIGH';
     } = { title: '', tags: [] };
 
-    let text = input.trim();
+    let text = input.normalize('NFC').trim();
 
-    // Parse priority: !high, !medium, !low
-    const priorityMatch = text.match(/!(\w+)/i);
-    if (priorityMatch) {
-        const p = priorityMatch[1].toUpperCase();
-        if (['HIGH', 'MEDIUM', 'LOW'].includes(p)) {
-            result.priority = p as 'LOW' | 'MEDIUM' | 'HIGH';
-        }
-        text = text.replace(/!\w+/i, '').trim();
+    // Parse priority: !high, !medium, !low, or Vietnamese aliases like !cao.
+    const priorityMatch = text.match(/!([\p{L}\p{N}_-]+)/u);
+    if (priorityMatch?.[1]) {
+        result.priority = priorityAliases[normalizeCommandToken(priorityMatch[1])];
+        text = text.replace(priorityMatch[0], '').trim();
     }
 
-    // Parse tags: #tag1 #tag2
-    const tagMatches = text.match(/#(\w+)/g);
-    if (tagMatches) {
-        result.tags = tagMatches.map(t => t.slice(1));
-        text = text.replace(/#\w+/g, '').trim();
+    // Parse tags with Unicode letters so Vietnamese tags like #công-việc work.
+    const tagMatches = [...text.matchAll(/#([\p{L}\p{N}_-]+)/gu)];
+    const tags = tagMatches
+        .map((match) => match[1])
+        .filter((tag): tag is string => Boolean(tag));
+    if (tags.length > 0) {
+        result.tags = tags;
+        text = text.replace(/#[\p{L}\p{N}_-]+/gu, '').trim();
     }
 
     // Parse time: 20:00, 8pm, etc.
@@ -79,11 +118,13 @@ export function parseQuickAdd(input: string) {
         text = text.replace(/(\d{1,2}):(\d{2})|(\d{1,2})(am|pm)/i, '').trim();
     }
 
-    // Parse relative dates: hôm nay, ngày mai, tomorrow, today
-    if (/hôm nay|today/i.test(text)) {
+    // Parse relative dates with and without Vietnamese diacritics.
+    const todayPattern = /(?:h[oô]m\s+nay|today)/iu;
+    const tomorrowPattern = /(?:ng[aà]y\s+mai|tomorrow)/iu;
+    if (todayPattern.test(text)) {
         if (!result.dueAt) result.dueAt = new Date();
-        text = text.replace(/hôm nay|today/gi, '').trim();
-    } else if (/ngày mai|tomorrow/i.test(text)) {
+        text = text.replace(todayPattern, '').trim();
+    } else if (tomorrowPattern.test(text)) {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         if (result.dueAt) {
@@ -91,7 +132,7 @@ export function parseQuickAdd(input: string) {
         } else {
             result.dueAt = tomorrow;
         }
-        text = text.replace(/ngày mai|tomorrow/gi, '').trim();
+        text = text.replace(tomorrowPattern, '').trim();
     }
 
     result.title = text.trim();

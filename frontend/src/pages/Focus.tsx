@@ -1,255 +1,416 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, Coffee, Brain, Settings2, Maximize2, Minimize2 } from 'lucide-react';
-import { Button } from '../components/ui';
-import { cn } from '../lib/utils';
-import { showToast } from '../components/ui/toast';
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+} from 'react';
+import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
+import {
+    Brain,
+    CheckCircle2,
+    Clock3,
+    Coffee,
+    Keyboard,
+    Pause,
+    Play,
+    RotateCcw,
+    TimerReset,
+    type LucideIcon,
+} from 'lucide-react';
+import './focus-session.css';
 
 type SessionType = 'focus' | 'shortBreak' | 'longBreak';
 
-const DEFAULT_TIMES = {
-    focus: 25 * 60,
-    shortBreak: 5 * 60,
-    longBreak: 15 * 60,
+interface SessionConfig {
+    seconds: number;
+    label: string;
+    headline: string;
+    description: string;
+    icon: LucideIcon;
+}
+
+const SESSION_CONFIG: Record<SessionType, SessionConfig> = {
+    focus: {
+        seconds: 25 * 60,
+        label: 'Tập trung',
+        headline: 'Dành 25 phút cho một việc.',
+        description: 'Đóng các luồng không cần thiết và giữ một mục tiêu duy nhất trước mắt.',
+        icon: Brain,
+    },
+    shortBreak: {
+        seconds: 5 * 60,
+        label: 'Nghỉ ngắn',
+        headline: 'Rời màn hình trong 5 phút.',
+        description: 'Thả lỏng mắt, đứng dậy và để nhịp tiếp theo bắt đầu nhẹ hơn.',
+        icon: Coffee,
+    },
+    longBreak: {
+        seconds: 15 * 60,
+        label: 'Nghỉ dài',
+        headline: 'Phục hồi trong 15 phút.',
+        description: 'Kết thúc một chu kỳ bốn phiên trước khi quay lại công việc.',
+        icon: Coffee,
+    },
 };
 
+function formatTime(seconds: number) {
+    const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
+    return minutes + ':' + remainingSeconds;
+}
+
+function isTypingTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement
+        && Boolean(target.closest('input, textarea, select, button, a, [contenteditable="true"]'));
+}
+
 export function Focus() {
+    const completionHandledRef = useRef(false);
+    const autoStartHandledRef = useRef(false);
+    const fullscreenSeenRef = useRef(false);
+    const [searchParams, setSearchParams] = useSearchParams();
     const [sessionType, setSessionType] = useState<SessionType>('focus');
-    const [timeLeft, setTimeLeft] = useState(DEFAULT_TIMES.focus);
+    const [timeLeft, setTimeLeft] = useState(SESSION_CONFIG.focus.seconds);
     const [isRunning, setIsRunning] = useState(false);
+    const [isSessionActive, setIsSessionActive] = useState(false);
     const [sessionsCompleted, setSessionsCompleted] = useState(0);
-    const [zenMode, setZenMode] = useState(false);
 
-    const totalTime = DEFAULT_TIMES[sessionType];
-    const progress = ((totalTime - timeLeft) / totalTime) * 100;
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
+    const currentSession = SESSION_CONFIG[sessionType];
+    const totalTime = currentSession.seconds;
+    const progress = Math.min(1, Math.max(0, (totalTime - timeLeft) / totalTime));
+    const progressStyle = { '--focus-progress': progress } as CSSProperties;
+    const focusMinutesCompleted = sessionsCompleted * 25;
+    const sessionsUntilLongBreak = 4 - (sessionsCompleted % 4);
+    const SessionIcon = currentSession.icon;
 
     const handleComplete = useCallback(() => {
         setIsRunning(false);
+
         if (sessionType === 'focus') {
-            setSessionsCompleted((prev) => prev + 1);
-            showToast.success('Phiên Focus hoàn thành!', 'Nghỉ ngơi một chút nhé');
-            // Auto switch to break
-            if ((sessionsCompleted + 1) % 4 === 0) {
-                setSessionType('longBreak');
-                setTimeLeft(DEFAULT_TIMES.longBreak);
-            } else {
-                setSessionType('shortBreak');
-                setTimeLeft(DEFAULT_TIMES.shortBreak);
-            }
-        } else {
-            showToast.info('Hết giờ nghỉ!', 'Sẵn sàng cho phiên Focus tiếp theo');
-            setSessionType('focus');
-            setTimeLeft(DEFAULT_TIMES.focus);
+            const nextSessionCount = sessionsCompleted + 1;
+            const nextType: SessionType = nextSessionCount % 4 === 0 ? 'longBreak' : 'shortBreak';
+
+            setSessionsCompleted(nextSessionCount);
+            setSessionType(nextType);
+            setTimeLeft(SESSION_CONFIG[nextType].seconds);
+            return;
         }
+
+        setSessionType('focus');
+        setTimeLeft(SESSION_CONFIG.focus.seconds);
     }, [sessionType, sessionsCompleted]);
 
     useEffect(() => {
-        let interval: ReturnType<typeof setInterval>;
-        if (isRunning && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0) {
-            handleComplete();
+        if (!isRunning) {
+            return;
         }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isRunning, timeLeft, handleComplete]);
 
-    const toggleTimer = () => setIsRunning(!isRunning);
+        const intervalId = window.setInterval(() => {
+            setTimeLeft((current) => Math.max(0, current - 1));
+        }, 1000);
 
-    const resetTimer = () => {
+        return () => window.clearInterval(intervalId);
+    }, [isRunning]);
+
+    useEffect(() => {
+        if (timeLeft > 0) {
+            completionHandledRef.current = false;
+            return;
+        }
+
+        if (completionHandledRef.current) {
+            return;
+        }
+
+        completionHandledRef.current = true;
+        handleComplete();
+    }, [handleComplete, timeLeft]);
+
+    const toggleTimer = useCallback(() => {
+        if (timeLeft === 0) {
+            setTimeLeft(SESSION_CONFIG[sessionType].seconds);
+        }
+        setIsRunning((current) => !current);
+    }, [sessionType, timeLeft]);
+
+    const exitSession = useCallback(() => {
+        fullscreenSeenRef.current = false;
         setIsRunning(false);
-        setTimeLeft(DEFAULT_TIMES[sessionType]);
-    };
+        setIsSessionActive(false);
 
-    const switchSession = (type: SessionType) => {
+        if (document.fullscreenElement && document.exitFullscreen) {
+            void document.exitFullscreen().catch(() => undefined);
+        }
+    }, []);
+
+    const startSession = useCallback(() => {
+        const fullscreenTarget = document.documentElement;
+
+        if (!document.fullscreenElement && fullscreenTarget?.requestFullscreen) {
+            void fullscreenTarget.requestFullscreen()
+                .then(() => {
+                    fullscreenSeenRef.current = true;
+                })
+                .catch(() => undefined);
+        } else if (document.fullscreenElement) {
+            fullscreenSeenRef.current = true;
+        }
+
+        setIsSessionActive(true);
+        setIsRunning(true);
+    }, []);
+
+    const resetTimer = useCallback(() => {
+        setIsRunning(false);
+        setTimeLeft(SESSION_CONFIG[sessionType].seconds);
+    }, [sessionType]);
+
+    const switchSession = useCallback((type: SessionType) => {
         setSessionType(type);
-        setTimeLeft(DEFAULT_TIMES[type]);
+        setTimeLeft(SESSION_CONFIG[type].seconds);
         setIsRunning(false);
-    };
+    }, []);
 
-    const sessionColors = {
-        focus: 'from-cyan-500 via-blue-500 to-purple-600',
-        shortBreak: 'from-emerald-500 via-green-500 to-teal-600',
-        longBreak: 'from-blue-500 via-indigo-500 to-violet-600',
-    };
+    useEffect(() => {
+        if (autoStartHandledRef.current || searchParams.get('start') !== 'true') {
+            return;
+        }
 
-    const sessionLabels = {
-        focus: 'Focus',
-        shortBreak: 'Nghỉ ngắn',
-        longBreak: 'Nghỉ dài',
-    };
+        autoStartHandledRef.current = true;
+        fullscreenSeenRef.current = Boolean(document.fullscreenElement);
+        setIsSessionActive(true);
+        setIsRunning(true);
 
-    if (zenMode) {
-        return (
-            <div className="fixed inset-0 z-50 bg-gradient-to-br from-[#0F1F3A] via-[#1A2942] to-[#0A1628] flex items-center justify-center">
-                <button
-                    onClick={() => setZenMode(false)}
-                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors"
-                >
-                    <Minimize2 className="w-6 h-6" />
-                </button>
-                <div className="text-center">
-                    <p className="text-gray-300 text-lg mb-6 tracking-wide">{sessionLabels[sessionType]}</p>
-                    <p className="text-8xl font-bold text-white font-mono mb-8 drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]">
-                        {formatTime(timeLeft)}
-                    </p>
-                    <Button
-                        size="lg"
-                        onClick={toggleTimer}
-                        className={cn(
-                            'w-30 h-30 rounded-full transition-all',
-                            isRunning
-                                ? 'bg-red-500 hover:bg-red-600 text-white shadow-[0_0_30px_rgba(239,68,68,0.5)]'
-                                : 'bg-gradient-to-r from-[#12C2FF] to-[#3B82F6] hover:from-[#3DD6FF] hover:to-[#60A5FA] text-white shadow-[0_0_30px_rgba(59,130,246,0.5)]'
-                        )}
-                    >
-                        {isRunning ? (
-                            <Pause className="w-8 h-8" />
-                        ) : (
-                            <Play className="w-8 h-8 ml-1 fill-white" />
-                        )}
-                    </Button>
-                </div>
-            </div>
-        );
-    }
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('start');
+        setSearchParams(nextParams, { replace: true });
+    }, [searchParams, setSearchParams]);
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            if (document.fullscreenElement) {
+                fullscreenSeenRef.current = true;
+                return;
+            }
+
+            if (isSessionActive && fullscreenSeenRef.current) {
+                fullscreenSeenRef.current = false;
+                setIsRunning(false);
+                setIsSessionActive(false);
+            }
+        };
+
+        handleFullscreenChange();
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, [isSessionActive]);
+
+    useEffect(() => {
+        if (!isSessionActive) {
+            return;
+        }
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const handleKeyboard = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                exitSession();
+                return;
+            }
+
+            if (event.code === 'Space' && !event.repeat && !isTypingTarget(event.target)) {
+                event.preventDefault();
+                toggleTimer();
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyboard, true);
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            document.removeEventListener('keydown', handleKeyboard, true);
+        };
+    }, [exitSession, isSessionActive, toggleTimer]);
+
+    useEffect(() => {
+        return () => {
+            if (document.fullscreenElement && document.exitFullscreen) {
+                void document.exitFullscreen().catch(() => undefined);
+            }
+        };
+    }, []);
+
+    const sessionTabs = useMemo(
+        () => (Object.keys(SESSION_CONFIG) as SessionType[]),
+        [],
+    );
 
     return (
-        <div className="max-w-2xl mx-auto space-y-8 pb-20 md:pb-0">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--text)]">Focus Mode</h1>
-                    <p className="text-[var(--text-2)]">Tập trung làm việc với Pomodoro</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setZenMode(true)}>
-                    <Maximize2 className="w-5 h-5" />
-                </Button>
-            </div>
+        <div
+            className="focus-page"
+            data-session={sessionType}
+            data-active={isSessionActive ? 'true' : 'false'}
+        >
+            {isSessionActive ? createPortal(
+                <section
+                    className="focus-immersive"
+                    data-state={isRunning ? 'running' : 'paused'}
+                    aria-label={'Phiên ' + currentSession.label}
+                >
+                    <header className="focus-immersive__header">
+                        <div className="focus-immersive__brand">
+                            <TimerReset aria-hidden="true" />
+                            <span>LifeSync Focus</span>
+                        </div>
+                        <p className="focus-immersive__status" aria-live="polite">
+                            <span aria-hidden="true" />
+                            {isRunning ? 'Đang chạy' : 'Đang tạm dừng'}
+                        </p>
+                    </header>
 
-            {/* Session Type Tabs */}
-            <div className=" flex gap-2 p-1 bg-blue-400 border border-[var(--border)] rounded-xl backdrop-blur-xl ">
-                {(['focus', 'shortBreak', 'longBreak'] as SessionType[]).map((type) => (
-                    <button
-                        key={type}
-                        onClick={() => switchSession(type)}
-                        className={cn(
-                            'flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all',
-                            sessionType === type
-                                ? 'bg-[var(--surface-2)] text-[var(--text)] shadow-sm'
-                                : 'text-[var(--text-2)] hover:text-[var(--text)]'
-                        )}
-                    >
-                        {type === 'focus' && <Brain className="w-4 h-4 inline mr-1.5" />}
-                        {type === 'shortBreak' && <Coffee className="w-4 h-4 inline mr-1.5" />}
-                        {type === 'longBreak' && <Coffee className="w-4 h-4 inline mr-1.5" />}
-                        {sessionLabels[type]}
-                    </button>
-                ))}
-            </div>
-
-            {/* Timer */}
-            <div className={cn('bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-lg)] rounded-xl backdrop-blur-xl p-8 text-center bg-gradient-to-br', sessionColors[sessionType])}>
-                {/* Progress Ring */}
-                <div className="relative w-64 h-64 mx-auto mb-6">
-                    <svg className="w-full h-full transform -rotate-90">
-                        <circle
-                            cx="128"
-                            cy="128"
-                            r="120"
-                            fill="none"
-                            stroke="rgba(255,255,255,0.2)"
-                            strokeWidth="8"
-                        />
-                        <circle
-                            cx="128"
-                            cy="128"
-                            r="120"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="8"
-                            strokeLinecap="round"
-                            strokeDasharray={2 * Math.PI * 120}
-                            strokeDashoffset={2 * Math.PI * 120 * (1 - progress / 100)}
-                            className="transition-all duration-1000"
-                        />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-6xl font-bold text-white font-mono">
+                    <div className="focus-immersive__stage">
+                        <div className="focus-immersive__copy">
+                            <SessionIcon aria-hidden="true" />
+                            <span>{currentSession.label}</span>
+                        </div>
+                        <p
+                            className="focus-immersive__time"
+                            role="timer"
+                            aria-label={'Còn ' + formatTime(timeLeft)}
+                        >
                             {formatTime(timeLeft)}
-                        </span>
+                        </p>
+                        <h1>{currentSession.headline}</h1>
+                        <div className="focus-progress" style={progressStyle} aria-hidden="true">
+                            <span />
+                        </div>
                     </div>
-                </div>
 
-                {/* Controls */}
-                <div className="flex items-center justify-center gap-4">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={resetTimer}
-                        className="text-white/80 hover:text-white hover:bg-white/10"
-                    >
-                        <RotateCcw className="w-5 h-5" />
-                    </Button>
-                    <Button
-                        size="lg"
-                        onClick={toggleTimer}
-                        className={cn(
-                            'w-26 h-16 rounded-full shadow-lg',
-                            isRunning
-                                ? 'bg-white/20 hover:bg-white/30 text-white'
-                                : 'bg-slate-900 text-white hover:bg-slate-800'
-                        )}
-                    >
-                        {isRunning ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1 fill-white" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-white/80 hover:text-white hover:bg-white/10"
-                    >
-                        <Settings2 className="w-5 h-5" />
-                    </Button>
-                </div>
-            </div>
+                    <footer className="focus-immersive__footer">
+                        <div className="focus-keyboard-guide" aria-label="Phím điều khiển">
+                            <span><kbd>Space</kbd>{isRunning ? 'Tạm dừng' : 'Tiếp tục'}</span>
+                            <span><kbd>Esc</kbd>Thoát phiên</span>
+                        </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-                <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl p-4 text-center hover:shadow-[var(--shadow-lg)] hover:-translate-y-1 transition-all">
-                    <p className="text-3xl font-bold text-[var(--text)]">{sessionsCompleted}</p>
-                    <p className="text-sm text-[var(--text-2)]">Phiên hôm nay</p>
-                </div>
-                <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl p-4 text-center hover:shadow-[var(--shadow-lg)] hover:-translate-y-1 transition-all">
-                    <p className="text-3xl font-bold text-[var(--text)]">
-                        {Math.round((sessionsCompleted * 25) / 60 * 10) / 10}h
+                        <div className="focus-touch-controls" aria-label="Điều khiển cảm ứng">
+                            <button type="button" className="focus-button focus-button--quiet" onClick={toggleTimer}>
+                                {isRunning ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+                                {isRunning ? 'Tạm dừng' : 'Tiếp tục'}
+                            </button>
+                            <button type="button" className="focus-button focus-button--quiet" onClick={exitSession}>
+                                Thoát phiên
+                            </button>
+                        </div>
+
+                        <p>Chỉ một việc cho đến khi đồng hồ kết thúc.</p>
+                    </footer>
+                </section>,
+                document.body,
+            ) : (
+                <main className="focus-lobby">
+                    <header className="focus-header">
+                        <div>
+                            <h1>Pomodoro</h1>
+                            <p>Chọn một nhịp, rồi dành toàn bộ màn hình cho phiên đó.</p>
+                        </div>
+                        <div className="focus-cycle" aria-label={sessionsCompleted + ' phiên đã hoàn thành hôm nay'}>
+                            <CheckCircle2 aria-hidden="true" />
+                            <strong>{sessionsCompleted}</strong>
+                            <span>phiên hôm nay</span>
+                        </div>
+                    </header>
+
+                    <section className="focus-stage" aria-labelledby="focus-stage-heading">
+                        <div className="focus-stage__intro">
+                            <div>
+                                <h2 id="focus-stage-heading">{currentSession.headline}</h2>
+                                <p>{currentSession.description}</p>
+                            </div>
+
+                            <div className="focus-tabs" role="tablist" aria-label="Loại phiên">
+                                {sessionTabs.map((type) => {
+                                    const config = SESSION_CONFIG[type];
+                                    const Icon = config.icon;
+
+                                    return (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={sessionType === type}
+                                            className="focus-tab"
+                                            onClick={() => switchSession(type)}
+                                        >
+                                            <Icon aria-hidden="true" />
+                                            {config.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="focus-stage__timer">
+                            <p className="focus-stage__time" role="timer" aria-label={'Còn ' + formatTime(timeLeft)}>
+                                {formatTime(timeLeft)}
+                            </p>
+                            <div className="focus-progress" style={progressStyle} aria-hidden="true">
+                                <span />
+                            </div>
+                        </div>
+
+                        <div className="focus-stage__actions">
+                            <button
+                                type="button"
+                                className="focus-button focus-button--quiet"
+                                onClick={resetTimer}
+                                disabled={timeLeft === totalTime && !isRunning}
+                            >
+                                <RotateCcw aria-hidden="true" />
+                                Đặt lại
+                            </button>
+                            <button type="button" className="focus-button focus-button--primary" onClick={startSession}>
+                                <Play aria-hidden="true" />
+                                {timeLeft < totalTime ? 'Tiếp tục phiên' : 'Bắt đầu phiên'}
+                            </button>
+                        </div>
+                    </section>
+
+                    <section className="focus-support" aria-label="Tổng quan phiên">
+                        <div className="focus-stats">
+                            <div>
+                                <strong>{sessionsCompleted}</strong>
+                                <span>Phiên hoàn thành</span>
+                            </div>
+                            <div>
+                                <strong>{focusMinutesCompleted}</strong>
+                                <span>Phút tập trung</span>
+                            </div>
+                            <div>
+                                <strong>{sessionsUntilLongBreak}</strong>
+                                <span>Phiên đến nghỉ dài</span>
+                            </div>
+                        </div>
+
+                        <div className="focus-shortcuts">
+                            <Keyboard aria-hidden="true" />
+                            <div>
+                                <h2>Điều khiển trong phiên</h2>
+                                <p><kbd>Space</kbd> tạm dừng hoặc tiếp tục · <kbd>Esc</kbd> thoát.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <p className="focus-page__note">
+                        <Clock3 aria-hidden="true" />
+                        Đồng hồ giữ nguyên thời gian còn lại khi bạn thoát khỏi chế độ toàn màn hình.
                     </p>
-                    <p className="text-sm text-[var(--text-2)]">Thời gian focus</p>
-                </div>
-                <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl p-4 text-center hover:shadow-[var(--shadow-lg)] hover:-translate-y-1 transition-all">
-                    <p className="text-3xl font-bold text-[var(--text)]">
-                        {4 - (sessionsCompleted % 4)}
-                    </p>
-                    <p className="text-sm text-[var(--text-2)]">Đến nghỉ dài</p>
-                </div>
-            </div>
-
-            {/* Tips */}
-            <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl p-4">
-                <h3 className="font-medium text-[var(--text)] mb-2">💡 Mẹo Focus</h3>
-                <ul className="text-sm text-[var(--text-2)] space-y-1">
-                    <li>• Tắt thông báo điện thoại trong phiên focus</li>
-                    <li>• Uống nước trong giờ nghỉ</li>
-                    <li>• Đứng dậy vận động sau mỗi 4 phiên</li>
-                </ul>
-            </div>
+                </main>
+            )}
         </div>
     );
 }

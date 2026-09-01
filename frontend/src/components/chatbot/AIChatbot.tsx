@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Loader2, MessageCircle, Mail, Phone } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, MessageCircle, Mail, Phone, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { aiChatService, type ChatAction } from '../../services/ai-chat.service';
@@ -9,6 +9,7 @@ interface Message {
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
+    imageUrl?: string;
 }
 
 export default function AIChatbot() {
@@ -18,15 +19,58 @@ export default function AIChatbot() {
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [imageMode, setImageMode] = useState(false);
+    const [imageEnabled, setImageEnabled] = useState(false);
+    const [conversationId, setConversationId] = useState<string>();
+    const [providerConfigured, setProviderConfigured] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const initializedRef = useRef(false);
 
     useEffect(() => {
-        if (isOpen && messages.length === 0) {
-            loadInitialSuggestions();
+        if (!isOpen || initializedRef.current) return;
+        initializedRef.current = true;
+
+        const initializeChat = async () => {
+            try {
+                const [status, conversations, suggestionsData] = await Promise.all([
+                    aiChatService.getStatus(),
+                    aiChatService.getConversations(),
+                    aiChatService.getSuggestions(),
+                ]);
+                setProviderConfigured(status.configured);
+                setSuggestions(suggestionsData.suggestions || []);
+
+                const latest = conversations[0];
+                if (latest) {
+                    const history = await aiChatService.getConversationMessages(latest.id);
+                    setConversationId(latest.id);
+                    setMessages(history.map((message) => ({
+                        id: message.id,
+                        role: message.role === 'USER' ? 'user' : 'assistant',
+                        content: message.content,
+                        timestamp: new Date(message.createdAt),
+                    })));
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to initialize AI chat:', error);
+            }
+
             addWelcomeMessage();
-        }
-    }, [isOpen, messages.length]);
+        };
+
+        void initializeChat();
+    }, [isOpen]);
+
+    // Check whether image generation (Gemini) is configured on the backend.
+    useEffect(() => {
+        if (!isOpen) return;
+        aiChatService
+            .getImageStatus()
+            .then((s) => setImageEnabled(s.enabled))
+            .catch(() => setImageEnabled(false));
+    }, [isOpen]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -43,19 +87,10 @@ export default function AIChatbot() {
             id: Date.now().toString(),
             role: 'assistant',
             content:
-                'Xin chào! Tôi là trợ lý AI của Time Manager. Tôi có thể giúp bạn quản lý công việc, lên lịch và tối ưu thời gian. Bạn cần tôi giúp gì?',
+                'Xin chào! Tôi là trợ lý AI của LifeSync AI. Tôi có thể giúp bạn quản lý công việc, lên lịch và tối ưu thời gian. Bạn cần tôi giúp gì?',
             timestamp: new Date(),
         };
         setMessages([welcomeMsg]);
-    };
-
-    const loadInitialSuggestions = async () => {
-        try {
-            const suggestionsData = await aiChatService.getSuggestions();
-            setSuggestions(suggestionsData.suggestions || []);
-        } catch (error) {
-            console.error('Failed to load suggestions:', error);
-        }
     };
 
     const sendMessage = async (text: string) => {
@@ -76,18 +111,17 @@ export default function AIChatbot() {
             const chatData = await aiChatService.sendMessage(
                 {
                     message: text,
-                    context: messages.slice(-5).map((message) => ({
-                        role: message.role,
-                        content: message.content,
-                    })),
+                    conversationId,
                 },
             );
 
+            setConversationId(chatData.conversationId);
+
             const assistantMessage: Message = {
-                id: (Date.now() + 1).toString(),
+                id: chatData.assistantMessageId,
                 role: 'assistant',
                 content: chatData.message || 'Xin lỗi, tôi không thể trả lời lúc này.',
-                timestamp: new Date(),
+                timestamp: new Date(chatData.createdAt),
             };
 
             setMessages((prev) => [...prev, assistantMessage]);
@@ -112,10 +146,65 @@ export default function AIChatbot() {
         }
     };
 
+    const clearConversation = async () => {
+        if (conversationId) {
+            try {
+                await aiChatService.deleteConversation(conversationId);
+            } catch (error) {
+                console.error('Failed to delete conversation:', error);
+                return;
+            }
+        }
+        setConversationId(undefined);
+        setMessages([]);
+        addWelcomeMessage();
+    };
+
     const handleActions = (actions: ChatAction[]) => {
         actions.forEach(() => {
             // Reserved for future UI-side automation hooks.
         });
+    };
+
+    const generateImage = async (text: string) => {
+        if (!text.trim() || isLoading) return;
+
+        const userMessage: Message = {
+            id: Date.now().toString(),
+            role: 'user',
+            content: `🎨 ${text}`,
+            timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        setInput('');
+        setIsLoading(true);
+
+        try {
+            const result = await aiChatService.generateImage(text);
+            const assistantMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: 'Đây là ảnh mình tạo theo mô tả của bạn:',
+                timestamp: new Date(),
+                imageUrl: result.dataUrl,
+            };
+            setMessages((prev) => [...prev, assistantMessage]);
+        } catch (error) {
+            const err = error as { response?: { data?: { error?: { message?: string }; message?: string } } };
+            const msg =
+                err.response?.data?.error?.message ||
+                err.response?.data?.message ||
+                'Xin lỗi, mình không thể tạo ảnh lúc này. Vui lòng thử lại sau.';
+            const errorMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: msg,
+                timestamp: new Date(),
+            };
+            setMessages((prev) => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSuggestionClick = (suggestion: string) => {
@@ -124,7 +213,11 @@ export default function AIChatbot() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        sendMessage(input);
+        if (imageMode) {
+            generateImage(input);
+        } else {
+            sendMessage(input);
+        }
     };
 
     const contactMethods = [
@@ -145,14 +238,14 @@ export default function AIChatbot() {
             ),
             label: 'Facebook',
             color: 'from-blue-600 to-blue-700',
-            action: () => window.open('https://facebook.com/timemanager', '_blank'),
+            action: () => window.open('https://facebook.com/lifesyncai', '_blank'),
         },
         {
             icon: Mail,
             label: 'Email',
             color: 'from-red-500 to-pink-500',
             action: () => {
-                window.location.href = 'mailto:support@timemanager.com';
+                window.location.href = 'mailto:support@lifesyncai.com';
             },
         },
         {
@@ -168,7 +261,7 @@ export default function AIChatbot() {
     return (
         <>
             {!isOpen && (
-                <div className="fixed bottom-6 right-6 z-50">
+                <div className="fixed bottom-20 right-4 z-50 md:bottom-6 md:right-6">
                     {showContactMenu && (
                         <div className="absolute bottom-20 right-0 mb-2 flex flex-col gap-3">
                             {contactMethods.map((method, index) => {
@@ -232,11 +325,12 @@ export default function AIChatbot() {
 
             {isOpen && (
                 <div
-                    className="fixed bottom-6 right-6 z-50 flex flex-col overflow-hidden rounded-3xl"
+                    className="fixed bottom-20 right-4 z-50 flex flex-col overflow-hidden rounded-3xl md:bottom-6 md:right-6"
                     style={{
                         width: '400px',
                         height: '600px',
-                        maxHeight: 'calc(100vh - 100px)',
+                        maxWidth: 'calc(100vw - 2rem)',
+                        maxHeight: 'calc(100vh - 140px)',
                         background: 'var(--surface-2)',
                         border: '1px solid var(--border)',
                         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
@@ -257,24 +351,38 @@ export default function AIChatbot() {
                                 <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/50 bg-white/30 backdrop-blur-sm">
                                     <Bot className="h-6 w-6" />
                                 </div>
-                                <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-400">
-                                    <span className="absolute inset-0 animate-ping rounded-full bg-green-400" />
+                                <div className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${providerConfigured ? 'bg-green-400' : 'bg-amber-400'}`}>
+                                    {providerConfigured && <span className="absolute inset-0 animate-ping rounded-full bg-green-400" />}
                                 </div>
                             </div>
                             <div>
                                 <h3 className="text-base font-semibold">AI Assistant</h3>
                                 <p className="flex items-center gap-1 text-xs opacity-90">
-                                    <span className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
-                                    Đang hoạt động
+                                    <span className={`h-2 w-2 rounded-full ${providerConfigured ? 'animate-pulse bg-green-400' : 'bg-amber-400'}`} />
+                                    {providerConfigured ? 'Đã kết nối AI' : 'Chưa cấu hình AI'}
                                 </p>
                             </div>
                         </div>
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="relative z-10 flex h-9 w-9 items-center justify-center rounded-full transition-all hover:rotate-90 hover:bg-white/20"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
+                        <div className="relative z-10 flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => void clearConversation()}
+                                className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:bg-white/20"
+                                title="Xóa cuộc trò chuyện"
+                                aria-label="Xóa cuộc trò chuyện"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsOpen(false)}
+                                className="flex h-9 w-9 items-center justify-center rounded-full transition-all hover:rotate-90 hover:bg-white/20"
+                                title="Đóng trò chuyện"
+                                aria-label="Đóng trò chuyện"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex-1 space-y-4 overflow-y-auto p-4">
@@ -299,9 +407,8 @@ export default function AIChatbot() {
                                     )}
                                 </div>
                                 <div
-                                    className={`flex-1 rounded-2xl p-3 shadow-sm ${
-                                        message.role === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'
-                                    }`}
+                                    className={`flex-1 rounded-2xl p-3 shadow-sm ${message.role === 'user' ? 'rounded-tr-sm' : 'rounded-tl-sm'
+                                        }`}
                                     style={{
                                         background:
                                             message.role === 'user' ? 'var(--primary)' : 'var(--surface-3)',
@@ -311,6 +418,19 @@ export default function AIChatbot() {
                                     <p className="whitespace-pre-wrap text-sm leading-relaxed">
                                         {message.content}
                                     </p>
+                                    {message.imageUrl && (
+                                        <a
+                                            href={message.imageUrl}
+                                            download="lifesync-ai-image.png"
+                                            className="mt-2 block overflow-hidden rounded-xl border border-[var(--border)]"
+                                        >
+                                            <img
+                                                src={message.imageUrl}
+                                                alt="AI generated"
+                                                className="w-full object-cover"
+                                            />
+                                        </a>
+                                    )}
                                     <span
                                         className="mt-1 block text-xs"
                                         style={{
@@ -378,17 +498,31 @@ export default function AIChatbot() {
                         style={{ borderColor: 'var(--border)' }}
                     >
                         <div className="flex gap-2">
+                            {imageEnabled && (
+                                <button
+                                    type="button"
+                                    onClick={() => setImageMode((v) => !v)}
+                                    title={imageMode ? 'Đang ở chế độ tạo ảnh' : 'Chuyển sang tạo ảnh'}
+                                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg transition-colors"
+                                    style={{
+                                        background: imageMode ? 'var(--primary-gradient)' : 'var(--surface-3)',
+                                        color: imageMode ? 'white' : 'var(--text-2)',
+                                    }}
+                                >
+                                    <ImagePlus className="h-5 w-5" />
+                                </button>
+                            )}
                             <Input
                                 ref={inputRef}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                placeholder="Nhập tin nhắn..."
-                                disabled={isLoading}
+                                placeholder={imageMode ? 'Mô tả ảnh bạn muốn tạo...' : 'Nhập tin nhắn...'}
+                                disabled={isLoading || (!providerConfigured && !imageMode)}
                                 className="flex-1"
                             />
                             <Button
                                 type="submit"
-                                disabled={!input.trim() || isLoading}
+                                disabled={!input.trim() || isLoading || (!providerConfigured && !imageMode)}
                                 className="px-4"
                                 style={{
                                     background: input.trim()
@@ -404,6 +538,11 @@ export default function AIChatbot() {
                                 )}
                             </Button>
                         </div>
+                        {imageMode && (
+                            <p className="mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
+                                🎨 Chế độ tạo ảnh đang bật — mô tả ảnh và nhấn gửi.
+                            </p>
+                        )}
                     </form>
                 </div>
             )}

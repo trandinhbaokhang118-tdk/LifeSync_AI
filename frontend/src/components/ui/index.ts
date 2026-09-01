@@ -17,6 +17,10 @@ export * from './DateTimePicker';
 export * from './ErrorState';
 export * from './EmptyTasks';
 export * from './EmptyNotifications';
+export * from './WaveBackground';
+export * from './Animated3DScene';
+export * from './VideoBackground';
+export * from './LifeSyncFlowBackground';
 
 // Re-export for backward compatibility
 export { SkeletonList, ListSkeleton, SkeletonStats } from './Skeleton';

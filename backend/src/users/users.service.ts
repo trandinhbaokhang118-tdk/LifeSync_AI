@@ -127,14 +127,30 @@ export class UsersService {
             });
         }
 
+        // Reject no-op changes so a compromised session can't "confirm" the
+        // current password by setting it to itself.
+        if (currentPassword === newPassword) {
+            throw new BadRequestException({
+                code: 'PASSWORD_UNCHANGED',
+                message: 'New password must be different from the current password',
+            });
+        }
+
         // Hash new password
         const newPasswordHash = await argon2.hash(newPassword);
 
-        // Update password
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: { passwordHash: newPasswordHash },
-        });
+        // Update password AND revoke every existing refresh token in one
+        // transaction. Changing a password must invalidate all other sessions
+        // (a key mitigation when an account is suspected compromised).
+        await this.prisma.$transaction([
+            this.prisma.user.update({
+                where: { id: userId },
+                data: { passwordHash: newPasswordHash },
+            }),
+            this.prisma.refreshToken.deleteMany({
+                where: { userId },
+            }),
+        ]);
 
         return { message: 'Password changed successfully' };
     }

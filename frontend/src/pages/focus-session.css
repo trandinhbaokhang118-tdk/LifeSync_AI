@@ -1,0 +1,626 @@
+/* Hallmark · macrostructure: Stat-Led · genre: modern-minimal · theme: LifeSync custom dark
+ * pre-emit critique: P5 H5 E5 S5 R5 V4
+ * audience: personal productivity · use: start a focused session quickly · tone: technical, athletic, austere
+ * enrichment: none · nav: existing N3 side-rail · footer: app-shell none
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * contrast: pass (40–41) · slop: pass (42–45) · honest: pass (46) · chrome: pass (47)
+ * tokens: pass (48) · responsive: pass (34, 49, 50–57) · icons: pass (30)
+ */
+
+@import url('../../tokens.css');
+
+html,
+body {
+    overflow-x: clip;
+}
+
+.focus-page {
+    min-width: 0;
+    color: var(--color-focus-ink);
+    font-family: var(--font-body);
+}
+
+.focus-page:fullscreen {
+    background: var(--color-focus-paper);
+}
+
+.focus-page :is(button, [role="tab"]):focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 3px;
+}
+
+.focus-lobby {
+    display: grid;
+    width: min(100%, var(--page-max));
+    margin-inline: auto;
+    gap: var(--space-lg);
+    padding-block-end: var(--space-2xl);
+}
+
+.focus-header {
+    display: grid;
+    gap: var(--space-md);
+    min-width: 0;
+    padding-block: var(--space-xs) var(--space-lg);
+    border-block-end: var(--rule-hair) solid var(--color-focus-rule);
+}
+
+.focus-header h1,
+.focus-stage h2,
+.focus-shortcuts h2,
+.focus-immersive h1 {
+    margin: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: var(--color-focus-ink);
+    font-family: var(--font-display);
+    font-style: normal;
+}
+
+.focus-header h1 {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+}
+
+.focus-header p,
+.focus-stage__intro p,
+.focus-shortcuts p,
+.focus-page__note {
+    color: var(--color-focus-muted);
+    line-height: 1.6;
+}
+
+.focus-header p {
+    max-width: 58ch;
+    margin: var(--space-xs) 0 0;
+}
+
+.focus-cycle {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-xs);
+    min-height: 2.75rem;
+    color: var(--color-focus-muted);
+}
+
+.focus-cycle svg {
+    width: 1.125rem;
+    color: var(--color-focus-accent);
+}
+
+.focus-cycle strong {
+    color: var(--color-focus-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-variant-numeric: tabular-nums;
+}
+
+.focus-cycle span {
+    white-space: nowrap;
+}
+
+.focus-stage {
+    display: grid;
+    gap: var(--space-xl);
+    min-width: 0;
+    padding: var(--space-lg);
+    border: var(--rule-hair) solid var(--color-focus-rule);
+    border-radius: var(--radius-lg);
+    background: var(--color-focus-paper-2);
+    color: var(--color-focus-ink);
+}
+
+.focus-stage__intro {
+    display: grid;
+    gap: var(--space-lg);
+}
+
+.focus-stage h2 {
+    max-width: 18ch;
+    font-size: var(--text-xl);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+}
+
+.focus-stage__intro p {
+    max-width: 62ch;
+    margin: var(--space-sm) 0 0;
+}
+
+.focus-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-self: start;
+    gap: var(--space-2xs);
+    min-width: 0;
+    padding: var(--space-2xs);
+    border: var(--rule-hair) solid var(--color-focus-rule);
+    border-radius: var(--radius-md);
+    background: var(--color-focus-paper);
+}
+
+.focus-tab,
+.focus-button {
+    min-height: 2.75rem;
+    border: var(--rule-hair) solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--color-focus-muted);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform var(--dur-micro) var(--ease-out), opacity var(--dur-micro) var(--ease-out);
+}
+
+.focus-tab {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding-inline: var(--space-xs);
+    background: transparent;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+}
+
+.focus-tab svg {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+}
+
+.focus-tab[aria-selected="true"] {
+    border-color: var(--color-focus-rule-strong);
+    background: var(--color-focus-paper-3);
+    color: var(--color-focus-ink);
+}
+
+.focus-stage__timer {
+    display: grid;
+    gap: var(--space-md);
+    min-width: 0;
+    padding-block: var(--space-md) var(--space-xs);
+}
+
+.focus-stage__time,
+.focus-immersive__time {
+    margin: 0;
+    color: var(--color-focus-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-focus-timer);
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    letter-spacing: -0.065em;
+    line-height: 0.86;
+}
+
+.focus-progress {
+    width: 100%;
+    height: var(--rule-progress);
+    overflow: hidden;
+    background: var(--color-focus-rule);
+}
+
+.focus-progress span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--color-focus-accent);
+    transform: scaleX(var(--focus-progress, 0));
+    transform-origin: left center;
+    transition: transform 1s linear;
+}
+
+.focus-stage__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+.focus-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding-inline: var(--space-lg);
+    white-space: nowrap;
+}
+
+.focus-button svg {
+    width: 1.125rem;
+    height: 1.125rem;
+}
+
+.focus-button--primary {
+    margin-inline-start: auto;
+    border-color: var(--color-focus-accent);
+    background: var(--color-focus-accent);
+    color: var(--color-focus-accent-ink);
+}
+
+.focus-button--primary:focus-visible {
+    outline-color: var(--color-focus-paper);
+    box-shadow: 0 0 0 var(--focus-ring-outer) var(--color-focus-ring);
+}
+
+.focus-button--quiet {
+    border-color: var(--color-focus-rule-strong);
+    background: transparent;
+    color: var(--color-focus-ink);
+}
+
+.focus-tab:active,
+.focus-button:active {
+    transform: translateY(1px);
+}
+
+.focus-tab:disabled,
+.focus-button:disabled,
+.focus-tab[aria-disabled="true"],
+.focus-button[aria-disabled="true"] {
+    opacity: 0.48;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.focus-tab[data-state="loading"],
+.focus-button[data-state="loading"] {
+    opacity: 0.68;
+    cursor: wait;
+}
+
+.focus-tab[data-state="error"],
+.focus-button[data-state="error"] {
+    border-color: var(--color-focus-danger);
+    color: var(--color-focus-danger);
+}
+
+.focus-tab[data-state="success"],
+.focus-button[data-state="success"] {
+    border-color: var(--color-focus-success);
+    color: var(--color-focus-success);
+}
+
+.focus-support {
+    display: grid;
+    gap: var(--space-lg);
+    min-width: 0;
+}
+
+.focus-stats {
+    display: grid;
+    border-block: var(--rule-hair) solid var(--color-focus-rule);
+}
+
+.focus-stats > div {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-sm);
+    min-width: 0;
+    padding-block: var(--space-md);
+    border-block-end: var(--rule-hair) solid var(--color-focus-rule);
+}
+
+.focus-stats > div:last-child {
+    border-block-end: 0;
+}
+
+.focus-stats strong {
+    color: var(--color-focus-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-variant-numeric: tabular-nums;
+}
+
+.focus-stats span {
+    color: var(--color-focus-muted);
+}
+
+.focus-shortcuts {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: start;
+    gap: var(--space-md);
+    min-width: 0;
+    padding-block: var(--space-md);
+    border-block-start: var(--rule-hair) solid var(--color-focus-rule);
+}
+
+.focus-shortcuts > svg {
+    width: 1.5rem;
+    color: var(--color-focus-accent);
+}
+
+.focus-shortcuts h2 {
+    font-size: var(--text-md);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+.focus-shortcuts p {
+    margin: var(--space-xs) 0 0;
+}
+
+.focus-page kbd {
+    display: inline-flex;
+    min-width: 2.75rem;
+    min-height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    padding-inline: var(--space-xs);
+    border: var(--rule-hair) solid var(--color-focus-rule-strong);
+    border-radius: var(--radius-sm);
+    background: var(--color-focus-paper-3);
+    color: var(--color-focus-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: 800;
+}
+
+.focus-page__note {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xs);
+    max-width: 62ch;
+    margin: 0;
+    font-size: var(--text-sm);
+}
+
+.focus-page__note svg {
+    flex: 0 0 auto;
+    width: 1rem;
+    margin-block-start: var(--space-3xs);
+}
+
+.focus-immersive {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    width: 100%;
+    min-height: 100dvh;
+    overflow: auto;
+    gap: var(--space-lg);
+    padding: max(var(--space-lg), env(safe-area-inset-top)) max(var(--space-lg), env(safe-area-inset-right)) max(var(--space-lg), env(safe-area-inset-bottom)) max(var(--space-lg), env(safe-area-inset-left));
+    background: var(--color-focus-paper);
+    color: var(--color-focus-ink);
+}
+
+.focus-immersive__header,
+.focus-immersive__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    min-width: 0;
+}
+
+.focus-immersive__brand,
+.focus-immersive__status,
+.focus-immersive__copy,
+.focus-keyboard-guide,
+.focus-keyboard-guide span {
+    display: flex;
+    align-items: center;
+}
+
+.focus-immersive__brand {
+    gap: var(--space-xs);
+    color: var(--color-focus-ink);
+    font-weight: 800;
+}
+
+.focus-immersive__brand svg,
+.focus-immersive__copy svg {
+    width: 1.125rem;
+    color: var(--color-focus-accent);
+}
+
+.focus-immersive__status {
+    gap: var(--space-xs);
+    margin: 0;
+    color: var(--color-focus-muted);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+}
+
+.focus-immersive__status span {
+    width: var(--status-dot);
+    height: var(--status-dot);
+    border-radius: 50%;
+    background: var(--color-focus-accent);
+}
+
+.focus-immersive[data-state="paused"] .focus-immersive__status span {
+    background: var(--color-focus-muted);
+}
+
+.focus-immersive__stage {
+    display: grid;
+    align-content: center;
+    gap: var(--space-lg);
+    width: min(100%, var(--page-max));
+    margin-inline: auto;
+    min-width: 0;
+}
+
+.focus-immersive__copy {
+    gap: var(--space-xs);
+    color: var(--color-focus-muted);
+    font-size: var(--text-sm);
+    font-weight: 800;
+}
+
+.focus-immersive__time {
+    transition: opacity var(--dur-short) var(--ease-in-out);
+}
+
+.focus-immersive[data-state="paused"] .focus-immersive__time {
+    opacity: 0.52;
+}
+
+.focus-immersive h1 {
+    max-width: 24ch;
+    font-size: var(--text-lg);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+}
+
+.focus-immersive__footer {
+    align-items: flex-end;
+    padding-block-start: var(--space-md);
+    border-block-start: var(--rule-hair) solid var(--color-focus-rule);
+}
+
+.focus-keyboard-guide {
+    flex-wrap: wrap;
+    gap: var(--space-lg);
+}
+
+.focus-keyboard-guide span {
+    gap: var(--space-xs);
+    color: var(--color-focus-muted);
+    font-size: var(--text-sm);
+    white-space: nowrap;
+}
+
+.focus-immersive__footer > p {
+    max-width: 34ch;
+    margin: 0;
+    color: var(--color-focus-muted);
+    font-size: var(--text-sm);
+    text-align: end;
+}
+
+.focus-touch-controls {
+    display: none;
+    gap: var(--space-xs);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .focus-tab:hover,
+    .focus-button:hover {
+        transform: translateY(-1px);
+    }
+
+    .focus-tab[aria-selected="true"]:hover,
+    .focus-button:disabled:hover {
+        transform: none;
+    }
+}
+
+@media (pointer: coarse) {
+    .focus-button,
+    .focus-tab {
+        min-height: 3rem;
+    }
+
+    .focus-keyboard-guide {
+        display: none;
+    }
+
+    .focus-touch-controls {
+        display: flex;
+        flex-wrap: wrap;
+    }
+}
+
+@media (min-width: 40rem) {
+    .focus-header {
+        grid-template-columns: minmax(0, 1.35fr) minmax(12rem, 0.65fr);
+        align-items: end;
+    }
+
+    .focus-cycle {
+        justify-self: end;
+    }
+
+    .focus-stage {
+        padding: var(--space-xl);
+    }
+
+    .focus-stage__intro {
+        grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+        align-items: start;
+    }
+
+    .focus-tab svg {
+        display: block;
+    }
+
+    .focus-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .focus-stats > div {
+        grid-template-columns: 1fr;
+        border-block-end: 0;
+        border-inline-end: var(--rule-hair) solid var(--color-focus-rule);
+    }
+
+    .focus-stats > div:last-child {
+        border-inline-end: 0;
+    }
+}
+
+@media (min-width: 60rem) {
+    .focus-support {
+        grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 0.5fr);
+        align-items: start;
+    }
+
+    .focus-shortcuts {
+        border-block-start: 0;
+        border-inline-start: var(--rule-hair) solid var(--color-focus-rule);
+        padding-block: var(--space-md);
+        padding-inline-start: var(--space-lg);
+    }
+
+    .focus-immersive__stage {
+        padding-inline: var(--space-xl);
+    }
+}
+
+@media (max-width: 39.999rem) {
+    .focus-stage__actions {
+        display: grid;
+    }
+
+    .focus-button--primary {
+        order: -1;
+        width: 100%;
+        margin-inline-start: 0;
+    }
+
+    .focus-immersive__brand span {
+        display: none;
+    }
+
+    .focus-immersive__footer {
+        display: grid;
+    }
+
+    .focus-immersive__footer > p {
+        text-align: start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .focus-tab,
+    .focus-button,
+    .focus-immersive__time {
+        transition-duration: 0ms;
+    }
+
+    .focus-progress span {
+        transition-duration: 150ms;
+    }
+}

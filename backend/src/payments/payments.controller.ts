@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Put, Body, UseGuards, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  UseGuards,
+  Param,
+  Req,
+  BadRequestException,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PaymentProvider, SubscriptionStatus, SubscriptionTier } from '@prisma/client';
 import { PaymentsService } from './payments.service';
@@ -7,6 +20,7 @@ import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser, CurrentUserData } from '../common/decorators/current-user.decorator';
 
 @ApiTags('payments')
@@ -52,19 +66,49 @@ export class PaymentsController {
     return this.paymentsService.cancelSubscription(user.id);
   }
 
+  @Post('trial')
+  @Roles('USER')
+  @ApiOperation({ summary: 'Start a 7-day Plus trial' })
+  async startTrial(@CurrentUser() user: CurrentUserData) {
+    return this.paymentsService.startTrial(user.id, SubscriptionTier.PLUS);
+  }
+
   @Post('webhook/:provider')
+  @HttpCode(HttpStatus.OK)
+  @Public()
   @ApiOperation({ summary: 'Handle payment provider webhook' })
   async handleWebhook(
-    @Param('provider') provider: PaymentProvider,
+    @Param('provider') provider: string,
     @Body() payload: Record<string, unknown>,
+    @Req() request: Request & { rawBody?: Buffer },
   ) {
-    return this.paymentsService.handleWebhook(provider, payload);
+    const normalizedProvider = provider.toUpperCase() as PaymentProvider;
+    const signature =
+      normalizedProvider === PaymentProvider.SEPAY
+        ? (request.header('x-secret-key') ?? request.header('authorization'))
+        : request.header('stripe-signature');
+    if (normalizedProvider === PaymentProvider.STRIPE && !request.rawBody) {
+      throw new BadRequestException('Webhook request body is unavailable.');
+    }
+    const result = await this.paymentsService.handleWebhook(
+      normalizedProvider,
+      payload,
+      request.rawBody,
+      signature,
+    );
+    if (normalizedProvider === PaymentProvider.SEPAY) {
+      // The response interceptor skips objects containing `data`; undefined is
+      // omitted by JSON serialization, leaving SePay's required {success:true}.
+      return { success: true, data: undefined };
+    }
+    return result;
   }
 
   @Post('verify')
+  @Roles('USER')
   @ApiOperation({ summary: 'Verify payment' })
-  async verifyPayment(@Body('paymentId') paymentId: string) {
-    return this.paymentsService.verifyPayment(paymentId);
+  async verifyPayment(@CurrentUser() user: CurrentUserData, @Body('paymentId') paymentId: string) {
+    return this.paymentsService.verifyPayment(user.id, paymentId);
   }
 
   // Admin endpoints

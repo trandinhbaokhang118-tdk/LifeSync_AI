@@ -1,6 +1,6 @@
-services:
+﻿services:
   - type: web
-    name: time-manager-api
+    name: lifesync-ai-api
     env: node
     region: singapore
     plan: free
@@ -24,28 +24,52 @@ services:
       - key: FRONTEND_URL
         fromService:
           type: web
-          name: time-manager-frontend
+          name: lifesync-ai-frontend
           envVarKey: RENDER_EXTERNAL_URL
-        value: https://time-manager-frontend.onrender.com
+        value: https://lifesync-ai-frontend.onrender.com
       - key: OPENAI_API_KEY
         sync: false
+      - key: AI_BASE_URL
+        value: https://api.openai.com/v1
+      - key: AI_MODEL
+        value: gpt-4o-mini
+      - key: RATE_LIMIT_AI_MAX
+        value: 30
       - key: PAYMENTS_ENABLED
         value: false
+      - key: SEPAY_ENVIRONMENT
+        value: production
+      - key: SEPAY_MERCHANT_ID
+        value: SP-LIVE-TD7A37B6
+      - key: SEPAY_MERCHANT_SECRET_KEY
+        sync: false
+      - key: SEPAY_IPN_SECRET_KEY
+        sync: false
+      - key: SEPAY_WEBHOOK_API_KEY
+        sync: false
+      - key: SEPAY_BANK_NAME
+        value: VietinBank
+      - key: SEPAY_BANK_ACCOUNT_NUMBER
+        value: "105879514995"
+      - key: SEPAY_BANK_ACCOUNT_NAME
+        value: TRAN DINH BAO KHANG
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        value: https://time-manager-api.onrender.com/auth/google/callback
+        value: https://lifesync-ai-api.onrender.com/auth/google/callback
       - key: FACEBOOK_APP_ID
         sync: false
       - key: FACEBOOK_APP_SECRET
         sync: false
       - key: FACEBOOK_REDIRECT_URI
-        value: https://time-manager-api.onrender.com/auth/facebook/callback
+        value: https://lifesync-ai-api.onrender.com/auth/facebook/callback
+      - key: FACEBOOK_API_VERSION
+        value: v25.0
 
   - type: web
-    name: time-manager-frontend
+    name: lifesync-ai-frontend
     env: static
     region: singapore
     plan: free
@@ -64,7 +88,7 @@ services:
       - key: VITE_API_URL
         fromService:
           type: web
-          name: time-manager-api
+          name: lifesync-ai-api
           envVarKey: RENDER_EXTERNAL_URL
       - key: NODE_ENV
         value: production

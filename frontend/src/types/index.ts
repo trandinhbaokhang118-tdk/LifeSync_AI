@@ -1,17 +1,21 @@
 // User types
 export type SubscriptionTier = 'FREE' | 'PRO' | 'PLUS';
 export type SubscriptionStatus = 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'TRIALING';
-export type PaymentProvider = 'STRIPE' | 'VNPAY' | 'MOMO' | 'ZALOPAY';
+export type PaymentProvider = 'STRIPE' | 'SEPAY' | 'VNPAY' | 'MOMO' | 'ZALOPAY';
 export type HealthProvider = 'apple_health' | 'google_fit';
 export type HealthConnectionMode = 'native' | 'preview';
 export type HealthPlatform = 'ios' | 'android' | 'web';
+export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN';
+export type AuthPortal = 'user' | 'admin';
 
 export interface User {
     id: string;
     email: string;
     name: string;
     avatar?: string;
-    role: 'USER' | 'ADMIN';
+    phone?: string;
+    role: UserRole;
+    portal?: AuthPortal;
     createdAt: string;
     updatedAt: string;
     subscription?: Subscription;
@@ -21,6 +25,7 @@ export interface User {
 export interface LoginRequest {
     email: string;
     password: string;
+    rememberMe?: boolean;
 }
 
 export interface RegisterRequest {
@@ -33,6 +38,13 @@ export interface AuthResponse {
     accessToken: string;
     refreshToken: string;
     user: User;
+    access?: {
+        portal: AuthPortal;
+        defaultRoute: string;
+        allowedRoutePrefixes: string[];
+        restrictedRoutePrefixes: string[];
+        description: string;
+    };
 }
 
 // Task types
@@ -187,6 +199,7 @@ export interface Subscription {
     currentPeriodStart?: string;
     currentPeriodEnd?: string;
     canceledAt?: string;
+    trialUsed?: boolean;
 }
 
 export interface SubscriptionPlan {
@@ -205,6 +218,19 @@ export interface SubscriptionPlan {
 export interface CreateCheckoutRequest {
     tier: SubscriptionTier;
     provider?: PaymentProvider;
+}
+
+export interface CheckoutResponse {
+    provider: PaymentProvider;
+    checkoutUrl: string;
+    checkoutFields?: Record<string, string>;
+    sessionId?: string;
+    paymentId?: string;
+    receiver?: {
+        bankName: string;
+        accountNumber: string;
+        accountName: string;
+    };
 }
 
 // Fitness types
@@ -324,6 +350,8 @@ export interface TrackingSession {
     startLocation?: { lat: number; lng: number };
     locationCount?: number;
     totalDistance?: number;
+    ignored?: boolean;
+    reason?: string;
     summary?: {
         duration: number;
         distance: number;

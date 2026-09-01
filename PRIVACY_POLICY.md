@@ -1,11 +1,11 @@
-# Privacy Policy - TimeManager
+﻿# Privacy Policy - LifeSync AI
 
 **Effective Date:** January 25, 2026  
 **Last Updated:** January 25, 2026
 
 ## Introduction
 
-Welcome to TimeManager ("we," "our," or "us"). We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our mobile application and web service.
+Welcome to LifeSync AI ("we," "our," or "us"). We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we collect, use, and safeguard your information when you use our mobile application and web service.
 
 ## Information We Collect
 
@@ -24,7 +24,7 @@ Welcome to TimeManager ("we," "our," or "us"). We respect your privacy and are c
 ### 3. Device Information
 - **Device Type**: Phone model and manufacturer
 - **Operating System**: Android version
-- **App Version**: TimeManager version you're using
+- **App Version**: LifeSync AI version you're using
 - **Device ID**: Anonymous identifier for push notifications
 
 ### 4. Automatically Collected Data
@@ -110,12 +110,12 @@ We use the following third-party services:
 
 ### How to Exercise Rights
 - **In-app**: Settings → Privacy → Manage Data
-- **Email**: privacy@timemanager.com
+- **Email**: privacy@lifesyncai.com
 - **Response Time**: Within 30 days
 
 ## Children's Privacy
 
-TimeManager is not intended for children under 13. We do not knowingly collect data from children. If you believe a child has provided us data, contact us immediately.
+LifeSync AI is not intended for children under 13. We do not knowingly collect data from children. If you believe a child has provided us data, contact us immediately.
 
 ## Cookies and Tracking
 
@@ -154,12 +154,12 @@ We may update this policy periodically. Changes will be:
 ## Contact Us
 
 ### Privacy Questions
-**Email**: privacy@timemanager.com  
+**Email**: privacy@lifesyncai.com  
 **Response Time**: Within 48 hours
 
 ### General Support
-**Email**: support@timemanager.com  
-**Website**: https://timemanager.com
+**Email**: support@lifesyncai.com  
+**Website**: https://lifesyncai.com
 
 ### Developer
 **Name**: Trần Đình Bảo Khang  
@@ -176,9 +176,9 @@ This privacy policy complies with:
 
 ## Consent
 
-By using TimeManager, you consent to this privacy policy.
+By using LifeSync AI, you consent to this privacy policy.
 
 ---
 
-**TimeManager** - Smart Time Management with AI  
+**LifeSync AI** - Smart Time Management with AI  
 © 2026 All Rights Reserved

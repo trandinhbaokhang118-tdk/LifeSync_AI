@@ -1,4 +1,4 @@
-# 🔄 CHUYỂN ĐỔI SANG MYSQL - HƯỚNG DẪN
+﻿# 🔄 CHUYỂN ĐỔI SANG MYSQL - HƯỚNG DẪN
 
 ## ✅ Đã hoàn thành
 
@@ -30,8 +30,8 @@ docker-compose ps
 
 Bạn sẽ thấy:
 ```
-time_manager_mysql       Up (healthy)
-time_manager_phpmyadmin  Up
+lifesync_ai_mysql       Up (healthy)
+lifesync_ai_phpmyadmin  Up
 ```
 
 ### Bước 4: Tạo database schema
@@ -66,7 +66,7 @@ Mở trình duyệt:
 ```
 Host: localhost
 Port: 3306
-Database: time_manager
+Database: lifesync_ai
 User: tm_user
 Password: tm_password
 ```
@@ -121,13 +121,13 @@ docker-compose restart mysql
 cat backend/.env | grep DATABASE_URL
 
 # Phải là:
-DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/time_manager"
+DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/lifesync_ai"
 ```
 
-### Lỗi: "Unknown database 'time_manager'"
+### Lỗi: "Unknown database 'lifesync_ai'"
 ```bash
 # Tạo lại database
-docker-compose exec mysql mysql -u root -proot_password -e "CREATE DATABASE IF NOT EXISTS time_manager;"
+docker-compose exec mysql mysql -u root -proot_password -e "CREATE DATABASE IF NOT EXISTS lifesync_ai;"
 ```
 
 ### Lỗi: Migration failed
@@ -143,7 +143,7 @@ npx prisma migrate dev --name init_mysql
 ### Backup MySQL
 ```bash
 # Backup toàn bộ database
-docker-compose exec mysql mysqldump -u tm_user -ptm_password time_manager > backup.sql
+docker-compose exec mysql mysqldump -u tm_user -ptm_password lifesync_ai > backup.sql
 
 # Hoặc dùng phpMyAdmin: Export tab
 ```
@@ -151,7 +151,7 @@ docker-compose exec mysql mysqldump -u tm_user -ptm_password time_manager > back
 ### Restore MySQL
 ```bash
 # Restore từ file
-docker-compose exec -T mysql mysql -u tm_user -ptm_password time_manager < backup.sql
+docker-compose exec -T mysql mysql -u tm_user -ptm_password lifesync_ai < backup.sql
 
 # Hoặc dùng phpMyAdmin: Import tab
 ```
@@ -238,7 +238,7 @@ docker-compose down
 docker-compose logs -f mysql
 
 # Access MySQL CLI
-docker-compose exec mysql mysql -u tm_user -ptm_password time_manager
+docker-compose exec mysql mysql -u tm_user -ptm_password lifesync_ai
 
 # Reset database
 cd backend && npx prisma migrate reset

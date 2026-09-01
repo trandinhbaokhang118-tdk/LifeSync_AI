@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { registerServiceWorker } from './cache'
 
 // Import Capacitor for native features
 import { Capacitor } from '@capacitor/core';
@@ -27,6 +28,12 @@ if (Capacitor.isNativePlatform()) {
   console.log('Running on native platform:', Capacitor.getPlatform());
 } else {
   console.log('Running on web platform');
+
+  // Cache Layer 3: đăng ký Service Worker cache asset + offline (chỉ trên web).
+  registerServiceWorker({
+    onOfflineReady: () => console.log('App sẵn sàng chạy offline'),
+    onNeedRefresh: () => console.log('Có phiên bản mới, reload để cập nhật'),
+  });
 }
 
 createRoot(document.getElementById('root')!).render(

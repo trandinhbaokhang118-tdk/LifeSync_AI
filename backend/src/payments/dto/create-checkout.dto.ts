@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export enum PaymentProvider {
   STRIPE = 'STRIPE',
+  SEPAY = 'SEPAY',
   VNPAY = 'VNPAY',
   MOMO = 'MOMO',
   ZALOPAY = 'ZALOPAY',

@@ -111,7 +111,7 @@ export function Reminders() {
                     {/* Upcoming Reminders */}
                     {upcomingReminders.length > 0 && (
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                            <h2 className="text-lg font-semibold text-[var(--text)] mb-3">
                                 Upcoming
                             </h2>
                             <div className="space-y-3">
@@ -129,7 +129,7 @@ export function Reminders() {
                     {/* Triggered Reminders */}
                     {triggeredReminders.length > 0 && (
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-500 dark:text-gray-400 mb-3">
+                            <h2 className="text-lg font-semibold text-[var(--text-2)] mb-3">
                                 Triggered
                             </h2>
                             <div className="space-y-3 opacity-60">
@@ -225,14 +225,14 @@ function ReminderCard({ reminder, onDelete }: { reminder: Reminder; onDelete: ()
                         )}
                     </div>
                     <div>
-                        <p className="font-medium text-gray-900 dark:text-white">
+                        <p className="font-medium text-[var(--text)]">
                             {reminder.message}
                         </p>
                         <p className={clsx(
                             'text-sm',
                             isPast && !reminder.triggered
                                 ? 'text-red-600 dark:text-red-400'
-                                : 'text-gray-500 dark:text-gray-400'
+                                : 'text-[var(--text-2)]'
                         )}>
                             {new Date(reminder.triggerAt).toLocaleString()}
                             {reminder.triggered && ' (triggered)'}

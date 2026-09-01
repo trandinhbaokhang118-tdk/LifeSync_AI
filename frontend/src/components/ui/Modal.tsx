@@ -31,10 +31,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                     leaveFrom="opacity-100"
                     leaveTo="opacity-0"
                 >
-                    <div className="fixed inset-0 z-[99] bg-black/60 backdrop-blur-sm" aria-hidden="true" />
+                    <div className="fixed inset-0 z-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
                 </TransitionChild>
 
-                <div className="fixed inset-0 flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-10 flex items-center justify-center p-4">
                     <TransitionChild
                         as={Fragment}
                         enter="ease-out duration-300"
@@ -61,6 +61,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                                         {title}
                                     </DialogTitle>
                                     <button
+                                        type="button"
                                         onClick={onClose}
                                         className="rounded-xl p-2 text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-3)] transition-all duration-200"
                                     >
@@ -75,6 +76,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                             {/* Close button if no title */}
                             {!title && (
                                 <button
+                                    type="button"
                                     onClick={onClose}
                                     className="absolute right-4 top-4 rounded-xl p-2 text-[var(--text-3)] hover:text-[var(--text)] hover:bg-[var(--surface-3)] transition-all duration-200"
                                 >

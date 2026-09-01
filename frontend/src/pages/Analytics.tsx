@@ -122,8 +122,8 @@ export function Analytics() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Thống kê</h1>
-                    <p className="text-gray-500 dark:text-gray-400">Phân tích năng suất của bạn</p>
+                    <h1 className="text-2xl font-bold text-[var(--text)]">Thống kê</h1>
+                    <p className="text-[var(--text-2)]">Phân tích năng suất của bạn</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Badge variant="outline" className="gap-1">
@@ -176,21 +176,22 @@ export function Analytics() {
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* Weekly Progress */}
                     <div className="card p-6">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+                        <h3 className="font-semibold text-[var(--text)] mb-4">
                             Tiến độ tuần này
                         </h3>
                         <ResponsiveContainer width="100%" height={250}>
                             <BarChart data={taskStats.weeklyData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-                                <XAxis dataKey="day" stroke="#9ca3af" fontSize={12} />
-                                <YAxis stroke="#9ca3af" fontSize={12} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                                <XAxis dataKey="day" stroke="var(--text-3)" fontSize={12} />
+                                <YAxis stroke="var(--text-3)" fontSize={12} />
                                 <Tooltip
                                     contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #e5e7eb',
+                                        backgroundColor: 'var(--surface-2)',
+                                        border: '1px solid var(--border)',
                                         borderRadius: '8px',
+                                        color: 'var(--text)',
                                     }}
-                                    labelStyle={{ color: '#111827' }}
+                                    labelStyle={{ color: 'var(--text)' }}
                                 />
                                 <Bar dataKey="completed" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Hoàn thành" />
                             </BarChart>
@@ -199,7 +200,7 @@ export function Analytics() {
 
                     {/* Task Status Distribution */}
                     <div className="card p-6">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+                        <h3 className="font-semibold text-[var(--text)] mb-4">
                             Phân bố trạng thái
                         </h3>
                         <div className="flex items-center">
@@ -228,10 +229,10 @@ export function Analytics() {
                                             className="w-3 h-3 rounded-full"
                                             style={{ backgroundColor: item.color }}
                                         />
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                                        <span className="text-sm text-[var(--text-2)]">
                                             {item.name}
                                         </span>
-                                        <span className="ml-auto text-sm font-medium text-gray-900 dark:text-white">
+                                        <span className="ml-auto text-sm font-medium text-[var(--text)]">
                                             {item.value}
                                         </span>
                                     </div>
@@ -242,19 +243,20 @@ export function Analytics() {
 
                     {/* Focus Time */}
                     <div className="card p-6">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+                        <h3 className="font-semibold text-[var(--text)] mb-4">
                             Thời gian Focus
                         </h3>
                         <ResponsiveContainer width="100%" height={250}>
                             <BarChart data={taskStats.weeklyData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-                                <XAxis dataKey="day" stroke="#9ca3af" fontSize={12} />
-                                <YAxis stroke="#9ca3af" fontSize={12} unit="h" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                                <XAxis dataKey="day" stroke="var(--text-3)" fontSize={12} />
+                                <YAxis stroke="var(--text-3)" fontSize={12} unit="h" />
                                 <Tooltip
                                     contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #e5e7eb',
+                                        backgroundColor: 'var(--surface-2)',
+                                        border: '1px solid var(--border)',
                                         borderRadius: '8px',
+                                        color: 'var(--text)',
                                     }}
                                 />
                                 <Bar dataKey="focus" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Giờ Focus" />
@@ -264,19 +266,20 @@ export function Analytics() {
 
                     {/* Peak Productivity Hours */}
                     <div className="card p-6">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
+                        <h3 className="font-semibold text-[var(--text)] mb-4">
                             Giờ năng suất cao nhất
                         </h3>
                         <ResponsiveContainer width="100%" height={250}>
                             <LineChart data={taskStats.productivityData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-                                <XAxis dataKey="hour" stroke="#9ca3af" fontSize={12} />
-                                <YAxis stroke="#9ca3af" fontSize={12} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                                <XAxis dataKey="hour" stroke="var(--text-3)" fontSize={12} />
+                                <YAxis stroke="var(--text-3)" fontSize={12} />
                                 <Tooltip
                                     contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #e5e7eb',
+                                        backgroundColor: 'var(--surface-2)',
+                                        border: '1px solid var(--border)',
                                         borderRadius: '8px',
+                                        color: 'var(--text)',
                                     }}
                                 />
                                 <Line
@@ -289,7 +292,7 @@ export function Analytics() {
                                 />
                             </LineChart>
                         </ResponsiveContainer>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                        <p className="text-sm text-[var(--text-2)] mt-2 text-center">
                             🎯 Bạn năng suất nhất vào lúc <strong>{taskStats.peakHour}h</strong>
                         </p>
                     </div>
@@ -313,8 +316,8 @@ function StatCard({ title, value, suffix, change, positive, icon: Icon }: StatCa
     return (
         <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
-                <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
-                    <Icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <div className="p-2 rounded-lg bg-[var(--surface-2)]">
+                    <Icon className="w-5 h-5 text-[var(--text-2)]" />
                 </div>
                 <span
                     className={cn(
@@ -327,10 +330,10 @@ function StatCard({ title, value, suffix, change, positive, icon: Icon }: StatCa
                     {change}
                 </span>
             </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            <p className="text-2xl font-bold text-[var(--text)]">
                 {value}{suffix}
             </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
+            <p className="text-sm text-[var(--text-2)]">{title}</p>
         </div>
     );
 }

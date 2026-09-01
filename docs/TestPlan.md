@@ -1,5 +1,5 @@
-# Test Plan
-# Time Manager Application
+﻿# Test Plan
+# LifeSync AI Application
 
 ## 1. Test Strategy
 

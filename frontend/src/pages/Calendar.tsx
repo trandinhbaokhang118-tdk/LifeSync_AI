@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,8 +39,17 @@ function formatDate(date: Date): string {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function formatDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
 export function Calendar() {
     const queryClient = useQueryClient();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [deleteBlock, setDeleteBlock] = useState<TimeBlock | null>(null);
@@ -87,6 +97,25 @@ export function Calendar() {
         resolver: zodResolver(timeBlockSchema),
     });
 
+    useEffect(() => {
+        if (searchParams.get('new') !== 'true') {
+            return;
+        }
+
+        reset({
+            date: formatDateInputValue(new Date()),
+            title: '',
+            description: '',
+            startTime: '09:00',
+            endTime: '10:00',
+        });
+        setIsModalOpen(true);
+
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('new');
+        setSearchParams(nextParams, { replace: true });
+    }, [reset, searchParams, setSearchParams]);
+
     const days = Array.from({ length: 7 }, (_, i) => {
         const date = new Date(weekStart);
         date.setDate(date.getDate() + i);
@@ -101,9 +130,14 @@ export function Calendar() {
 
     const goToToday = () => setCurrentDate(new Date());
 
-    const openCreateModal = (date?: Date) => {
-        const dateStr = date ? date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-        reset({ date: dateStr, title: '', description: '', startTime: '09:00', endTime: '10:00' });
+    const openCreateModal = (date = new Date()) => {
+        reset({
+            date: formatDateInputValue(date),
+            title: '',
+            description: '',
+            startTime: '09:00',
+            endTime: '10:00',
+        });
         setIsModalOpen(true);
     };
 

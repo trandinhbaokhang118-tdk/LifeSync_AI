@@ -6,6 +6,7 @@ import type {
     ApiResponse,
     SubscriptionStatus,
     SubscriptionTier,
+    CheckoutResponse,
 } from '../types';
 
 type AdminSubscription = Subscription & {
@@ -23,8 +24,8 @@ export const subscriptionsService = {
         return response.data.data;
     },
 
-    async createCheckout(data: CreateCheckoutRequest): Promise<{ checkoutUrl: string; subscription: Subscription }> {
-        const response = await api.post<ApiResponse<{ checkoutUrl: string; subscription: Subscription }>>('/payments/checkout', data);
+    async createCheckout(data: CreateCheckoutRequest): Promise<CheckoutResponse> {
+        const response = await api.post<ApiResponse<CheckoutResponse>>('/payments/checkout', data);
         return response.data.data;
     },
 

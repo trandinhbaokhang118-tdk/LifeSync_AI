@@ -1,6 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types';
 import { API_URL } from '../lib/api-config';
+import { clearAuthTokens, getAccessToken, getRefreshToken, replaceAuthTokens } from '../lib/auth-tokens';
 
 function isLoginRoute(pathname: string) {
     return pathname === '/login' || pathname === '/admin/login';
@@ -20,7 +21,7 @@ export const api = axios.create({
 // Request interceptor - add auth token
 api.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('accessToken');
+        const token = getAccessToken();
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -54,7 +55,7 @@ api.interceptors.response.use(
                 return Promise.reject(error);
             }
 
-            const refreshToken = localStorage.getItem('refreshToken');
+            const refreshToken = getRefreshToken();
             if (refreshToken) {
                 try {
                     const response = await axios.post(`${API_URL}/auth/refresh`, {
@@ -62,8 +63,7 @@ api.interceptors.response.use(
                     });
 
                     const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-                    localStorage.setItem('accessToken', accessToken);
-                    localStorage.setItem('refreshToken', newRefreshToken);
+                    replaceAuthTokens(accessToken, newRefreshToken);
 
                     if (originalRequest.headers) {
                         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -72,8 +72,7 @@ api.interceptors.response.use(
                 } catch (refreshError) {
                     console.error('Token refresh failed:', refreshError);
                     // Refresh failed, clear tokens and redirect to login
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
+                    clearAuthTokens();
                     localStorage.removeItem('auth-storage');
 
                     if (!isLoginRoute(currentPath)) {
@@ -83,8 +82,7 @@ api.interceptors.response.use(
                 }
             } else {
                 // No refresh token, clear storage
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
+                clearAuthTokens();
                 localStorage.removeItem('auth-storage');
 
                 if (!isLoginRoute(currentPath)) {

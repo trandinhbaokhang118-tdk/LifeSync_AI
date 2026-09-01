@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store';
 import { getLoginRouteForUser, isAdminUser } from '../../lib/auth';
+import { hasAuthTokens } from '../../lib/auth-tokens';
 
 interface PrivateRouteProps {
     children: React.ReactNode;
@@ -11,7 +12,7 @@ export function PrivateRoute({ children }: PrivateRouteProps) {
     const location = useLocation();
 
     // Check tokens directly from localStorage for immediate response
-    const hasTokens = !!localStorage.getItem('accessToken') || !!localStorage.getItem('refreshToken');
+    const hasTokens = hasAuthTokens();
 
     // If not authenticated and no tokens, redirect to login
     if (!isAuthenticated && !hasTokens) {

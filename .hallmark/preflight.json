@@ -1,0 +1,14 @@
+{
+  "scanned_at": "2026-07-29",
+  "framework": "React 19 + Vite + TypeScript + Tailwind CSS",
+  "font_stack": ["Manrope", "Noto Sans"],
+  "palette": "Existing LifeSync blue system plus landing-specific mint/cream tokens",
+  "motion": ["framer-motion", "three"],
+  "spacing": "Existing Tailwind and CSS spacing conventions",
+  "preserve": [
+    "React Router routes",
+    "LifeSync brand mark",
+    "authentication CTAs",
+    "existing product capabilities and content intent"
+  ]
+}

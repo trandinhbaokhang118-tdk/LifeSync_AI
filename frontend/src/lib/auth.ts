@@ -1,7 +1,7 @@
 import type { User } from '../types';
 
 export function isAdminUser(user: User | null | undefined): boolean {
-    return user?.role === 'ADMIN';
+    return user?.role === 'ADMIN' && user.portal === 'admin';
 }
 
 export function getDefaultRouteForUser(user: User | null | undefined): string {

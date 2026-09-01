@@ -28,7 +28,7 @@ function CustomToast({ t, type, title, description }: ToastProps) {
     return (
         <div
             className={cn(
-                'max-w-md w-full bg-white dark:bg-gray-900 shadow-lg rounded-xl pointer-events-auto',
+                'max-w-md w-full bg-[var(--surface-1)] text-[var(--text)] border border-[var(--border)] shadow-lg rounded-xl pointer-events-auto',
                 'border-l-4 p-4 flex items-start gap-3 select-none',
                 bgColors[type],
                 t.visible ? 'animate-slide-up' : 'animate-fade-out'
@@ -38,14 +38,14 @@ function CustomToast({ t, type, title, description }: ToastProps) {
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white select-none">{title}</p>
                 {description && (
-                    <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-200 select-none">{description}</p>
+                    <p className="mt-1 text-sm font-medium text-[var(--text-2)] select-none">{description}</p>
                 )}
             </div>
             <button
                 onClick={() => toast.dismiss(t.id)}
-                className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="flex-shrink-0 text-[var(--text-3)] hover:text-[var(--text)]"
             >
-                <X className="w-4 h-4 text-black/90" />
+                <X className="w-4 h-4" />
             </button>
         </div>
     );

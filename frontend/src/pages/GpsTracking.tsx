@@ -39,6 +39,12 @@ type LabTab = 'recovery' | 'stress' | 'hydration';
 type TimelineKind = 'sleep' | 'deep-work' | 'meeting' | 'move' | 'workout' | 'recovery';
 type TrackingPhase = 'idle' | 'starting' | 'recording' | 'finishing' | 'finished';
 type TrackingMode = 'walking' | 'running' | 'cycling' | 'hiking';
+type PhotoPhase = 'start' | 'finish';
+
+const MIN_TRACK_POINT_DISTANCE_KM = 0.012;
+const MIN_DRAWABLE_ROUTE_DISTANCE_KM = 0.025;
+const MAX_FIRST_FIX_ACCURACY_METERS = 120;
+const PHOTO_LIMIT_PER_PHASE = 2;
 
 interface TimelineBlock {
     id: string;
@@ -83,11 +89,25 @@ interface LiveTrackPoint {
     timestamp: string;
     speed: number;
     altitude?: number;
+    accuracy?: number;
 }
 
 interface TrackReflectionPhoto {
     name: string;
     url: string;
+    phase: PhotoPhase;
+    capturedAt: string;
+}
+
+interface RouteSuggestion {
+    id: string;
+    name: string;
+    mode: TrackingMode;
+    distanceKm: number;
+    estimatedMinutes: number;
+    surface: string;
+    safetyNote: string;
+    points: Array<{ lat: number; lng: number }>;
 }
 
 interface WorkoutSummary {
@@ -138,10 +158,10 @@ export function GpsTracking() {
     const [photoPreviews, setPhotoPreviews] = useState<TrackReflectionPhoto[]>([]);
     const [savedReflectionAt, setSavedReflectionAt] = useState<string | null>(null);
     const [completedWorkoutId, setCompletedWorkoutId] = useState<string | null>(null);
+    const [routeSuggestion, setRouteSuggestion] = useState<RouteSuggestion | null>(null);
 
     const watchIdRef = useRef<number | null>(null);
     const timerRef = useRef<number | null>(null);
-    const simulationRef = useRef<number | null>(null);
     const startTimeRef = useRef<number | null>(null);
     const sessionIdRef = useRef<string | null>(null);
     const autoStartRef = useRef(false);
@@ -267,9 +287,12 @@ export function GpsTracking() {
         finished: 'Completed',
     }[trackingPhase];
     const recorderPoints = trackingPhase === 'finished' && lastSummary ? lastSummary.path : livePoints;
+    const startPhotos = photoPreviews.filter((photo) => photo.phase === 'start');
+    const finishPhotos = photoPreviews.filter((photo) => photo.phase === 'finish');
     const syncChips = [
         syncSource === 'cloud' ? 'Cloud route sync' : 'Local recap mode',
-        isSimulated ? 'Demo route overlay' : 'GPS live',
+        isSimulated ? 'GPS pending' : 'GPS live',
+        routeSuggestion ? `${routeSuggestion.distanceKm.toFixed(1)} km route nearby` : 'Find nearby route',
         activeBlock ? `Schedule slot: ${activeBlock.label}` : 'Schedule layer ready',
         `Energy ${liveEnergy}/100`,
     ];
@@ -326,7 +349,7 @@ export function GpsTracking() {
             setTrackingMode(saved.mode);
             setWorkoutRating(saved.rating ?? 0);
             setSessionNotes(saved.notes ?? '');
-            setPhotoPreviews(saved.photos ?? []);
+            setPhotoPreviews(normalizeSavedPhotos(saved.photos));
             setSavedReflectionAt(saved.savedAt ?? null);
             setTrackingPhase('finished');
             setSyncSource(saved.syncMode.toLowerCase().includes('cloud') ? 'cloud' : 'local');
@@ -358,11 +381,6 @@ export function GpsTracking() {
         if (timerRef.current !== null) {
             window.clearInterval(timerRef.current);
             timerRef.current = null;
-        }
-
-        if (simulationRef.current !== null) {
-            window.clearInterval(simulationRef.current);
-            simulationRef.current = null;
         }
 
         if (watchIdRef.current !== null && typeof navigator !== 'undefined' && 'geolocation' in navigator) {
@@ -406,21 +424,29 @@ export function GpsTracking() {
     }
 
     function pushTrackPoint(point: LiveTrackPoint) {
-        setCurrentSpeed(point.speed);
-        setLivePoints((current) => appendUniqueTrackPoint(current, point));
-        void syncPointToCloud(point);
-    }
+        const nextPoints = appendReliableTrackPoint(pointsRef.current, point);
 
-    function startSimulationLoop(seed: LiveTrackPoint, mode: TrackingMode) {
-        simulationRef.current = window.setInterval(() => {
-            const nextPoint = simulateNextTrackPoint(pointsRef.current[pointsRef.current.length - 1] ?? seed, pointsRef.current.length, mode);
-            pushTrackPoint(nextPoint);
-            setGpsStatus('Simulation mode is keeping the route active until device GPS is available.');
-        }, 4000);
+        if (nextPoints === pointsRef.current) {
+            setCurrentSpeed(0);
+            setGpsStatus('GPS is locked, but Track Lab is waiting for real movement before drawing the route.');
+            return;
+        }
+
+        pointsRef.current = nextPoints;
+        setCurrentSpeed(point.speed);
+        setLivePoints(nextPoints);
+        setIsSimulated(false);
+
+        if (!routeSuggestion) {
+            setRouteSuggestion(buildNearbyExerciseRouteSuggestion(point, trackingMode, model.readiness));
+        }
+
+        void syncPointToCloud(point);
     }
 
     function startGeolocationWatch() {
         if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+            setGpsStatus('This device does not expose GPS to the browser, so no route will be drawn until a real location is available.');
             return;
         }
 
@@ -459,6 +485,36 @@ export function GpsTracking() {
         setPhotoPreviews([]);
         setSavedReflectionAt(null);
         setCompletedWorkoutId(null);
+        setRouteSuggestion(null);
+    }
+
+    async function handleFindNearbyRoute() {
+        if (trackingPhase === 'starting' || trackingPhase === 'finishing') {
+            return;
+        }
+
+        setGpsStatus('Finding a nearby route from your current GPS position...');
+        const seed = await resolveStartingPoint(trackingMode);
+
+        if (!seed) {
+            setGpsStatus('Could not get a reliable GPS fix. Allow location access and try finding a nearby route again.');
+            showToast.error('Location is not ready', 'Track Lab needs a real GPS fix before suggesting a nearby running route.');
+            return;
+        }
+
+        const anchor: LiveTrackPoint = {
+            lat: seed.lat,
+            lng: seed.lng,
+            timestamp: new Date().toISOString(),
+            speed: seed.speed,
+            altitude: seed.altitude,
+            accuracy: seed.accuracy,
+        };
+        const suggestion = buildNearbyExerciseRouteSuggestion(anchor, trackingMode, model.readiness);
+
+        setRouteSuggestion(suggestion);
+        setGpsStatus(`${suggestion.name} is ready. This suggested path will stay separate from your recorded route.`);
+        showToast.success('Nearby route ready', `${suggestion.distanceKm.toFixed(1)} km ${suggestion.surface.toLowerCase()} option near your current position.`);
     }
 
     async function handleStartRecording() {
@@ -466,6 +522,7 @@ export function GpsTracking() {
             return;
         }
 
+        const clearPreviousRecap = trackingPhase === 'finished';
         stopTrackingEngines();
         setTrackingPhase('starting');
         setCurrentSession(null);
@@ -475,23 +532,29 @@ export function GpsTracking() {
         setLastSummary(null);
         setWorkoutRating(0);
         setSessionNotes('');
-        setPhotoPreviews([]);
+        setPhotoPreviews((current) => (clearPreviousRecap ? [] : current.filter((photo) => photo.phase === 'start')));
         setSavedReflectionAt(null);
         setCompletedWorkoutId(null);
+        if (clearPreviousRecap) {
+            setRouteSuggestion(null);
+        }
         setGpsStatus('Preparing route capture and looking for a stable location fix...');
 
         const seed = await resolveStartingPoint(trackingMode);
-        const openingPoint: LiveTrackPoint = {
-            lat: seed.lat,
-            lng: seed.lng,
-            timestamp: new Date().toISOString(),
-            speed: seed.speed,
-            altitude: seed.altitude,
-        };
+        const openingPoint: LiveTrackPoint | null = seed
+            ? {
+                lat: seed.lat,
+                lng: seed.lng,
+                timestamp: new Date().toISOString(),
+                speed: seed.speed,
+                altitude: seed.altitude,
+                accuracy: seed.accuracy,
+            }
+            : null;
 
-        let nextSyncSource: 'cloud' | 'local' = hasPremiumAccess ? 'cloud' : 'local';
+        let nextSyncSource: 'cloud' | 'local' = hasPremiumAccess && openingPoint ? 'cloud' : 'local';
 
-        if (hasPremiumAccess) {
+        if (hasPremiumAccess && openingPoint) {
             try {
                 const startedSession = await gpsService.startTracking({
                     latitude: openingPoint.lat,
@@ -515,32 +578,34 @@ export function GpsTracking() {
 
         startTimeRef.current = Date.now();
         setSyncSource(nextSyncSource);
-        setIsSimulated(seed.simulated);
-        setLivePoints([openingPoint]);
-        setCurrentSpeed(openingPoint.speed);
+        setIsSimulated(!openingPoint);
+        if (openingPoint) {
+            const initialPoints = [openingPoint];
+            pointsRef.current = initialPoints;
+            setLivePoints(initialPoints);
+            setCurrentSpeed(openingPoint.speed);
+            setRouteSuggestion(buildNearbyExerciseRouteSuggestion(openingPoint, trackingMode, model.readiness));
+        } else {
+            pointsRef.current = [];
+            setLivePoints([]);
+            setCurrentSpeed(0);
+        }
         setTrackingPhase('recording');
         setGpsStatus(
-            nextSyncSource === 'cloud'
-                ? seed.simulated
-                    ? 'Cloud session is live with a demo route while GPS warms up.'
-                    : 'Cloud session is live and the route is syncing in real time.'
-                : seed.simulated
-                  ? 'Local record mode is active with a demo route overlay.'
-                  : 'Local record mode is active and the route is updating on this device.'
+            openingPoint
+                ? nextSyncSource === 'cloud'
+                    ? 'Cloud session is live. The route line will appear only after real movement.'
+                    : 'Local record mode is active. The route line will appear only after real movement.'
+                : 'Timer is running, but Track Lab is waiting for a real GPS fix before drawing a route.'
         );
         beginElapsedTimer();
-
-        if (seed.simulated) {
-            startSimulationLoop(openingPoint, trackingMode);
-        } else {
-            startGeolocationWatch();
-        }
+        startGeolocationWatch();
 
         showToast.success(
             'Workout recording started',
             nextSyncSource === 'cloud'
-                ? 'Track Lab is now recording your route, timer and compatible live signals.'
-                : 'Track Lab is recording locally and will build a full finish recap for this session.'
+                ? 'Track Lab is recording the timer now and will draw the map after you actually move.'
+                : 'Track Lab is recording locally and will draw the route only from real GPS movement.'
         );
     }
 
@@ -577,11 +642,11 @@ export function GpsTracking() {
             syncMode:
                 syncSource === 'cloud'
                     ? isSimulated
-                        ? 'Cloud sync + demo route'
+                        ? 'Cloud sync + GPS pending'
                         : 'Cloud sync + GPS live'
                     : isSimulated
-                      ? 'Local recap + demo route'
-                      : 'Local recap + GPS live',
+                        ? 'Local recap + GPS pending'
+                        : 'Local recap + GPS live',
             path: livePoints,
             startedAt: new Date((startTimeRef.current ?? Date.now()) - elapsedSeconds * 1000).toISOString(),
         });
@@ -629,20 +694,21 @@ export function GpsTracking() {
         showToast.success('Workout completed', 'Your route snapshot and finish recap are ready.');
     }
 
-    async function handlePhotoUpload(event: ChangeEvent<HTMLInputElement>) {
+    async function handlePhotoUpload(event: ChangeEvent<HTMLInputElement>, phase: PhotoPhase) {
         const selectedFiles = Array.from(event.target.files ?? []);
-        const remainingSlots = Math.max(0, 4 - photoPreviews.length);
+        const currentPhaseCount = photoPreviews.filter((photo) => photo.phase === phase).length;
+        const remainingSlots = Math.max(0, PHOTO_LIMIT_PER_PHASE - currentPhaseCount);
         const filesToRead = selectedFiles.slice(0, remainingSlots);
 
         if (filesToRead.length === 0) {
             event.target.value = '';
-            showToast.info('Photo limit reached', 'Track Lab keeps up to 4 activity photos in one finish recap.');
+            showToast.info('Photo limit reached', `Track Lab keeps up to ${PHOTO_LIMIT_PER_PHASE} ${phase} photos in one finish recap.`);
             return;
         }
 
         try {
-            const previews = await Promise.all(filesToRead.map(readPhotoPreview));
-            setPhotoPreviews((current) => [...current, ...previews].slice(0, 4));
+            const previews = await Promise.all(filesToRead.map((file) => readPhotoPreview(file, phase)));
+            setPhotoPreviews((current) => [...current, ...previews]);
             showToast.success('Activity photos added', `${previews.length} photo preview${previews.length > 1 ? 's are' : ' is'} ready in the recap.`);
         } catch (error) {
             console.error('Failed to read activity photos:', error);
@@ -846,7 +912,7 @@ export function GpsTracking() {
                             </span>
                             <span className="track-metric-pill">
                                 <Zap className="h-3.5 w-3.5" />
-                                {isSimulated ? 'Demo route overlay' : 'GPS live'}
+                                {isSimulated ? 'GPS pending' : 'GPS live'}
                             </span>
                         </div>
                     </div>
@@ -868,6 +934,7 @@ export function GpsTracking() {
 
                             <RoutePreview
                                 points={recorderPoints}
+                                suggestion={trackingPhase === 'finished' ? null : routeSuggestion}
                                 active={trackingPhase === 'recording'}
                                 title={trackingPhase === 'finished' ? 'Finished route snapshot' : 'Realtime route snapshot'}
                                 status={gpsStatus}
@@ -915,6 +982,14 @@ export function GpsTracking() {
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => void handleFindNearbyRoute()}
+                                        disabled={trackingPhase === 'starting' || trackingPhase === 'finishing'}
+                                    >
+                                        <Route className="h-4 w-4" />
+                                        Find nearby route
+                                    </Button>
                                     <Button onClick={() => void handleStartRecording()} loading={trackingPhase === 'starting'} disabled={trackingPhase === 'recording' || trackingPhase === 'finishing'}>
                                         {trackingPhase === 'finished' ? 'Record another session' : 'Start recording'}
                                     </Button>
@@ -930,6 +1005,30 @@ export function GpsTracking() {
                                         <TimerReset className="h-4 w-4" />
                                         Reset
                                     </Button>
+                                </div>
+
+                                <div className="mt-4 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-3)] p-3">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p className="text-sm font-medium text-[var(--text)]">Start photos</p>
+                                            <p className="text-xs leading-5 text-[var(--text-2)]">Capture the beginning of the workout before or during the run.</p>
+                                        </div>
+                                        <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] px-3 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--surface-3)]">
+                                            <ImagePlus className="h-4 w-4" />
+                                            Add start
+                                            <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => void handlePhotoUpload(event, 'start')} />
+                                        </label>
+                                    </div>
+                                    {startPhotos.length > 0 && (
+                                        <div className="mt-3 grid grid-cols-2 gap-2">
+                                            {startPhotos.map((photo) => (
+                                                <div key={photo.url} className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)]">
+                                                    <img src={photo.url} alt={photo.name} className="h-24 w-full object-cover" />
+                                                    <div className="truncate px-2 py-1.5 text-xs text-[var(--text-2)]">{photo.name}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -953,6 +1052,20 @@ export function GpsTracking() {
                                         {activeBlock ? `Current context: ${activeBlock.label}` : 'Context timeline ready'}
                                     </span>
                                 </div>
+                                {routeSuggestion && (
+                                    <div className="mt-4 rounded-2xl border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] p-3">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <p className="text-sm font-semibold text-[var(--text)]">{routeSuggestion.name}</p>
+                                            <span className="track-metric-pill">
+                                                <Route className="h-3.5 w-3.5" />
+                                                {routeSuggestion.distanceKm.toFixed(1)} km / {routeSuggestion.estimatedMinutes} min
+                                            </span>
+                                        </div>
+                                        <p className="mt-2 text-xs leading-5 text-[var(--text-2)]">
+                                            {routeSuggestion.surface}. {routeSuggestion.safetyNote}
+                                        </p>
+                                    </div>
+                                )}
                                 <p className="mt-4 text-sm leading-6 text-[var(--text-2)]">{gpsStatus}</p>
                             </div>
                         </div>
@@ -1038,22 +1151,22 @@ export function GpsTracking() {
                                         <div>
                                             <div className="mb-2 flex items-center gap-2 text-[var(--primary)]">
                                                 <ImagePlus className="h-4 w-4" />
-                                                <span className="text-sm font-medium">Upload activity photos</span>
+                                                <span className="text-sm font-medium">Finish photos</span>
                                             </div>
                                             <p className="text-sm leading-6 text-[var(--text-2)]">
-                                                Add a few photos from the session so the finish recap feels personal and complete.
+                                                Add photos from the end of the session so the finish recap has a clear before and after.
                                             </p>
                                         </div>
                                         <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] px-4 py-2 text-sm font-semibold text-[var(--primary)] transition-colors hover:bg-[var(--surface-3)]">
                                             <ImagePlus className="h-4 w-4" />
-                                            Add photos
-                                            <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+                                            Add finish
+                                            <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => void handlePhotoUpload(event, 'finish')} />
                                         </label>
                                     </div>
 
-                                    {photoPreviews.length > 0 ? (
+                                    {finishPhotos.length > 0 ? (
                                         <div className="grid grid-cols-2 gap-3">
-                                            {photoPreviews.map((photo) => (
+                                            {finishPhotos.map((photo) => (
                                                 <div key={photo.url} className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-3)]">
                                                     <img src={photo.url} alt={photo.name} className="h-32 w-full object-cover" />
                                                     <div className="px-3 py-2 text-xs text-[var(--text-2)]">{photo.name}</div>
@@ -1062,7 +1175,7 @@ export function GpsTracking() {
                                         </div>
                                     ) : (
                                         <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--surface-3)] px-4 py-6 text-center text-sm text-[var(--text-2)]">
-                                            No activity photos yet. Add a few snapshots to complete the recap.
+                                            No finish photos yet. Add a final snapshot to complete the recap.
                                         </div>
                                     )}
 
@@ -1265,7 +1378,7 @@ export function GpsTracking() {
                                         </div>
                                         <div className="space-y-3">
                                             {rangeSeries.slice(-6).map((item) => (
-                                                <div key={item.label} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-3)] p-3">
+                                                <div key={item.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-3)] p-3">
                                                     <div className="mb-3 flex items-center justify-between">
                                                         <span className="text-sm font-medium text-[var(--text)]">{item.label}</span>
                                                         <span className="text-xs text-[var(--text-3)]">Stress {item.stress.toFixed(1)}/5</span>
@@ -1304,7 +1417,7 @@ export function GpsTracking() {
                                         </div>
                                         <div className="grid grid-cols-10 gap-2">
                                             {rangeSeries.slice(-10).map((item) => (
-                                                <div key={item.label} className="flex flex-col items-center gap-2">
+                                                <div key={item.id} className="flex flex-col items-center gap-2">
                                                     <div className="flex h-36 w-full items-end rounded-2xl bg-[var(--surface-3)] p-1">
                                                         <div
                                                             className="w-full rounded-xl bg-[image:var(--primary-gradient)] shadow-[var(--primary-glow)]"
@@ -1454,12 +1567,10 @@ function PremiumPreview({
                         <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--primary)]">Premium preview</p>
                         <h3 className="text-xl font-semibold text-[var(--text)]">{title}</h3>
                         <p className="mt-3 text-sm leading-6 text-[var(--text-2)]">{teaser}</p>
-                        <Button asChild className="mt-5">
-                            <Link to="/app/subscription">
-                                Unlock Track Lab
-                                <ArrowRight className="h-4 w-4" />
-                            </Link>
-                        </Button>
+                        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] px-4 py-2 text-sm font-medium text-[var(--text)]">
+                            <Lock className="h-4 w-4 text-[var(--primary)]" />
+                            Plus required
+                        </div>
                     </div>
                 </div>
             )}
@@ -1492,16 +1603,21 @@ function RecordStatCard({ label, value, note }: { label: string; value: string; 
 
 function RoutePreview({
     points,
+    suggestion,
     active = false,
     title,
     status,
 }: {
     points: Array<{ lat: number; lng: number }>;
+    suggestion?: RouteSuggestion | null;
     active?: boolean;
     title: string;
     status: string;
 }) {
-    if (points.length === 0) {
+    const suggestedPoints = suggestion?.points ?? [];
+    const framePoints = [...suggestedPoints, ...points];
+
+    if (framePoints.length === 0) {
         return (
             <div className="track-route-shell">
                 <div className="track-route-overlay" />
@@ -1516,10 +1632,15 @@ function RoutePreview({
         );
     }
 
-    const projected = projectTrackPoints(points);
-    const polyline = projected.map((point) => `${point.x},${point.y}`).join(' ');
+    const projected = projectTrackPoints(points, framePoints);
+    const suggestedProjected = projectTrackPoints(suggestedPoints, framePoints);
+    const hasRecordedPath = isDrawableRoute(points);
+    const recordedPolyline = hasRecordedPath ? projected.map((point) => `${point.x},${point.y}`).join(' ') : '';
+    const suggestedPolyline = suggestedProjected.length > 1 ? suggestedProjected.map((point) => `${point.x},${point.y}`).join(' ') : '';
     const start = projected[0];
     const finish = projected[projected.length - 1];
+    const current = finish ?? suggestedProjected[0];
+    const routeBadge = active ? 'Live route' : suggestion && !hasRecordedPath ? 'Suggested route' : 'Route image';
 
     return (
         <div className="track-route-shell">
@@ -1530,7 +1651,7 @@ function RoutePreview({
                     <p className="mt-1 text-xs text-[var(--text-3)]">{status}</p>
                 </div>
                 <span className={cn('track-load-pill', active ? 'track-load-pill-danger' : 'track-load-pill-primary')}>
-                    {active ? 'Live route' : 'Route image'}
+                    {routeBadge}
                 </span>
             </div>
 
@@ -1565,30 +1686,69 @@ function RoutePreview({
                     />
                 ))}
 
-                <polyline
-                    points={polyline}
-                    fill="none"
-                    stroke="url(#track-route-stroke)"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={active ? 'track-route-path-active' : 'track-route-path'}
-                />
+                {suggestedPolyline && (
+                    <polyline
+                        points={suggestedPolyline}
+                        fill="none"
+                        stroke="rgba(34,197,94,0.62)"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeDasharray="10 10"
+                    />
+                )}
 
-                {projected.filter((_, index) => index > 0 && index < projected.length - 1 && index % Math.max(Math.floor(projected.length / 4), 2) === 0).map((point) => (
+                {recordedPolyline && (
+                    <polyline
+                        points={recordedPolyline}
+                        fill="none"
+                        stroke="url(#track-route-stroke)"
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={active ? 'track-route-path-active' : 'track-route-path'}
+                    />
+                )}
+
+                {hasRecordedPath && projected.filter((_, index) => index > 0 && index < projected.length - 1 && index % Math.max(Math.floor(projected.length / 4), 2) === 0).map((point) => (
                     <circle key={`${point.x}-${point.y}`} cx={point.x} cy={point.y} r="4" fill="rgba(255,255,255,0.9)" />
                 ))}
 
-                <circle cx={start.x} cy={start.y} r="7" fill="rgba(34,197,94,0.95)" />
-                <circle cx={finish.x} cy={finish.y} r="7" fill="rgba(0,229,255,0.98)" />
+                {suggestedProjected[0] && (
+                    <circle cx={suggestedProjected[0].x} cy={suggestedProjected[0].y} r="5" fill="rgba(34,197,94,0.9)" />
+                )}
+                {hasRecordedPath && start && <circle cx={start.x} cy={start.y} r="7" fill="rgba(34,197,94,0.95)" />}
+                {current && <RunnerMarker x={current.x} y={current.y} active={active} />}
             </svg>
 
             <div className="mt-3 flex flex-wrap gap-2">
-                <span className="track-note-chip">Start marker captured</span>
-                <span className="track-note-chip">Finish marker captured</span>
-                <span className="track-note-chip">Path points {points.length}</span>
+                {suggestion && <span className="track-note-chip">Suggested {suggestion.distanceKm.toFixed(1)} km nearby route</span>}
+                {points.length > 0 && <span className="track-note-chip">Current GPS marker captured</span>}
+                {hasRecordedPath ? (
+                    <span className="track-note-chip">Recorded path points {points.length}</span>
+                ) : (
+                    <span className="track-note-chip">Waiting for real movement before drawing</span>
+                )}
             </div>
         </div>
+    );
+}
+
+function RunnerMarker({ x, y, active }: { x: number; y: number; active: boolean }) {
+    return (
+        <g transform={`translate(${x} ${y})`} className={active ? 'track-runner-marker-active' : undefined}>
+            <circle r="12" fill="rgba(0,229,255,0.16)" stroke="rgba(0,229,255,0.36)" strokeWidth="2" />
+            <circle cy="-5" r="3.4" fill="rgba(255,255,255,0.96)" />
+            <path
+                d="M -1 -1 L -5 5 M -1 -1 L 5 1 M 1 5 L -5 10 M 1 5 L 7 10"
+                fill="none"
+                stroke="rgba(255,255,255,0.96)"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path d="M -1 -1 L 2 5" fill="none" stroke="rgba(0,229,255,0.98)" strokeWidth="3" strokeLinecap="round" />
+        </g>
     );
 }
 
@@ -1697,11 +1857,15 @@ function Sparkline({ points, bright = false }: { points: number[]; bright?: bool
 
 async function resolveStartingPoint(mode: TrackingMode) {
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
-        return { ...getFallbackTrackSeed(mode), simulated: true };
+        return null;
     }
 
     try {
         const position = await getCurrentPosition();
+        if (position.coords.accuracy > MAX_FIRST_FIX_ACCURACY_METERS) {
+            return null;
+        }
+
         return {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
@@ -1710,11 +1874,11 @@ async function resolveStartingPoint(mode: TrackingMode) {
                     ? roundDecimal(getTrackingSeedSpeed(mode) * 0.72, 1)
                     : roundDecimal(Math.max(position.coords.speed * 3.6, 0), 1),
             altitude: position.coords.altitude ?? undefined,
-            simulated: false,
+            accuracy: position.coords.accuracy,
         };
     } catch (error) {
         console.error('Failed to resolve GPS start point:', error);
-        return { ...getFallbackTrackSeed(mode), simulated: true };
+        return null;
     }
 }
 
@@ -1723,36 +1887,75 @@ function createTrackPointFromPosition(position: GeolocationPosition): LiveTrackP
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         altitude: position.coords.altitude ?? undefined,
+        accuracy: position.coords.accuracy,
         speed: roundDecimal(Math.max((position.coords.speed ?? 0) * 3.6, 0), 1),
         timestamp: new Date(position.timestamp).toISOString(),
     };
 }
 
-function simulateNextTrackPoint(current: LiveTrackPoint, step: number, mode: TrackingMode): LiveTrackPoint {
-    const factor = mode === 'cycling' ? 0.0012 : mode === 'running' ? 0.00062 : mode === 'hiking' ? 0.0004 : 0.00034;
-    const latOffset = Math.sin(step / 1.8) * factor + factor * 0.85;
-    const lngOffset = Math.cos(step / 2.2) * factor + factor * 0.4;
+function appendReliableTrackPoint(points: LiveTrackPoint[], point: LiveTrackPoint) {
+    if (points.length === 0) {
+        if (point.accuracy !== undefined && point.accuracy > MAX_FIRST_FIX_ACCURACY_METERS) {
+            return points;
+        }
 
-    return {
-        lat: current.lat + latOffset,
-        lng: current.lng + lngOffset,
-        altitude: current.altitude,
-        speed: roundDecimal(getTrackingSeedSpeed(mode) + Math.sin(step / 2.5) * 1.8, 1),
-        timestamp: new Date().toISOString(),
-    };
-}
-
-function appendUniqueTrackPoint(points: LiveTrackPoint[], point: LiveTrackPoint) {
-    const lastPoint = points[points.length - 1];
-    if (!lastPoint) {
         return [point];
     }
 
-    if (haversineDistanceKm(lastPoint, point) < 0.003) {
+    const lastPoint = points[points.length - 1];
+    const distanceFromLast = haversineDistanceKm(lastPoint, point);
+    const accuracyFloorKm = Math.min(((lastPoint.accuracy ?? 0) + (point.accuracy ?? 0)) / 2000, 0.04);
+    const minimumDistanceKm = Math.max(MIN_TRACK_POINT_DISTANCE_KM, accuracyFloorKm * 0.5);
+
+    if (distanceFromLast < minimumDistanceKm) {
         return points;
     }
 
     return [...points, point];
+}
+
+function isDrawableRoute(points: Array<{ lat: number; lng: number }>) {
+    return points.length > 1 && calculateTrackDistance(points) >= MIN_DRAWABLE_ROUTE_DISTANCE_KM;
+}
+
+function buildNearbyExerciseRouteSuggestion(
+    anchor: LiveTrackPoint,
+    mode: TrackingMode,
+    readiness: number,
+): RouteSuggestion {
+    const baseDistance = mode === 'cycling' ? 8.4 : mode === 'running' ? 3.6 : mode === 'hiking' ? 4.2 : 1.8;
+    const readinessBoost = readiness >= 78 ? 1.25 : readiness >= 55 ? 1 : 0.72;
+    const distanceKm = roundDecimal(baseDistance * readinessBoost, 1);
+    const estimatedMinutes = Math.max(12, Math.round((distanceKm / Math.max(getTrackingSeedSpeed(mode), 3)) * 60));
+    const radiusKm = Math.max(0.18, distanceKm / 6.2);
+    const points = [
+        { lat: anchor.lat, lng: anchor.lng },
+        offsetLatLng(anchor, radiusKm * 0.55, radiusKm * 0.95),
+        offsetLatLng(anchor, radiusKm * 1.05, radiusKm * 0.25),
+        offsetLatLng(anchor, radiusKm * 0.72, -radiusKm * 0.78),
+        offsetLatLng(anchor, -radiusKm * 0.12, -radiusKm * 1.05),
+        offsetLatLng(anchor, -radiusKm * 0.68, -radiusKm * 0.22),
+        offsetLatLng(anchor, -radiusKm * 0.36, radiusKm * 0.68),
+        { lat: anchor.lat, lng: anchor.lng },
+    ];
+
+    return {
+        id: `nearby-${mode}-${Math.round(anchor.lat * 10000)}-${Math.round(anchor.lng * 10000)}`,
+        name: `${getTrackingModeLabel(mode)} loop nearby`,
+        mode,
+        distanceKm,
+        estimatedMinutes,
+        surface: mode === 'hiking' ? 'Trail' : mode === 'cycling' ? 'Road' : 'Urban loop',
+        safetyNote: readiness >= 55 ? 'Balanced route for today readiness' : 'Keep this one easy and recovery-focused',
+        points,
+    };
+}
+
+function offsetLatLng(origin: { lat: number; lng: number }, northKm: number, eastKm: number) {
+    const lat = origin.lat + northKm / 110.574;
+    const lng = origin.lng + eastKm / (111.32 * Math.max(Math.cos(degToRad(origin.lat)), 0.2));
+
+    return { lat, lng };
 }
 
 function calculateTrackDistance(points: Array<{ lat: number; lng: number }>) {
@@ -1893,22 +2096,23 @@ async function syncWorkoutIntoDailyActivity(
     });
 }
 
-function projectTrackPoints(points: Array<{ lat: number; lng: number }>) {
+function projectTrackPoints(points: Array<{ lat: number; lng: number }>, framePoints = points) {
     const width = 320;
     const height = 220;
     const padding = 24;
-    const lats = points.map((point) => point.lat);
-    const lngs = points.map((point) => point.lng);
+    const bounds = framePoints.length > 0 ? framePoints : points;
+    const lats = bounds.map((point) => point.lat);
+    const lngs = bounds.map((point) => point.lng);
     const minLat = Math.min(...lats);
     const maxLat = Math.max(...lats);
     const minLng = Math.min(...lngs);
     const maxLng = Math.max(...lngs);
-    const latSpan = maxLat - minLat || 0.001;
-    const lngSpan = maxLng - minLng || 0.001;
+    const latSpan = maxLat - minLat;
+    const lngSpan = maxLng - minLng;
 
     return points.map((point) => ({
-        x: padding + ((point.lng - minLng) / lngSpan) * (width - padding * 2),
-        y: height - padding - ((point.lat - minLat) / latSpan) * (height - padding * 2),
+        x: lngSpan === 0 ? width / 2 : padding + ((point.lng - minLng) / lngSpan) * (width - padding * 2),
+        y: latSpan === 0 ? height / 2 : height - padding - ((point.lat - minLat) / latSpan) * (height - padding * 2),
     }));
 }
 
@@ -1976,15 +2180,6 @@ function blendHeartRate(
     return Math.round(weightedAverage);
 }
 
-function getFallbackTrackSeed(mode: TrackingMode) {
-    return {
-        lat: 10.7768,
-        lng: 106.7009,
-        speed: getTrackingSeedSpeed(mode),
-        altitude: 6,
-    };
-}
-
 function getCurrentPosition() {
     return new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -1995,14 +2190,28 @@ function getCurrentPosition() {
     });
 }
 
-function readPhotoPreview(file: File) {
+function readPhotoPreview(file: File, phase: PhotoPhase) {
     return new Promise<TrackReflectionPhoto>((resolve, reject) => {
         const reader = new FileReader();
 
-        reader.onload = () => resolve({ name: file.name, url: String(reader.result) });
+        reader.onload = () => resolve({
+            name: file.name,
+            url: String(reader.result),
+            phase,
+            capturedAt: new Date().toISOString(),
+        });
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(file);
     });
+}
+
+function normalizeSavedPhotos(photos?: Array<Partial<TrackReflectionPhoto>>) {
+    return (photos ?? []).map((photo) => ({
+        name: photo.name ?? 'activity-photo',
+        url: photo.url ?? '',
+        phase: photo.phase ?? 'finish',
+        capturedAt: photo.capturedAt ?? new Date().toISOString(),
+    })).filter((photo) => photo.url);
 }
 
 function roundDecimal(value: number, precision: number) {
@@ -2033,11 +2242,11 @@ function buildTrackModel({
     const readiness = clamp(
         Math.round(
             68 +
-                (sleepHours - 7) * 12 -
-                meetingHours * 5 -
-                loadFromExercises * 0.05 -
-                Math.max(baseHr - 66, 0) * 1.2 +
-                deepHours * 2
+            (sleepHours - 7) * 12 -
+            meetingHours * 5 -
+            loadFromExercises * 0.05 -
+            Math.max(baseHr - 66, 0) * 1.2 +
+            deepHours * 2
         ),
         28,
         96
@@ -2065,8 +2274,8 @@ function buildTrackModel({
             readinessLevel === 'High'
                 ? 'Hôm nay nên: Đẩy mạnh tập, nhưng vẫn giữ một block recovery sau buổi nặng.'
                 : readinessLevel === 'Medium'
-                  ? 'Hôm nay nên: Tập vừa, ưu tiên block quan trọng ngay sau vận động nhẹ.'
-                  : 'Hôm nay nên: Ưu tiên hồi phục và giảm cường độ ở cả tập luyện lẫn lịch họp dày.',
+                    ? 'Hôm nay nên: Tập vừa, ưu tiên block quan trọng ngay sau vận động nhẹ.'
+                    : 'Hôm nay nên: Ưu tiên hồi phục và giảm cường độ ở cả tập luyện lẫn lịch họp dày.',
         reasons: [
             sleepHours < 6.5 && 'Ngủ ít hơn baseline',
             loadFromExercises > 320 && 'Tải tập 7 ngày đang cao',
@@ -2081,14 +2290,14 @@ function buildTrackModel({
             readiness >= 78
                 ? 'Body and calendar are aligned enough for ambitious work.'
                 : readiness >= 54
-                  ? 'Giữ nhịp đều, tránh dồn cả họp lẫn bài nặng vào cùng một nửa ngày.'
-                  : 'Nên neo ngày bằng break ngắn và vận động nhẹ để tránh tụt năng lượng.',
+                    ? 'Giữ nhịp đều, tránh dồn cả họp lẫn bài nặng vào cùng một nửa ngày.'
+                    : 'Nên neo ngày bằng break ngắn và vận động nhẹ để tránh tụt năng lượng.',
         stressNote:
             current.stress >= 3.8
                 ? 'Calendar pressure and bio signals are both elevated.'
                 : current.stress >= 2.5
-                  ? 'Stress đang trong ngưỡng có thể chuyển hóa thành tập trung.'
-                  : 'Signals đang yên, có thể bảo vệ focus tốt hơn trong nửa đầu ngày.',
+                    ? 'Stress đang trong ngưỡng có thể chuyển hóa thành tập trung.'
+                    : 'Signals đang yên, có thể bảo vệ focus tốt hơn trong nửa đầu ngày.',
         schedulePressure: meetingHours >= 3.5 ? 'High' : meetingHours >= 1.75 ? 'Managed' : 'Light',
         todayInsight:
             meetingHours >= 3
@@ -2137,8 +2346,8 @@ function buildTrackModel({
             readinessLevel === 'Low'
                 ? 'Lịch hôm nay nhiều áp lực + readiness thấp: chỉ nên tập nhẹ 20 phút đi bộ trước giờ làm và cắt bớt khối lượng nặng.'
                 : readinessLevel === 'Medium'
-                  ? 'Một buổi vừa sức + 1 block deep work đặt sau vận động nhẹ sẽ cho hiệu quả cao hơn dồn toàn bộ việc khó vào cuối ngày.'
-                  : 'Readiness tốt: có thể xếp 1 buổi chất lượng cao, nhưng nên khóa thêm một block hồi phục ngay sau đó.',
+                    ? 'Một buổi vừa sức + 1 block deep work đặt sau vận động nhẹ sẽ cho hiệu quả cao hơn dồn toàn bộ việc khó vào cuối ngày.'
+                    : 'Readiness tốt: có thể xếp 1 buổi chất lượng cao, nhưng nên khóa thêm một block hồi phục ngay sau đó.',
         aiWeek:
             meetingHours >= 3
                 ? 'Tuần này nên phân bổ 2 ngày nặng, 3 ngày nhẹ/chất lượng, 2 ngày recovery để lịch họp không đẩy bạn vào trạng thái quá tải.'
@@ -2158,6 +2367,7 @@ function buildSeries(readiness: number, sleep: number, baseHr: number, meetings:
 
         return {
             label: dayLabel(index, 30),
+            id: `series-${index}`,
             readiness: clamp(Math.round(readiness + wave * 9 - drift * 4), 28, 96),
             sleep: seriesSleep,
             sleepScore: clamp(Math.round(seriesSleep * 12 + hrv * 0.42), 46, 97),
@@ -2264,10 +2474,10 @@ function effortScore(exercise: Exercise) {
         intensity.includes('high') || intensity.includes('vigorous') || intensity.includes('hard')
             ? 1.45
             : intensity.includes('medium') || intensity.includes('moderate')
-              ? 1.15
-              : intensity.includes('light') || intensity.includes('recovery') || intensity.includes('low')
-                ? 0.82
-                : 1;
+                ? 1.15
+                : intensity.includes('light') || intensity.includes('recovery') || intensity.includes('low')
+                    ? 0.82
+                    : 1;
     const heartComponent = exercise.avgHeartRate ? exercise.avgHeartRate * 0.33 : 21;
     return clamp(Math.round(exercise.duration * factor + heartComponent), 24, 96);
 }

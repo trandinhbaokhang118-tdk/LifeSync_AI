@@ -1,13 +1,13 @@
-# Software Requirements Specification (SRS)
-# Time Manager Application
+﻿# Software Requirements Specification (SRS)
+# LifeSync AI Application
 
 ## 1. Introduction
 
 ### 1.1 Purpose
-Tài liệu này mô tả các yêu cầu chức năng và phi chức năng cho ứng dụng Time Manager - một hệ thống quản lý thời gian và công việc.
+Tài liệu này mô tả các yêu cầu chức năng và phi chức năng cho ứng dụng LifeSync AI - một hệ thống quản lý thời gian và công việc.
 
 ### 1.2 Scope
-Time Manager là ứng dụng web full-stack cho phép người dùng:
+LifeSync AI là ứng dụng web full-stack cho phép người dùng:
 - Quản lý công việc (tasks) với tags và priorities
 - Lập lịch time blocks trên calendar
 - Đặt reminders và nhận notifications

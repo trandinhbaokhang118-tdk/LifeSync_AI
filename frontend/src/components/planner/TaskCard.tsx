@@ -6,44 +6,35 @@ import type { Task } from '../../types';
 
 interface TaskCardProps {
     task: Task;
+    /** When true, renders the static visual used inside the DragOverlay. */
     isDragging?: boolean;
 }
 
-export function TaskCard({ task, isDragging }: TaskCardProps) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging: isSortableDragging } = useSortable({
-        id: task.id,
-    });
+const priorityColors = {
+    LOW: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
+    MEDIUM: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
+    HIGH: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
+};
 
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isSortableDragging ? 0.5 : 1,
-    };
+const statusColors = {
+    TODO: 'border-l-gray-400',
+    IN_PROGRESS: 'border-l-blue-500',
+    DONE: 'border-l-green-500',
+};
 
-    const priorityColors = {
-        LOW: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-        MEDIUM: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
-        HIGH: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
-    };
-
-    const statusColors = {
-        TODO: 'border-l-gray-400',
-        IN_PROGRESS: 'border-l-blue-500',
-        DONE: 'border-l-green-500',
-    };
-
+/**
+ * Pure presentational card. No dnd hooks, so it can be rendered safely inside
+ * a DragOverlay without applying a second (offsetting) transform.
+ */
+function TaskCardContent({ task, isDragging }: TaskCardProps) {
     return (
         <div
-            ref={setNodeRef}
-            style={style}
             className={cn(
-                'bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-3 cursor-grab active:cursor-grabbing',
-                'hover:shadow-[var(--shadow-md)] transition-all border-l-4',
+                'bg-[var(--surface-1)] border border-[var(--border)] rounded-lg p-3',
+                'hover:shadow-[var(--shadow-md)] transition-shadow border-l-4',
                 statusColors[task.status],
-                isDragging && 'shadow-[var(--shadow-lg)] rotate-2'
+                isDragging ? 'shadow-[var(--shadow-lg)] rotate-2 cursor-grabbing' : 'cursor-grab'
             )}
-            {...attributes}
-            {...listeners}
         >
             <div className="flex items-start gap-2">
                 <GripVertical className="w-4 h-4 text-[var(--text-3)] flex-shrink-0 mt-0.5" />
@@ -74,6 +65,34 @@ export function TaskCard({ task, isDragging }: TaskCardProps) {
                     </div>
                 </div>
             </div>
+        </div>
+    );
+}
+
+export function TaskCard({ task, isDragging }: TaskCardProps) {
+    // Overlay variant: render the static content only (DragOverlay handles motion).
+    if (isDragging) {
+        return <TaskCardContent task={task} isDragging />;
+    }
+
+    return <SortableTaskCard task={task} />;
+}
+
+function SortableTaskCard({ task }: { task: Task }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: task.id,
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        // Hide the original while it is being dragged; the DragOverlay shows the clone.
+        opacity: isDragging ? 0 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <TaskCardContent task={task} />
         </div>
     );
 }

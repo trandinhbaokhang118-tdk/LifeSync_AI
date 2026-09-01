@@ -1,8 +1,8 @@
-# Requirements Document
+﻿# Requirements Document
 
 ## Introduction
 
-Website Quản lý thời gian (Time Manager) là một ứng dụng web full-stack giúp người dùng quản lý công việc, lên lịch thời gian, và theo dõi năng suất làm việc. Hệ thống được xây dựng theo chuẩn học thuật và dự án thực tế với Node.js + React + PostgreSQL (Docker) + Prisma, bao gồm đầy đủ tài liệu, quy trình CI/CD, và kiểm thử.
+Website Quản lý thời gian (LifeSync AI) là một ứng dụng web full-stack giúp người dùng quản lý công việc, lên lịch thời gian, và theo dõi năng suất làm việc. Hệ thống được xây dựng theo chuẩn học thuật và dự án thực tế với Node.js + React + PostgreSQL (Docker) + Prisma, bao gồm đầy đủ tài liệu, quy trình CI/CD, và kiểm thử.
 
 ## Glossary
 

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { Button, showToast } from '../components/ui';
 import { fitnessService } from '../services/fitness.service';
 import { gpsService } from '../services/gps.service';
+import { includesNormalizedVietnamese, normalizeVietnameseText } from '../lib/utils';
 import type { Exercise, GpsRoute } from '../types';
 
 const workoutFilters = ['all', 'running', 'walking', 'cycling', 'hiking', 'strength'] as const;
@@ -49,13 +50,13 @@ export function WorkoutHistory() {
     }
 
     const routeMap = new Map(routes.map((route) => [route.exerciseId, route]));
-    const normalizedSearch = search.trim().toLowerCase();
+    const normalizedSearch = normalizeVietnameseText(search);
     const filteredExercises = exercises.filter((exercise) => {
         const matchesFilter = filter === 'all' || exercise.category === filter;
         const matchesSearch =
             normalizedSearch.length === 0 ||
-            exercise.name.toLowerCase().includes(normalizedSearch) ||
-            exercise.category.toLowerCase().includes(normalizedSearch);
+            includesNormalizedVietnamese(exercise.name, normalizedSearch) ||
+            includesNormalizedVietnamese(exercise.category, normalizedSearch);
         return matchesFilter && matchesSearch;
     });
 

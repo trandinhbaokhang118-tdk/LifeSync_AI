@@ -1,4 +1,4 @@
-# 📱 Roadmap: Đưa TimeManager lên Google Play Store
+﻿# 📱 Roadmap: Đưa LifeSync AI lên Google Play Store
 
 ## 🎯 Tổng quan
 
@@ -29,7 +29,7 @@ Hiện tại bạn có **Web App** (React). Để lên Google Play, cần chuy�
 npm install -g react-native-cli
 
 # Tạo project mới
-npx react-native init TimeManagerMobile --template react-native-template-typescript
+npx react-native init LifeSync AIMobile --template react-native-template-typescript
 
 # Cài đặt dependencies cần thiết
 npm install @react-navigation/native @react-navigation/stack
@@ -96,7 +96,7 @@ npm install axios date-fns
 ```bash
 cd frontend
 npm install @capacitor/core @capacitor/cli
-npx cap init TimeManager com.timemanager.app
+npx cap init LifeSyncAI com.lifesyncai.app
 npm install @capacitor/android
 npx cap add android
 ```

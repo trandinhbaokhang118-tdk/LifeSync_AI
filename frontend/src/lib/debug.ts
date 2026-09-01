@@ -47,8 +47,11 @@ export const debugAPI = async () => {
     console.groupEnd();
 };
 
-// Add to window for easy access in console
-if (typeof window !== 'undefined') {
+// Add to window for easy access in console.
+// SECURITY: Only expose debug helpers during development. In production builds
+// (import.meta.env.DEV === false) these are never attached, so tokens and API
+// responses are never logged on a user's machine.
+if (typeof window !== 'undefined' && import.meta.env.DEV) {
     const debugWindow = window as Window & typeof globalThis & {
         debugAuth?: typeof debugAuth;
         debugAPI?: typeof debugAPI;

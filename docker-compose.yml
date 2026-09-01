@@ -1,13 +1,11 @@
-version: "3.9"
-
 services:
   mysql:
     image: mysql:8.0
-    container_name: time_manager_mysql
+    container_name: lifesync_ai_mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: time_manager
+      MYSQL_DATABASE: lifesync_ai
       MYSQL_USER: tm_user
       MYSQL_PASSWORD: tm_password
     ports:
@@ -23,7 +21,7 @@ services:
 
   phpmyadmin:
     image: phpmyadmin:latest
-    container_name: time_manager_phpmyadmin
+    container_name: lifesync_ai_phpmyadmin
     restart: unless-stopped
     environment:
       PMA_HOST: mysql
@@ -36,5 +34,21 @@ services:
     depends_on:
       - mysql
 
+  redis:
+    image: redis:7-alpine
+    container_name: lifesync_ai_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - tm_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
 volumes:
   tm_mysql_data:
+  tm_redis_data:

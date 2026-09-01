@@ -4,6 +4,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { apiLimiter } from './common/middleware/rate-limit.middleware';
+import helmet from 'helmet';
 
 function isPrivateNetworkOrigin(origin: string): boolean {
     try {
@@ -28,28 +30,52 @@ function isPrivateNetworkOrigin(origin: string): boolean {
 }
 
 async function bootstrap() {
-    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    // Retain raw request bytes for Stripe webhook signature verification.
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+
+    // Trust Cloudflare proxy
+    app.set('trust proxy', 1);
+
     const allowedOrigins = new Set(
         [
             'http://localhost',
             'https://localhost',
+            'http://127.0.0.1',
+            'https://127.0.0.1',
             'capacitor://localhost',
             'http://localhost:5173',
             'http://localhost:5174',
             'http://localhost:5175',
             'http://localhost:5176',
             'http://localhost:5177',
+            'http://127.0.0.1:5173',
+            'http://127.0.0.1:5174',
+            'http://127.0.0.1:5175',
+            'http://127.0.0.1:5176',
+            'http://127.0.0.1:5177',
             process.env.FRONTEND_URL,
             process.env.MOBILE_FRONTEND_URL,
+            process.env.PRODUCTION_FRONTEND_URL, // Cloudflare domain
         ].filter(Boolean) as string[],
     );
+
+    // Security headers (Helmet)
+    app.use(helmet({
+        contentSecurityPolicy: false, // Disable if using inline scripts
+        crossOriginEmbedderPolicy: false,
+    }));
+
+    // General rate limiting for all routes (no /api prefix is used in this app).
+    // Auth-specific limiters live in AuthModule. This is a broad abuse guard and
+    // self-disables under NODE_ENV=test.
+    app.use(apiLimiter);
 
     // Serve static files
     app.useStaticAssets(join(__dirname, '..', 'uploads'), {
         prefix: '/uploads/',
     });
 
-    // Enable CORS
+    // Enable CORS with Cloudflare headers support
     app.enableCors({
         origin: (origin, callback) => {
             if (!origin || allowedOrigins.has(origin) || isPrivateNetworkOrigin(origin)) {
@@ -60,6 +86,16 @@ async function bootstrap() {
             callback(new Error(`Origin ${origin} is not allowed by CORS`), false);
         },
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Requested-With',
+            'CF-Ray',
+            'CF-Connecting-IP',
+            'X-Forwarded-For',
+            'X-Real-IP',
+        ],
     });
 
     // Global validation pipe
@@ -73,8 +109,8 @@ async function bootstrap() {
 
     // Swagger setup
     const config = new DocumentBuilder()
-        .setTitle('Time Manager API')
-        .setDescription('API documentation for Time Manager application')
+        .setTitle('LifeSync AI API')
+        .setDescription('API documentation for LifeSync AI application')
         .setVersion('1.0')
         .addBearerAuth()
         .build();

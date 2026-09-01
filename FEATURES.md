@@ -1,4 +1,4 @@
-# Danh sách Tính năng TimeManager
+﻿# Danh sách Tính năng LifeSync AI
 
 ## 🎯 Tính năng chính
 

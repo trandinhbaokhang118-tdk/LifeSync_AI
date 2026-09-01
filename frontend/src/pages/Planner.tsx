@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
-import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
+import {
+    DndContext,
+    DragOverlay,
+    closestCenter,
+    PointerSensor,
+    TouchSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, List, Grid3x3 } from 'lucide-react';
 import { Button } from '../components/ui';
 import { TaskCard } from '../components/planner/TaskCard';
@@ -20,6 +28,17 @@ export function Planner() {
 
     const { data: tasksData } = useTasksQuery();
     const updateTask = useUpdateTaskMutation();
+
+    // Require a small movement before a drag starts so taps/clicks still work,
+    // and so the overlay tracks the pointer cleanly from the grab point.
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 8 },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: { delay: 150, tolerance: 8 },
+        }),
+    );
 
     const tasks = tasksData?.data || [];
 
@@ -146,7 +165,7 @@ export function Planner() {
     };
 
     return (
-        <DndContext collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="space-y-6 pb-20 md:pb-0">
                 {/* Header */}
                 <div className="flex items-center justify-between flex-wrap gap-4">

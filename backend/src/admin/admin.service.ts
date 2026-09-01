@@ -1,16 +1,19 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { Role } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 
 @Injectable()
 export class AdminService {
     constructor(private prisma: PrismaService) { }
 
     async getSystemStats() {
-        const [totalUsers, totalTasks, completedTasks] = await Promise.all([
+        const [totalUsers, totalTasks, completedTasks, adminCount, moderatorCount] = await Promise.all([
             this.prisma.user.count(),
             this.prisma.task.count(),
             this.prisma.task.count({ where: { status: 'DONE' } }),
+            this.prisma.user.count({ where: { role: Role.ADMIN } }),
+            this.prisma.user.count({ where: { role: Role.MODERATOR } }),
         ]);
 
         const today = new Date();
@@ -39,6 +42,9 @@ export class AdminService {
             completedTasks,
             avgTasksPerUser,
             newUsersToday,
+            adminCount,
+            moderatorCount,
+            regularUserCount: totalUsers - adminCount - moderatorCount,
         };
     }
 
@@ -57,14 +63,114 @@ export class AdminService {
         });
     }
 
-    async updateUserRole(userId: string, role: string) {
-        if (role !== Role.USER && role !== Role.ADMIN) {
+    async updateUser(userId: string, dto: UpdateAdminUserDto) {
+        const target = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, phone: true },
+        });
+
+        if (!target) {
+            throw new NotFoundException('User not found');
+        }
+
+        const data: { name?: string; email?: string; phone?: string | null } = {};
+
+        if (dto.name !== undefined) {
+            data.name = dto.name;
+        }
+
+        if (dto.email !== undefined) {
+            if (dto.email !== target.email) {
+                const existingEmail = await this.prisma.user.findUnique({
+                    where: { email: dto.email },
+                    select: { id: true },
+                });
+
+                if (existingEmail && existingEmail.id !== userId) {
+                    throw new BadRequestException('Email is already in use');
+                }
+            }
+
+            data.email = dto.email;
+        }
+
+        if (dto.phone !== undefined) {
+            const phone = dto.phone === '' ? null : dto.phone;
+
+            if (phone && phone !== target.phone) {
+                const existingPhone = await this.prisma.user.findFirst({
+                    where: { phone },
+                    select: { id: true },
+                });
+
+                if (existingPhone && existingPhone.id !== userId) {
+                    throw new BadRequestException('Phone number is already in use');
+                }
+            }
+
+            data.phone = phone;
+        }
+
+        if (Object.keys(data).length === 0) {
+            throw new BadRequestException('No account changes provided');
+        }
+
+        try {
+            return await this.prisma.user.update({
+                where: { id: userId },
+                data,
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    phone: true,
+                    role: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                throw new BadRequestException('Email or phone number is already in use');
+            }
+
+            throw error;
+        }
+    }
+
+    async updateUserRole(userId: string, role: string, actingAdminId?: string) {
+        const validRoles: string[] = [Role.USER, Role.MODERATOR, Role.ADMIN];
+        if (!validRoles.includes(role)) {
             throw new BadRequestException('Invalid role');
+        }
+
+        const target = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, role: true },
+        });
+
+        if (!target) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Prevent removing the last admin from the system.
+        if (target.role === Role.ADMIN && role !== Role.ADMIN) {
+            const adminCount = await this.prisma.user.count({ where: { role: Role.ADMIN } });
+            if (adminCount <= 1) {
+                throw new BadRequestException(
+                    'Cannot change the role of the last remaining admin. Promote another admin first.',
+                );
+            }
+        }
+
+        // Admins should not silently demote themselves and lose access.
+        if (actingAdminId && actingAdminId === userId && role !== Role.ADMIN) {
+            throw new BadRequestException('You cannot change your own admin role.');
         }
 
         return this.prisma.user.update({
             where: { id: userId },
-            data: { role },
+            data: { role: role as Role },
             select: {
                 id: true,
                 email: true,
@@ -74,7 +180,28 @@ export class AdminService {
         });
     }
 
-    async deleteUser(userId: string) {
+    async deleteUser(userId: string, actingAdminId?: string) {
+        if (actingAdminId && actingAdminId === userId) {
+            throw new BadRequestException('You cannot delete your own account.');
+        }
+
+        const target = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, role: true },
+        });
+
+        if (!target) {
+            throw new NotFoundException('User not found');
+        }
+
+        // Prevent deleting the last admin.
+        if (target.role === Role.ADMIN) {
+            const adminCount = await this.prisma.user.count({ where: { role: Role.ADMIN } });
+            if (adminCount <= 1) {
+                throw new BadRequestException('Cannot delete the last remaining admin.');
+            }
+        }
+
         await this.prisma.user.delete({
             where: { id: userId },
         });
@@ -178,8 +305,8 @@ export class AdminService {
         return {
             status: 'manual_required',
             message: 'Automated SQL export is not exposed from the API. Use the mysqldump and mysql commands from docs/Deployment.md.',
-            backupCommand: 'docker exec time_manager_mysql mysqldump -u tm_user -ptm_password time_manager > backup.sql',
-            restoreCommand: 'docker exec -i time_manager_mysql mysql -u tm_user -ptm_password time_manager < backup.sql',
+            backupCommand: 'docker exec lifesync_ai_mysql mysqldump -u tm_user -ptm_password lifesync_ai > backup.sql',
+            restoreCommand: 'docker exec -i lifesync_ai_mysql mysql -u tm_user -ptm_password lifesync_ai < backup.sql',
             timestamp: new Date(),
         };
     }

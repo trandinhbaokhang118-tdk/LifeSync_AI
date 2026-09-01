@@ -6,6 +6,7 @@ import {
     HttpStatus,
     Logger,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 
 @Catch()
@@ -43,7 +44,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
             }
         } else if (exception instanceof Error) {
             this.logger.error(`Unhandled error: ${exception.message}`, exception.stack);
-            message = process.env.NODE_ENV === 'development' ? exception.message : message;
+
+            if (this.isDatabaseUnavailableError(exception)) {
+                status = HttpStatus.SERVICE_UNAVAILABLE;
+                code = 'DATABASE_UNAVAILABLE';
+                message = 'Database is currently unavailable. Please try again shortly.';
+            } else {
+                message = process.env.NODE_ENV === 'development' ? exception.message : message;
+            }
         }
 
         response.status(status).json({
@@ -63,7 +71,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
             404: 'RESOURCE_NOT_FOUND',
             409: 'CONFLICT',
             500: 'INTERNAL_ERROR',
+            503: 'SERVICE_UNAVAILABLE',
         };
         return codeMap[status] || 'UNKNOWN_ERROR';
+    }
+
+    private isDatabaseUnavailableError(exception: Error): boolean {
+        if (exception instanceof Prisma.PrismaClientInitializationError) {
+            const errorCode = (exception as { errorCode?: string }).errorCode;
+            return errorCode === 'P1001' || exception.message.includes("Can't reach database server");
+        }
+
+        return exception.message.includes("Can't reach database server");
     }
 }

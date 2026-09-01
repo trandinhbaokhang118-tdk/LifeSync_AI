@@ -1,25 +1,31 @@
+import { useEffect, useMemo, useState } from 'react';
+import type { ElementType, MouseEvent as ReactMouseEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
-import type { ElementType } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useReducedMotion } from 'framer-motion';
 import {
-    CheckCircle2,
-    Clock,
     AlertTriangle,
-    TrendingUp,
-    Plus,
     ArrowRight,
     Calendar,
-    Timer,
+    CheckCircle2,
+    Clock3,
+    Plus,
     Sparkles,
+    Target,
+    Timer,
+    TrendingUp,
+    Zap,
 } from 'lucide-react';
-import { Button, Badge, SkeletonStats, ErrorState } from '../components/ui';
 import { AIScheduleModal } from '../components/ai-schedule/AIScheduleModal';
+import { ErrorState } from '../components/ui';
+import { cn, formatDate, isOverdue } from '../lib/utils';
 import { dashboardService } from '../services/dashboard.service';
 import { tasksService } from '../services/tasks.service';
 import { useAuthStore } from '../store/auth.store';
-import { cn, formatDate, isOverdue } from '../lib/utils';
 import type { Task } from '../types';
+import './dashboard-enterprise.css';
+
+const numberFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
 
 export function Dashboard() {
     const { user } = useAuthStore();
@@ -41,157 +47,194 @@ export function Dashboard() {
             }),
     });
 
-    const { data: focusStats } = useQuery({
+    const { data: focusStats, isLoading: focusLoading } = useQuery({
         queryKey: ['dashboard', 'focus'],
         queryFn: dashboardService.getFocusTime,
     });
 
-    const greeting = () => {
-        const hour = new Date().getHours();
-        if (hour < 12) return 'Chào buổi sáng';
-        if (hour < 18) return 'Chào buổi chiều';
-        return 'Chào buổi tối';
-    };
+    const upcomingTasks = tasksData?.data ?? [];
+    const nextTask = upcomingTasks[0];
+    const firstName = user?.name?.trim().split(/\s+/).at(-1) || 'bạn';
+    const todayLabel = useMemo(
+        () => formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' }),
+        [],
+    );
 
     if (statsError) {
         return <ErrorState onRetry={refetchStats} />;
     }
 
     return (
-        <div className="page-shell space-y-6 pb-20 md:pb-0">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-[var(--text)]">
-                        {greeting()}, {user?.name?.split(' ')[0]} 👋
-                    </h1>
-                    <p className="mt-1 text-[var(--text-2)]">
-                        Hôm nay là {formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    <Button
-                        variant="outline"
-                        onClick={() => setShowAISchedule(true)}
-                        className="border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] text-[var(--primary)] hover:bg-[var(--surface-3)] hover:text-[var(--primary)]"
-                    >
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        AI sắp xếp
-                    </Button>
-                    <Button variant="outline" asChild>
-                        <Link to="/app/calendar">
-                            <Calendar className="mr-2 h-4 w-4" />
-                            Xem lịch
-                        </Link>
-                    </Button>
-                    <Button asChild>
-                        <Link to="/app/focus">
-                            <Timer className="mr-2 h-4 w-4" />
-                            Bắt đầu focus
-                        </Link>
-                    </Button>
-                </div>
-            </div>
+        <div className="dashboard-workbench pb-20 md:pb-0">
+            <section className="dashboard-hero dash-enter" aria-labelledby="dashboard-heading">
+                <figure className="dashboard-hero__media" aria-hidden="true">
+                    <img
+                        src="/dashboard/performance-dawn-v1.webp"
+                        alt=""
+                        width="1600"
+                        height="855"
+                        fetchPriority="high"
+                    />
+                </figure>
+                <div className="dashboard-hero__scrim" aria-hidden="true" />
 
-            {statsLoading ? (
-                <SkeletonStats count={4} />
-            ) : (
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    <StatCard
-                        title="Việc hôm nay"
-                        value={stats?.tasksDueToday || 0}
-                        icon={Clock}
-                        color="blue"
-                    />
-                    <StatCard
-                        title="Quá hạn"
-                        value={stats?.tasksOverdue || 0}
-                        icon={AlertTriangle}
-                        color="red"
-                        alert={stats?.tasksOverdue ? stats.tasksOverdue > 0 : false}
-                    />
-                    <StatCard
-                        title="Hoàn thành tuần này"
-                        value={stats?.tasksCompletedThisWeek || 0}
-                        icon={CheckCircle2}
-                        color="green"
-                    />
-                    <StatCard
-                        title="Giờ focus tuần này"
-                        value={focusStats?.totalHours || 0}
-                        suffix="h"
-                        icon={TrendingUp}
-                        color="primary"
-                    />
-                </div>
-            )}
+                <div className="dashboard-hero__content">
+                    <div className="dashboard-hero__copy">
+                        <p className="dashboard-kicker">
+                            <span aria-hidden="true" />
+                            Nhịp hôm nay
+                        </p>
+                        <h1 id="dashboard-heading">
+                            {getGreeting()},
+                            <br />
+                            {firstName}.
+                        </h1>
+                        <p className="dashboard-date">{todayLabel}</p>
+                    </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                <div className="space-y-4 lg:col-span-2">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-semibold text-[var(--text)]">Kế hoạch hôm nay</h2>
-                        <Link
-                            to="/app/tasks"
-                            className="flex items-center gap-1 text-sm text-[var(--primary)] transition-colors hover:text-[var(--text)]"
+                    <div className="dashboard-hero__next" aria-live="polite">
+                        <span className="dashboard-hero__next-label">Ưu tiên kế tiếp</span>
+                        {tasksLoading ? (
+                            <div className="dashboard-hero__loading" aria-label="Đang tải công việc" />
+                        ) : nextTask ? (
+                            <>
+                                <strong>{nextTask.title}</strong>
+                                <span>{formatTaskTime(nextTask.dueAt)}</span>
+                            </>
+                        ) : (
+                            <>
+                                <strong>Chưa có việc cần xử lý</strong>
+                                <span>Bắt đầu bằng một kế hoạch ngắn, rõ ràng.</span>
+                            </>
+                        )}
+                    </div>
+
+                    <div className="dashboard-hero__actions">
+                        <Link className="dashboard-action dashboard-action--primary" to="/app/focus">
+                            <Zap size={20} aria-hidden="true" />
+                            Bắt đầu tập trung
+                        </Link>
+                        <button
+                            type="button"
+                            className="dashboard-action dashboard-action--secondary"
+                            onClick={() => setShowAISchedule(true)}
                         >
+                            <Sparkles size={20} aria-hidden="true" />
+                            Sắp xếp bằng AI
+                        </button>
+                    </div>
+                </div>
+
+                <figcaption className="dashboard-hero__caption">
+                    Performance mode <span aria-hidden="true">·</span> LifeSync AI
+                </figcaption>
+            </section>
+
+            <section className="dashboard-metrics dash-enter" aria-label="Tổng quan hiệu suất">
+                {statsLoading || focusLoading ? (
+                    Array.from({ length: 4 }, (_, index) => <MetricSkeleton key={index} />)
+                ) : (
+                    <>
+                        <Metric
+                            label="Việc hôm nay"
+                            value={stats?.tasksDueToday ?? 0}
+                            icon={Target}
+                            tone="accent"
+                        />
+                        <Metric
+                            label="Đang quá hạn"
+                            value={stats?.tasksOverdue ?? 0}
+                            icon={AlertTriangle}
+                            tone={stats?.tasksOverdue ? 'danger' : 'neutral'}
+                        />
+                        <Metric
+                            label="Xong trong tuần"
+                            value={stats?.tasksCompletedThisWeek ?? 0}
+                            icon={CheckCircle2}
+                            tone="success"
+                        />
+                        <Metric
+                            label="Focus tuần này"
+                            value={focusStats?.totalHours ?? 0}
+                            suffix=" giờ"
+                            icon={TrendingUp}
+                            tone="neutral"
+                        />
+                    </>
+                )}
+            </section>
+
+            <div className="dashboard-grid dash-enter">
+                <section className="dashboard-taskboard" aria-labelledby="upcoming-heading">
+                    <div className="dashboard-section-head">
+                        <div>
+                            <h2 id="upcoming-heading">Việc ưu tiên tiếp theo</h2>
+                            <p>Tối đa 10 công việc chưa hoàn thành, sắp theo hạn gần nhất.</p>
+                        </div>
+                        <Link className="dashboard-text-link" to="/app/tasks">
                             Xem tất cả
-                            <ArrowRight className="h-4 w-4" />
+                            <ArrowRight size={16} aria-hidden="true" />
                         </Link>
                     </div>
 
-                    <div className="surface-panel overflow-hidden divide-y divide-[var(--divider)]">
+                    <div className="dashboard-task-list">
                         {tasksLoading ? (
-                            <div className="space-y-3 p-4">
-                                {[1, 2, 3].map((i) => (
-                                    <div key={i} className="flex gap-3">
-                                        <div className="skeleton h-5 w-5 rounded-full" />
-                                        <div className="flex-1 space-y-2">
-                                            <div className="skeleton h-4 w-3/4 rounded" />
-                                            <div className="skeleton h-3 w-1/2 rounded" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : tasksData?.data && tasksData.data.length > 0 ? (
-                            tasksData.data.map((task) => <TaskItem key={task.id} task={task} />)
+                            Array.from({ length: 4 }, (_, index) => <TaskSkeleton key={index} />)
+                        ) : upcomingTasks.length > 0 ? (
+                            upcomingTasks.map((task, index) => (
+                                <TaskItem key={task.id} task={task} order={index + 1} />
+                            ))
                         ) : (
-                            <div className="p-8 text-center">
-                                <Sparkles className="mx-auto mb-3 h-12 w-12 text-[var(--text-3)]" />
-                                <p className="mb-4 text-[var(--text-2)]">Chưa có công việc nào cho hôm nay</p>
-                                <Button asChild size="sm">
-                                    <Link to="/app/tasks">
-                                        <Plus className="mr-1 h-4 w-4" />
-                                        Tạo công việc
-                                    </Link>
-                                </Button>
+                            <div className="dashboard-empty">
+                                <CheckCircle2 size={32} aria-hidden="true" />
+                                <div>
+                                    <h3>Danh sách đang trống.</h3>
+                                    <p>Tạo một công việc để định hình nhịp tiếp theo.</p>
+                                </div>
+                                <Link className="dashboard-action dashboard-action--secondary" to="/app/tasks?new=true">
+                                    <Plus size={20} aria-hidden="true" />
+                                    Tạo công việc
+                                </Link>
                             </div>
                         )}
                     </div>
-                </div>
+                </section>
 
-                <div className="space-y-6">
-                    <div className="surface-panel p-4">
-                        <h3 className="mb-3 font-medium text-[var(--text)]">Thao tác nhanh</h3>
-                        <div className="space-y-2">
-                            <QuickAction icon={Plus} label="Tạo công việc mới" to="/app/tasks?new=true" />
-                            <QuickAction icon={Calendar} label="Lên lịch công việc" to="/app/calendar" />
-                            <QuickAction icon={Timer} label="Bắt đầu Pomodoro" to="/app/focus" />
-                        </div>
-                    </div>
-
-                    <div className="challenge-banner p-4">
-                        <div className="relative z-10 flex items-start gap-3">
-                            <div className="rounded-lg bg-[image:var(--primary-gradient)] p-2 text-[var(--btn-primary-text)] shadow-[var(--primary-glow)]">
-                                <Sparkles className="h-4 w-4" />
-                            </div>
+                <aside className="dashboard-rail" aria-label="Thao tác và gợi ý">
+                    <section className="dashboard-quick" aria-labelledby="quick-heading">
+                        <div className="dashboard-section-head dashboard-section-head--compact">
                             <div>
-                                <h3 className="mb-1 font-medium text-[var(--text)]">Mẹo năng suất</h3>
-                                <p className="text-sm text-[var(--text-2)]">
-                                    Hãy bắt đầu ngày mới bằng việc hoàn thành công việc khó nhất trước.
-                                </p>
+                                <h2 id="quick-heading">Chuyển nhịp nhanh</h2>
+                                <p>Một chạm đến hành động thường dùng.</p>
                             </div>
                         </div>
-                    </div>
-                </div>
+                        <nav aria-label="Thao tác nhanh">
+                            <QuickAction icon={Plus} label="Tạo công việc" detail="Ghi lại việc mới" to="/app/tasks?new=true" />
+                            <QuickAction icon={Calendar} label="Mở lịch" detail="Xem khung thời gian" to="/app/calendar" />
+                            <QuickAction
+                                icon={Timer}
+                                label="Bắt đầu Pomodoro"
+                                detail="25 phút · toàn màn hình"
+                                to="/app/focus?start=true"
+                                startFullscreen
+                            />
+                        </nav>
+                    </section>
+
+                    <section className="dashboard-coach" aria-labelledby="coach-heading">
+                        <div className="dashboard-coach__mark" aria-hidden="true">
+                            <Sparkles size={20} />
+                        </div>
+                        <div>
+                            <h2 id="coach-heading">Giữ một nhịp rõ ràng.</h2>
+                            <p>Chọn việc khó nhất, dành cho nó một phiên tập trung, rồi mới mở rộng lịch.</p>
+                        </div>
+                        <button type="button" className="dashboard-text-link" onClick={() => setShowAISchedule(true)}>
+                            Để AI sắp lịch
+                            <ArrowRight size={16} aria-hidden="true" />
+                        </button>
+                    </section>
+                </aside>
             </div>
 
             <AIScheduleModal open={showAISchedule} onOpenChange={setShowAISchedule} />
@@ -199,108 +242,148 @@ export function Dashboard() {
     );
 }
 
-interface StatCardProps {
-    title: string;
+function getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Chào buổi sáng';
+    if (hour < 18) return 'Chào buổi chiều';
+    return 'Chào buổi tối';
+}
+
+function formatTaskTime(value?: string) {
+    if (!value) return 'Chưa đặt thời hạn';
+    return formatDate(value, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+interface MetricProps {
+    label: string;
     value: number;
     suffix?: string;
     icon: ElementType;
-    color: 'blue' | 'red' | 'green' | 'primary';
-    alert?: boolean;
+    tone: 'accent' | 'danger' | 'success' | 'neutral';
 }
 
-function StatCard({ title, value, suffix, icon: Icon, color, alert }: StatCardProps) {
-    const colors = {
-        blue: 'bg-info-var',
-        red: 'bg-danger-var',
-        green: 'bg-success-var',
-        primary: 'border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] text-[var(--primary)]',
-    };
-
+function Metric({ label, value, suffix = '', icon: Icon, tone }: MetricProps) {
     return (
-        <div
-            className={cn(
-                'surface-card-hover p-4',
-                alert && 'ring-2 ring-red-500 ring-offset-2 ring-offset-[var(--bg-body)]'
-            )}
-        >
-            <div className="mb-3 flex items-center justify-between">
-                <div className={cn('rounded-lg p-2', colors[color])}>
-                    <Icon className="h-5 w-5" />
-                </div>
-                {alert && (
-                    <span className="relative flex h-2 w-2">
-                        <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-                    </span>
-                )}
+        <div className={cn('dashboard-metric', `dashboard-metric--${tone}`)}>
+            <div className="dashboard-metric__label">
+                <Icon size={20} aria-hidden="true" />
+                <span>{label}</span>
             </div>
-            <p className="text-2xl font-bold text-[var(--text)]">
-                {value}
-                {suffix}
+            <p className="dashboard-metric__value">
+                <AnimatedNumber value={value} />
+                <span>{suffix}</span>
             </p>
-            <p className="text-sm text-[var(--text-2)]">{title}</p>
         </div>
     );
 }
 
-function TaskItem({ task }: { task: Task }) {
+function AnimatedNumber({ value }: { value: number }) {
+    const reduceMotion = useReducedMotion();
+    const [displayValue, setDisplayValue] = useState(reduceMotion ? value : 0);
+
+    useEffect(() => {
+        if (reduceMotion) {
+            setDisplayValue(value);
+            return;
+        }
+
+        const startedAt = performance.now();
+        let frame = 0;
+        const duration = 400;
+        const tick = (now: number) => {
+            const progress = Math.min((now - startedAt) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setDisplayValue(value * eased);
+            if (progress < 1) frame = requestAnimationFrame(tick);
+        };
+
+        frame = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frame);
+    }, [reduceMotion, value]);
+
+    return <span aria-label={numberFormatter.format(value)}>{numberFormatter.format(displayValue)}</span>;
+}
+
+function MetricSkeleton() {
+    return (
+        <div className="dashboard-metric dashboard-skeleton" aria-hidden="true">
+            <span />
+            <strong />
+        </div>
+    );
+}
+
+function TaskSkeleton() {
+    return (
+        <div className="dashboard-task dashboard-task--loading" aria-hidden="true">
+            <span />
+            <div><strong /><small /></div>
+        </div>
+    );
+}
+
+function TaskItem({ task, order }: { task: Task; order: number }) {
     const overdue = task.status !== 'DONE' && isOverdue(task.dueAt);
 
     return (
-        <Link
-            to={`/app/tasks?id=${task.id}`}
-            className="flex items-start gap-3 p-4 transition-colors hover:bg-[var(--surface-3)]"
-        >
-            <div
-                className={cn(
-                    'mt-0.5 h-5 w-5 flex-shrink-0 rounded-full border-2',
-                    task.status === 'DONE'
-                        ? 'border-green-500 bg-green-500'
-                        : overdue
-                          ? 'border-red-500'
-                          : 'border-[var(--border-strong)]'
-                )}
-            >
-                {task.status === 'DONE' && <CheckCircle2 className="h-full w-full p-0.5 text-white" />}
-            </div>
-            <div className="min-w-0 flex-1">
-                <p
-                    className={cn(
-                        'truncate font-medium',
-                        task.status === 'DONE' ? 'text-[var(--text-3)] line-through' : 'text-[var(--text)]'
-                    )}
-                >
-                    {task.title}
-                </p>
-                <div className="mt-1 flex items-center gap-2">
-                    {task.dueAt && (
-                        <span className={cn('text-xs', overdue ? 'text-red-500' : 'text-[var(--text-2)]')}>
-                            {formatDate(task.dueAt, { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    )}
-                    {task.priority === 'HIGH' && (
-                        <Badge variant="danger" className="py-0 text-xs">
-                            Cao
-                        </Badge>
-                    )}
+        <Link to={`/app/tasks?id=${task.id}`} className="dashboard-task">
+            <span className="dashboard-task__index" aria-hidden="true">{String(order).padStart(2, '0')}</span>
+            <div className="dashboard-task__body">
+                <div className="dashboard-task__title-row">
+                    <h3>{task.title}</h3>
+                    {task.priority === 'HIGH' && <span className="dashboard-priority">Ưu tiên cao</span>}
                 </div>
+                <p className={cn(overdue && 'is-overdue')}>
+                    <Clock3 size={16} aria-hidden="true" />
+                    {formatTaskTime(task.dueAt)}
+                    {overdue && <span>Quá hạn</span>}
+                </p>
             </div>
+            <ArrowRight className="dashboard-task__arrow" size={20} aria-hidden="true" />
         </Link>
     );
 }
 
-function QuickAction({ icon: Icon, label, to }: { icon: ElementType; label: string; to: string }) {
+interface QuickActionProps {
+    icon: ElementType;
+    label: string;
+    detail: string;
+    to: string;
+    startFullscreen?: boolean;
+}
+
+function QuickAction({ icon: Icon, label, detail, to, startFullscreen = false }: QuickActionProps) {
+    const navigate = useNavigate();
+
+    const handleClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+        if (
+            !startFullscreen
+            || event.button !== 0
+            || event.metaKey
+            || event.ctrlKey
+            || event.shiftKey
+            || event.altKey
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+            void document.documentElement.requestFullscreen().catch(() => undefined);
+        }
+
+        navigate(to);
+    };
+
     return (
-        <Link
-            to={to}
-            className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--surface-highlight)]"
-        >
-            <div className="rounded-lg bg-[var(--surface-3)] p-2 transition-colors group-hover:bg-[var(--surface-highlight)]">
-                <Icon className="h-4 w-4 text-[var(--text-2)] transition-colors group-hover:text-[var(--primary)]" />
-            </div>
-            <span className="text-sm text-[var(--text-2)] transition-colors group-hover:text-[var(--text)]">
-                {label}
+        <Link className="dashboard-quick-action" to={to} onClick={handleClick}>
+            <Icon size={20} aria-hidden="true" />
+            <span>
+                <strong>{label}</strong>
+                <small>{detail}</small>
             </span>
+            <ArrowRight size={16} aria-hidden="true" />
         </Link>
     );
 }

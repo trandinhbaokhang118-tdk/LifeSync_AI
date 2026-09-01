@@ -1,5 +1,5 @@
-# Deployment Guide
-# Time Manager Application
+﻿# Deployment Guide
+# LifeSync AI Application
 
 ## 1. Prerequisites
 
@@ -30,7 +30,7 @@ cd time-manager
 ```bash
 docker compose up -d
 docker ps
-docker exec -it time_manager_mysql mysql -u tm_user -ptm_password -D time_manager -e "SELECT VERSION();"
+docker exec -it lifesync_ai_mysql mysql -u tm_user -ptm_password -D lifesync_ai -e "SELECT VERSION();"
 ```
 
 ### 2.3 Configure backend
@@ -69,7 +69,7 @@ Frontend:
 
 ### Backend `.env`
 ```env
-DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/time_manager"
+DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/lifesync_ai"
 JWT_SECRET="your-super-secret-jwt-key-change-in-production"
 JWT_EXPIRES_IN="15m"
 REFRESH_TOKEN_EXPIRES_IN="7d"
@@ -84,6 +84,7 @@ GOOGLE_REDIRECT_URI="http://localhost:3000/auth/google/callback"
 FACEBOOK_APP_ID=""
 FACEBOOK_APP_SECRET=""
 FACEBOOK_REDIRECT_URI="http://localhost:3000/auth/facebook/callback"
+FACEBOOK_API_VERSION="v25.0"
 ```
 
 ### Frontend `.env`
@@ -132,7 +133,7 @@ Backend:
 - `PAYMENTS_ENABLED=false` unless a real provider integration has been completed
 - `OPENAI_API_KEY` if AI chat is enabled
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` if Google login is enabled
-- `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_REDIRECT_URI` if Facebook login is enabled
+- `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_REDIRECT_URI`, `FACEBOOK_API_VERSION` if Facebook login is enabled
 
 Frontend:
 - `VITE_API_URL`
@@ -174,11 +175,11 @@ Copy `frontend/android/key.properties.example` to `frontend/android/key.properti
 ```properties
 storePassword=your-password
 keyPassword=your-password
-keyAlias=timemanager
-storeFile=timemanager-release.keystore
+keyAlias=lifesyncai
+storeFile=lifesync-ai-release.keystore
 ```
 
-Place `timemanager-release.keystore` inside `frontend/android/`.
+Place `lifesync-ai-release.keystore` inside `frontend/android/`.
 If Android Studio cannot find the SDK, copy `frontend/android/local.properties.example` to `frontend/android/local.properties` and update the SDK path.
 
 ### 6.3 Build release APK / AAB
@@ -204,12 +205,12 @@ Before publishing:
 
 ### Backup
 ```bash
-docker exec time_manager_mysql mysqldump -u tm_user -ptm_password time_manager > backup.sql
+docker exec lifesync_ai_mysql mysqldump -u tm_user -ptm_password lifesync_ai > backup.sql
 ```
 
 ### Restore
 ```bash
-docker exec -i time_manager_mysql mysql -u tm_user -ptm_password time_manager < backup.sql
+docker exec -i lifesync_ai_mysql mysql -u tm_user -ptm_password lifesync_ai < backup.sql
 ```
 
 ### Prisma helpers
@@ -241,7 +242,7 @@ Expected response shape:
 
 ### Database
 ```bash
-docker exec time_manager_mysql mysqladmin ping -h localhost -u tm_user -ptm_password
+docker exec lifesync_ai_mysql mysqladmin ping -h localhost -u tm_user -ptm_password
 ```
 
 ## 9. Troubleshooting
@@ -249,7 +250,7 @@ docker exec time_manager_mysql mysqladmin ping -h localhost -u tm_user -ptm_pass
 ### Backend cannot connect to MySQL
 - Confirm `docker compose up -d` completed successfully
 - Check `DATABASE_URL`
-- Check MySQL container logs with `docker logs time_manager_mysql`
+- Check MySQL container logs with `docker logs lifesync_ai_mysql`
 
 ### Prisma migration fails
 ```bash

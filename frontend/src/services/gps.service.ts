@@ -19,6 +19,7 @@ export const gpsService = {
             latitude: number;
             longitude: number;
             altitude?: number;
+            accuracy?: number;
             speed?: number;
             timestamp?: string;
         }

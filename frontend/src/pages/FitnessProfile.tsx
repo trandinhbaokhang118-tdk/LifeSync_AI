@@ -50,62 +50,62 @@ export function FitnessProfile() {
         <div className="max-w-2xl mx-auto p-6">
             <div className="flex items-center justify-between mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h1 className="text-3xl font-bold text-[var(--text)] mb-2">
                         Fitness Profile
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-[var(--text-2)]">
                         Customize your fitness goals
                     </p>
                 </div>
                 <button
                     onClick={() => navigate('/app/fitness')}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    className="px-4 py-2 text-[var(--text-2)] hover:text-[var(--text)]"
                 >
                     Back
                 </button>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-6 shadow-[var(--shadow-sm)]">
                 <div className="space-y-6">
                     {/* Body Measurements */}
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <h3 className="text-lg font-semibold text-[var(--text)] mb-4">
                             Body Measurements
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">
                                     Height (cm)
                                 </label>
                                 <input
                                     type="number"
                                     value={profile.height || ''}
                                     onChange={(e) => setProfile({ ...profile, height: Number(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-2 text-[var(--input-text)] placeholder:text-[var(--input-placeholder)]"
                                     placeholder="170"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">
                                     Current Weight (kg)
                                 </label>
                                 <input
                                     type="number"
                                     value={profile.weight || ''}
                                     onChange={(e) => setProfile({ ...profile, weight: Number(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-2 text-[var(--input-text)] placeholder:text-[var(--input-placeholder)]"
                                     placeholder="70"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">
                                     Goal Weight (kg)
                                 </label>
                                 <input
                                     type="number"
                                     value={profile.goalWeight || ''}
                                     onChange={(e) => setProfile({ ...profile, goalWeight: Number(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-2 text-[var(--input-text)] placeholder:text-[var(--input-placeholder)]"
                                     placeholder="65"
                                 />
                             </div>
@@ -114,7 +114,7 @@ export function FitnessProfile() {
 
                     {/* Activity Level */}
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <h3 className="text-lg font-semibold text-[var(--text)] mb-4">
                             Activity Level
                         </h3>
                         <div className="space-y-2">
@@ -129,8 +129,8 @@ export function FitnessProfile() {
                                     key={level.value}
                                     className={`flex items-center p-4 border rounded-lg cursor-pointer transition-colors ${
                                         profile.activityLevel === level.value
-                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                                            ? 'border-[var(--primary)] bg-[var(--surface-highlight)]'
+                                            : 'border-[var(--border)] hover:border-[var(--border-strong)]'
                                     }`}
                                 >
                                     <input
@@ -142,8 +142,8 @@ export function FitnessProfile() {
                                         className="sr-only"
                                     />
                                     <div className="flex-1">
-                                        <p className="font-medium text-gray-900 dark:text-white">{level.label}</p>
-                                        <p className="text-sm text-gray-500">{level.desc}</p>
+                                        <p className="font-medium text-[var(--text)]">{level.label}</p>
+                                        <p className="text-sm text-[var(--text-2)]">{level.desc}</p>
                                     </div>
                                     {profile.activityLevel === level.value && (
                                         <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
@@ -157,30 +157,30 @@ export function FitnessProfile() {
 
                     {/* Daily Goals */}
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        <h3 className="text-lg font-semibold text-[var(--text)] mb-4">
                             Daily Goals
                         </h3>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">
                                     Daily Step Goal
                                 </label>
                                 <input
                                     type="number"
                                     value={profile.stepGoal || 10000}
                                     onChange={(e) => setProfile({ ...profile, stepGoal: Number(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-2 text-[var(--input-text)]"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                <label className="block text-sm font-medium text-[var(--text)] mb-1">
                                     Daily Calorie Goal
                                 </label>
                                 <input
                                     type="number"
                                     value={profile.calorieGoal || 500}
                                     onChange={(e) => setProfile({ ...profile, calorieGoal: Number(e.target.value) })}
-                                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                                    className="w-full rounded-lg border border-[var(--input-border)] bg-[var(--input-bg)] px-4 py-2 text-[var(--input-text)]"
                                 />
                             </div>
                         </div>

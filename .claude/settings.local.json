@@ -1,7 +1,31 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(npm run:*)",
+      "Bash(git restore:*)",
+      "Bash(netstat -ano)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5177)",
+      "Bash(curl -s http://localhost:3000/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"user@demo.com\"\",\"\"password\"\":\"\"user123\"\"}')",
+      "Bash(npx tsc:*)",
+      "Bash(curl -s http://localhost:3000/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"wrong@demo.com\"\",\"\"password\"\":\"\"wrong\"\"}')",
+      "Bash(git commit:*)",
+      "Bash(curl:*)",
+      "Bash(NODE_OPTIONS=--max-old-space-size=512 npm run build)",
+      "Edit\nWrite\nRead\nBash",
+      "Bash(sc query *)",
+      "Bash(where mysqld *)",
+      "Bash(where mysql *)",
+      "Bash(findstr :3306)",
+      "Bash(taskkill //F //IM \"Docker Desktop.exe\")",
+      "Bash(taskkill //F //IM \"com.docker.backend.exe\")",
+      "Bash(wsl --shutdown)",
+      "Bash(ls -t \"$HOME/AppData/Local/Docker/log/host/\" 2>/dev/null | head -3)",
+      "Read(//c/Users/DELL/AppData/Local/Docker/log/host/**)",
+      "Bash(systeminfo)",
+      "Bash(docker-compose up *)"
     ]
   }
 }

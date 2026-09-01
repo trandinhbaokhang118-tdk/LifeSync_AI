@@ -1,9 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray } from 'class-validator';
-
-export interface ChatContextMessage {
-    role: string;
-    content: string;
-}
+import { IsNotEmpty, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator';
 
 export interface ChatAction {
     type: 'create_task' | 'update_task' | 'schedule' | 'reminder';
@@ -13,15 +8,37 @@ export interface ChatAction {
 export class ChatMessageDto {
     @IsString()
     @IsNotEmpty()
+    @MaxLength(2000)
     message: string;
 
-    @IsArray()
+    @IsUUID()
     @IsOptional()
-    context?: ChatContextMessage[];
+    conversationId?: string;
 }
 
 export class ChatResponseDto {
+    conversationId: string;
+    userMessageId: string;
+    assistantMessageId: string;
     message: string;
+    createdAt: Date;
     suggestions?: string[];
     actions?: ChatAction[];
+}
+
+export class ConversationIdDto {
+    @IsUUID()
+    id: string;
+}
+
+export class GenerateImageDto {
+    @IsString()
+    @IsNotEmpty()
+    @Length(3, 1000)
+    prompt: string;
+}
+
+export class GenerateImageResponseDto {
+    dataUrl: string;
+    mimeType: string;
 }

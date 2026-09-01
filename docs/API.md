@@ -1,5 +1,5 @@
-# API Documentation
-# Time Manager Backend
+﻿# API Documentation
+# LifeSync AI Backend
 
 Base URL: `http://localhost:3000`
 Swagger UI: `http://localhost:3000/api-docs`

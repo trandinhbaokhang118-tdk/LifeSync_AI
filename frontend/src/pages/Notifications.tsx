@@ -48,9 +48,16 @@ export function Notifications() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-[var(--text)]">Thông báo</h1>
-                    <p className="text-[var(--text-2)]">
-                        {unreadCount > 0 ? `${unreadCount} thông báo chưa đọc` : 'Bạn đã xem hết thông báo'}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                        <p className="text-[var(--text-2)]">
+                            {unreadCount > 0 ? 'Bạn có thông báo mới cần xem' : 'Bạn đã xem hết thông báo'}
+                        </p>
+                        {unreadCount > 0 && (
+                            <Badge variant="primary" className="px-2.5 py-0.5 shadow-[var(--shadow-sm)]">
+                                {unreadCount} chưa đọc
+                            </Badge>
+                        )}
+                    </div>
                 </div>
                 {unreadCount > 0 && (
                     <Button
@@ -71,7 +78,7 @@ export function Notifications() {
                     <TabsTrigger value="all">
                         Tất cả
                         {notifications.length > 0 && (
-                            <Badge variant="secondary" className="ml-2">
+                            <Badge variant="default" className="ml-2 px-2 py-0.5">
                                 {notifications.length}
                             </Badge>
                         )}
@@ -79,7 +86,7 @@ export function Notifications() {
                     <TabsTrigger value="unread">
                         Chưa đọc
                         {unreadCount > 0 && (
-                            <Badge variant="primary" className="ml-2">
+                            <Badge variant="primary" className="ml-2 px-2 py-0.5 shadow-[var(--shadow-sm)]">
                                 {unreadCount}
                             </Badge>
                         )}
@@ -138,54 +145,54 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
     return (
         <div
             className={cn(
-                'bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl p-4 transition-all hover:shadow-[var(--shadow-lg)]',
-                isUnread && 'border-l-4 border-l-primary-500 bg-primary-50/50 dark:bg-primary-900/10'
+                'relative overflow-hidden rounded-2xl border p-4 backdrop-blur-xl transition-all duration-200',
+                isUnread
+                    ? 'border-[var(--surface-highlight-border)] bg-[linear-gradient(135deg,var(--surface-highlight),var(--surface-1)_65%)] shadow-[var(--shadow-md)] hover:-translate-y-0.5 hover:border-[var(--primary)] hover:shadow-[var(--shadow-lg)]'
+                    : 'border-[var(--border)] bg-[var(--surface-1)] opacity-90 shadow-[var(--shadow-sm)] hover:opacity-100 hover:shadow-[var(--shadow-md)]'
             )}
         >
+            {isUnread && (
+                <span className="absolute inset-y-0 left-0 w-1 bg-[var(--primary)]" aria-hidden="true" />
+            )}
             <div className="flex items-start gap-4">
                 <div
                     className={cn(
-                        'p-2 rounded-lg',
+                        'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border',
                         isUnread
-                            ? 'bg-primary-100 dark:bg-primary-900/30'
-                            : 'bg-[var(--surface-2)]'
+                            ? 'border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] text-[var(--primary)] shadow-[var(--shadow-sm)]'
+                            : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-3)]'
                     )}
                 >
                     <Bell
-                        className={cn(
-                            'w-5 h-5',
-                            isUnread
-                                ? 'text-primary-600 dark:text-primary-400'
-                                : 'text-gray-500 dark:text-gray-400'
-                        )}
+                        className="h-5 w-5"
                     />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="mb-1 flex items-start justify-between gap-3">
                         <h3
                             className={cn(
-                                'font-medium',
+                                'leading-6',
                                 isUnread
-                                    ? 'text-[var(--text)]'
+                                    ? 'font-semibold text-[var(--text)]'
                                     : 'text-[var(--text-2)]'
                             )}
                         >
                             {notification.title}
                         </h3>
-                        {isUnread && (
-                            <span className="flex h-2 w-2 flex-shrink-0">
-                                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-primary-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500" />
-                            </span>
-                        )}
+                        <Badge
+                            variant={isUnread ? 'primary' : 'default'}
+                            className="flex-shrink-0 px-2.5 py-0.5"
+                        >
+                            {isUnread ? 'Chưa đọc' : 'Đã đọc'}
+                        </Badge>
                     </div>
 
-                    <p className="text-sm text-[var(--text-2)] mb-2">
+                    <p className={cn('mb-3 text-sm leading-6', isUnread ? 'text-[var(--text-2)]' : 'text-[var(--text-3)]')}>
                         {notification.message}
                     </p>
 
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] pt-3">
                         <div className="flex items-center gap-1 text-xs text-[var(--text-3)]">
                             <Clock className="w-3 h-3" />
                             {formatDateTime(notification.createdAt)}
@@ -196,7 +203,7 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
                                 variant="ghost"
                                 size="sm"
                                 onClick={onMarkAsRead}
-                                className="h-7 text-xs"
+                                className="h-8 border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] px-3 text-xs font-semibold text-[var(--primary)] hover:border-[var(--primary)]"
                             >
                                 <Check className="w-3 h-3 mr-1" />
                                 Đánh dấu đã đọc

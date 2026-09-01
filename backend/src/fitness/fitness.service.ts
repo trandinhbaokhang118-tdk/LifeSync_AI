@@ -233,6 +233,7 @@ export class FitnessService {
         activeMinutes: a.activeMinutes,
       })),
     };
+    let heartRateSamples = 0;
 
     activities.forEach((a) => {
       stats.totalSteps += a.steps;
@@ -241,11 +242,12 @@ export class FitnessService {
       stats.totalActiveMinutes += a.activeMinutes;
       if (a.heartRateAvg) {
         stats.avgHeartRate += a.heartRateAvg;
+        heartRateSamples += 1;
       }
     });
 
-    if (activities.length > 0) {
-      stats.avgHeartRate = Math.round(stats.avgHeartRate / activities.length);
+    if (heartRateSamples > 0) {
+      stats.avgHeartRate = Math.round(stats.avgHeartRate / heartRateSamples);
     }
 
     return stats;
@@ -258,7 +260,15 @@ export class FitnessService {
       where: { userId },
     });
 
-    if (!subscription || subscription.status !== SubscriptionStatus.ACTIVE) {
+    const eligibleStatuses: SubscriptionStatus[] = [
+      SubscriptionStatus.ACTIVE,
+      SubscriptionStatus.TRIALING,
+    ];
+    const isExpired = subscription?.currentPeriodEnd
+      ? subscription.currentPeriodEnd.getTime() <= Date.now()
+      : true;
+
+    if (!subscription || !eligibleStatuses.includes(subscription.status) || isExpired) {
       return false;
     }
 

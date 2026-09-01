@@ -6,14 +6,26 @@ import { TaskStatus } from '@prisma/client';
 export class DashboardService {
     constructor(private prisma: PrismaService) { }
 
+    /**
+     * Returns midnight of the most recent Monday relative to `from`.
+     * getDay() is 0 on Sunday, so we shift back 6 days in that case
+     * instead of jumping forward to the upcoming Monday.
+     */
+    private getWeekStart(from: Date): Date {
+        const weekStart = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+        const day = weekStart.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        weekStart.setDate(weekStart.getDate() + diff);
+        return weekStart;
+    }
+
     async getStats(userId: string) {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
 
         // Start of week (Monday)
-        const weekStart = new Date(todayStart);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+        const weekStart = this.getWeekStart(now);
 
         const [tasksDueToday, tasksOverdue, tasksCompletedThisWeek] = await Promise.all([
             // Tasks due today
@@ -51,11 +63,9 @@ export class DashboardService {
 
     async getFocusTime(userId: string) {
         const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         // Start of week (Monday)
-        const weekStart = new Date(todayStart);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+        const weekStart = this.getWeekStart(now);
 
         const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
 

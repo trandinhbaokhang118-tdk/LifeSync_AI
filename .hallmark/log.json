@@ -1,0 +1,47 @@
+[
+  {
+    "date": "2026-08-24",
+    "macrostructure": "Split Studio",
+    "theme": "custom",
+    "theme_axes": "dark / geometric-sans / cool-cyan",
+    "vibe": "technical cinematic, focused, consistent auth flow",
+    "enrichment": "existing Sync mascot visual",
+    "brief": "Registration page aligned with the dark LifeSync login experience while preserving form logic and validation."
+  },
+  {
+    "date": "2026-08-17",
+    "macrostructure": "Stat-Led",
+    "theme": "custom",
+    "theme_axes": "dark / geometric-sans / cool-cyan",
+    "vibe": "technical focus, athletic restraint, distraction-free",
+    "enrichment": "none",
+    "brief": "Pomodoro lobby and immersive fullscreen session with Escape exit and Space pause controls."
+  },
+  {
+    "date": "2026-07-30",
+    "macrostructure": "Workbench",
+    "theme": "custom",
+    "theme_axes": "dual / geometric-sans / cool-cyan",
+    "vibe": "enterprise performance, athletic, cinematic restraint",
+    "enrichment": "Tier C generated performance photography, post-processed",
+    "brief": "Authenticated LifeSync dashboard with real task and focus data, dual-mode tokens, responsive workbench layout and cinematic athletic hero."
+  },
+  {
+    "date": "2026-07-29",
+    "macrostructure": "Feature Stack",
+    "theme": "custom",
+    "theme_axes": "dark / geometric-sans / cool-cyan",
+    "vibe": "enterprise performance, athletic, cinematic restraint",
+    "enrichment": "Tier C generated still sequence",
+    "brief": "Enterprise LifeSync landing page prioritizing registration, demo and exploration with cinematic athletic imagery."
+  },
+  {
+    "date": "2026-07-29",
+    "macrostructure": "Split Studio",
+    "theme": "custom",
+    "theme_axes": "dark / geometric-sans / cool-cyan",
+    "vibe": "enterprise performance, focused, cinematic restraint",
+    "enrichment": "Tier A custom SVG SyncPup mascot with layered walk cycle and pointer gaze",
+    "brief": "Login page with a looping robotic dog mascot, moving parallax scene, and head-and-eye pointer tracking inside the visual frame."
+  }
+]

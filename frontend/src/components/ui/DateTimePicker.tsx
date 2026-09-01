@@ -45,23 +45,23 @@ export function DateTimePicker({ value, onChange, label, className }: DateTimePi
     return (
         <div className={cn('space-y-2', className)}>
             {label && (
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="block text-sm font-medium text-[var(--text)]">
                     {label}
                 </label>
             )}
             <div className="grid grid-cols-2 gap-3">
                 {/* Date Picker */}
                 <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-3)] pointer-events-none" />
                     <input
                         type="date"
                         value={selectedDate}
                         onChange={(e) => handleDateChange(e.target.value)}
                         className={cn(
                             'w-full pl-10 pr-3 py-2.5 rounded-lg',
-                            'bg-white dark:bg-gray-800',
-                            'border border-gray-300 dark:border-gray-600',
-                            'text-gray-900 dark:text-gray-100',
+                            'bg-[var(--input-bg)]',
+                            'border border-[var(--input-border)]',
+                            'text-[var(--input-text)]',
                             'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                             'transition-all duration-200',
                             'cursor-pointer'
@@ -71,16 +71,16 @@ export function DateTimePicker({ value, onChange, label, className }: DateTimePi
 
                 {/* Time Picker */}
                 <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-3)] pointer-events-none" />
                     <input
                         type="time"
                         value={selectedTime}
                         onChange={(e) => handleTimeChange(e.target.value)}
                         className={cn(
                             'w-full pl-10 pr-3 py-2.5 rounded-lg',
-                            'bg-white dark:bg-gray-800',
-                            'border border-gray-300 dark:border-gray-600',
-                            'text-gray-900 dark:text-gray-100',
+                            'bg-[var(--input-bg)]',
+                            'border border-[var(--input-border)]',
+                            'text-[var(--input-text)]',
                             'focus:ring-2 focus:ring-blue-500 focus:border-transparent',
                             'transition-all duration-200',
                             'cursor-pointer'

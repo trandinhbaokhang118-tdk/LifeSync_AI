@@ -6,6 +6,7 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
+    DialogDescription,
 } from '../ui/dialog';
 import { Button, Badge } from '../ui';
 import { parseQuickAdd } from '../../lib/utils';
@@ -72,6 +73,9 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                         <Sparkles className="w-5 h-5 text-primary-500" />
                         Thêm nhanh
                     </DialogTitle>
+                    <DialogDescription>
+                        Nhập nhanh công việc kèm thời gian và độ ưu tiên, ví dụ: "Họp nhóm 20:00 hôm nay !cao".
+                    </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -80,24 +84,24 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            placeholder='Ví dụ: "Học Unity 20:00 hôm nay #study !high"'
+                            placeholder='Ví dụ: "Học Unity 20:00 hom nay #công-việc !cao"'
                             className="input text-base"
                             autoFocus
                         />
-                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            Gợi ý: Thêm thời gian (20:00), ngày (hôm nay, ngày mai), tag (#work), độ ưu tiên (!high, !medium, !low)
+                        <p className="mt-2 text-xs text-[var(--text-2)]">
+                            Gợi ý: dùng hôm nay/hom nay, ngày mai/ngay mai, tag có dấu (#công-việc), độ ưu tiên (!cao, !trung-binh, !thap)
                         </p>
                     </div>
 
                     {/* Preview */}
                     {input && (
-                        <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 space-y-3">
-                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        <div className="p-4 rounded-xl bg-[var(--surface-2)] space-y-3">
+                            <p className="text-sm font-medium text-[var(--text-2)]">
                                 Xem trước:
                             </p>
 
                             {parsed.title && (
-                                <p className="font-medium text-gray-900 dark:text-white">
+                                <p className="font-medium text-[var(--text)]">
                                     {parsed.title}
                                 </p>
                             )}

@@ -1,5 +1,5 @@
-# Software Design Document (SDD)
-# Time Manager Application
+﻿# Software Design Document (SDD)
+# LifeSync AI Application
 
 ## 1. System Architecture
 

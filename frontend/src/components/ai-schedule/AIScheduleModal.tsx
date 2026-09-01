@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Sparkles, Clock, Calendar, Zap, CheckCircle2 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/Select';
@@ -104,6 +104,9 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
                         </div>
                         Sắp xếp lịch bằng AI
                     </DialogTitle>
+                    <DialogDescription>
+                        AI sẽ phân tích công việc của bạn và đề xuất lịch trình tối ưu trong ngày.
+                    </DialogDescription>
                 </DialogHeader>
 
                 {step === 'form' && (
@@ -229,7 +232,7 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                             Đang phân tích lịch trình...
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-[var(--text-2)]">
                             AI đang tối ưu hóa thời gian của bạn
                         </p>
                     </div>
@@ -241,7 +244,7 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
                             <h3 className="font-medium text-gray-900 dark:text-white">
                                 Lịch trình được đề xuất
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-[var(--text-2)]">
                                 {suggestions.length} công việc
                             </span>
                         </div>
@@ -250,14 +253,14 @@ export function AIScheduleModal({ open, onOpenChange }: AIScheduleModalProps) {
                             {suggestions.map((suggestion, index) => (
                                 <div
                                     key={index}
-                                    className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
+                                    className="rounded-lg border border-[var(--border)] bg-[var(--surface-1)] p-4 text-[var(--text)] transition-colors hover:border-[var(--border-strong)]"
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <h4 className="font-medium text-gray-900 dark:text-white">
                                                 {suggestion.title}
                                             </h4>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                            <p className="text-sm text-[var(--text-2)] mt-1">
                                                 {new Date(suggestion.suggestedStart).toLocaleString('vi-VN', {
                                                     weekday: 'short',
                                                     day: 'numeric',

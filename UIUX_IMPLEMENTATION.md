@@ -1,4 +1,4 @@
-# 🎨 UI/UX Implementation Guide - Time Manager
+﻿# 🎨 UI/UX Implementation Guide - LifeSync AI
 
 ## Overview
 Kết hợp **tiêu chuẩn UI/UX** với **Galaxy Theme** để tạo giao diện hiện đại, trending, và dễ sử dụng.

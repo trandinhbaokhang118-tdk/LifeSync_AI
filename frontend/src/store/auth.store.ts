@@ -1,13 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '../types';
+import { API_URL } from '../lib/api-config';
+import { clearAuthTokens, getAccessToken, getRefreshToken, hasAuthTokens, saveAuthTokens } from '../lib/auth-tokens';
 
 interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
     setUser: (user: User | null) => void;
-    login: (user: User, accessToken: string, refreshToken: string) => void;
-    logout: () => void;
+    login: (user: User, accessToken: string, refreshToken: string, rememberMe?: boolean) => void;
+    logout: () => Promise<void>;
     checkAuth: () => void;
 }
 
@@ -19,22 +21,38 @@ export const useAuthStore = create<AuthState>()(
 
             setUser: (user) => set({ user, isAuthenticated: !!user }),
 
-            login: (user, accessToken, refreshToken) => {
-                localStorage.setItem('accessToken', accessToken);
-                localStorage.setItem('refreshToken', refreshToken);
+            login: (user, accessToken, refreshToken, rememberMe = true) => {
+                saveAuthTokens(accessToken, refreshToken, rememberMe);
                 set({ user, isAuthenticated: true });
             },
 
-            logout: () => {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                set({ user: null, isAuthenticated: false });
+            logout: async () => {
+                const refreshToken = getRefreshToken();
+
+                try {
+                    if (refreshToken) {
+                        await fetch(`${API_URL}/auth/logout`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ refreshToken }),
+                            keepalive: true,
+                        });
+                    }
+                } catch (error) {
+                    if (import.meta.env.DEV) {
+                        console.warn('Server-side logout failed; clearing the local session.', error);
+                    }
+                } finally {
+                    clearAuthTokens();
+                    localStorage.removeItem('auth-storage');
+                    set({ user: null, isAuthenticated: false });
+                }
             },
 
             // Check if tokens exist and sync state
             checkAuth: () => {
-                const hasAccessToken = !!localStorage.getItem('accessToken');
-                const hasRefreshToken = !!localStorage.getItem('refreshToken');
+                const hasAccessToken = !!getAccessToken();
+                const hasRefreshToken = !!getRefreshToken();
                 const currentState = get();
 
                 // If tokens exist but state says not authenticated, sync it
@@ -43,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
                 }
 
                 // If no tokens but state says authenticated, clear it
-                if (!hasAccessToken && !hasRefreshToken && currentState.isAuthenticated) {
+                if (!hasAuthTokens() && currentState.isAuthenticated) {
                     set({ user: null, isAuthenticated: false });
                 }
             },

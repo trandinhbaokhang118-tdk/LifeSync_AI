@@ -1,25 +1,11 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { PanelLeftClose, Shield, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import {
-    LayoutDashboard,
-    CheckSquare,
-    Calendar,
-    CalendarRange,
-    Timer,
-    BarChart3,
-    Bell,
-    Settings,
-    Clock,
-    ChevronLeft,
-    Users,
-    Shield,
-    FileText,
-    Cog,
-    Zap,
-    Activity,
-    Footprints,
-} from 'lucide-react';
+import { BrandMark } from '../ui/BrandMark';
 import { useAuthStore } from '../../store/auth.store';
+import { userNavItems, adminNavItems } from './navConfig';
+import { useTranslation } from '../../i18n';
 
 interface SidebarProps {
     collapsed: boolean;
@@ -28,157 +14,177 @@ interface SidebarProps {
     onClose?: () => void;
 }
 
-const userNavItems = [
-    { path: '/app', icon: LayoutDashboard, label: 'Dashboard', end: true },
-    { path: '/app/tasks', icon: CheckSquare, label: 'Công việc' },
-    { path: '/app/calendar', icon: Calendar, label: 'Lịch' },
-    { path: '/app/planner', icon: CalendarRange, label: 'Lập kế hoạch' },
-    { path: '/app/focus', icon: Timer, label: 'Focus' },
-    { path: '/app/analytics', icon: BarChart3, label: 'Thống kê' },
-    { path: '/app/fitness', icon: Activity, label: 'Fitness' },
-    { path: '/app/gps-tracking', icon: Footprints, label: 'Track Lab' },
-    { path: '/app/notifications', icon: Bell, label: 'Thông báo' },
-    { path: '/app/settings', icon: Settings, label: 'Cài đặt' },
-    { path: '/app/subscription', icon: Zap, label: 'Pro' },
-];
-
-const adminNavItems = [
-    { path: '/admin', icon: LayoutDashboard, label: 'Admin Dashboard' },
-    { path: '/admin/users', icon: Users, label: 'Người dùng' },
-    { path: '/admin/roles', icon: Shield, label: 'Phân quyền' },
-    { path: '/admin/logs', icon: FileText, label: 'Audit Logs' },
-    { path: '/admin/settings', icon: Cog, label: 'Hệ thống' },
-];
-
-export function Sidebar({ collapsed, onToggle, mobile, onClose }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, mobile = false, onClose }: SidebarProps) {
     const location = useLocation();
     const { user } = useAuthStore();
+    const { t } = useTranslation();
     const isAdmin = user?.role === 'ADMIN';
-
     const navItems = location.pathname.startsWith('/admin') && isAdmin ? adminNavItems : userNavItems;
+    const showDesktopLabels = !mobile && !collapsed;
+
+    const compactNavigationClass = !mobile && (
+        collapsed
+            ? 'justify-center px-2 lg:group-hover/sidebar:justify-start lg:group-hover/sidebar:px-3'
+            : 'justify-center px-2 lg:justify-start lg:px-3'
+    );
 
     return (
         <aside
+            id={mobile ? 'mobile-navigation' : 'desktop-navigation'}
+            aria-label={mobile ? 'Điều hướng di động' : 'Điều hướng chính'}
             className={cn(
-                'fixed left-0 top-0 z-40 h-screen border-r',
-                'bg-[var(--sidebar-bg)]',
-                'border-[var(--sidebar-border)]',
-                'backdrop-blur-xl',
-                'transition-all duration-300 ease-in-out',
-                collapsed ? 'w-[72px]' : 'w-64',
-                mobile && 'shadow-xl'
+                'group/sidebar fixed left-0 top-0 z-40 flex h-dvh flex-col overflow-hidden border-r',
+                'border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] backdrop-blur-xl',
+                'transition-[width] duration-300 ease-in-out',
+                mobile
+                    ? 'w-[82vw] max-w-[288px] shadow-2xl'
+                    : collapsed ? 'w-[60px] lg:hover:w-56' : 'w-[60px] lg:w-56',
             )}
         >
-            {/* Logo */}
             <div className={cn(
-                'h-16 flex items-center justify-between px-4',
-                'border-b border-[var(--sidebar-border)]'
+                'flex h-14 flex-shrink-0 items-center border-b border-[var(--sidebar-border)]',
+                mobile || !collapsed ? 'justify-between px-3' : 'justify-center px-2',
+                !mobile && collapsed && 'lg:group-hover/sidebar:justify-start lg:group-hover/sidebar:px-3',
             )}>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-                        <Clock className="w-5 h-5 text-white" />
-                    </div>
-                    {!collapsed && (
-                        <span className="text-lg font-bold text-[var(--text)]">
-                            TimeManager
-                        </span>
+                <Link
+                    to={isAdmin ? '/admin' : '/app'}
+                    onClick={mobile ? onClose : undefined}
+                    className={cn(
+                        'flex min-w-0 items-center rounded-xl transition-all hover:opacity-80',
+                        !mobile && collapsed ? 'gap-0 lg:group-hover/sidebar:gap-3' : 'gap-3',
+                        showDesktopLabels && 'lg:flex-1',
                     )}
-                </div>
-                {!mobile && (
+                    title="Về trang chủ"
+                >
+                    <BrandMark className={cn(
+                        'flex-shrink-0 rounded-lg shadow-sm',
+                        mobile ? 'h-9 w-9' : collapsed ? 'h-8 w-8' : 'h-8 w-8 lg:h-9 lg:w-9',
+                    )} />
+                    <span className={cn(
+                        'whitespace-nowrap text-lg font-bold text-[var(--text)] transition-all duration-200',
+                        mobile && 'block',
+                        !mobile && !collapsed && 'hidden lg:block',
+                        !mobile && collapsed && 'hidden max-w-0 translate-x-1 overflow-hidden opacity-0 lg:block group-hover/sidebar:max-w-36 group-hover/sidebar:translate-x-0 group-hover/sidebar:opacity-100',
+                    )}>
+                        LifeSync AI
+                    </span>
+                </Link>
+
+                {!mobile && !collapsed && (
                     <button
+                        type="button"
                         onClick={onToggle}
-                        className={cn(
-                            'rounded-lg p-1.5 text-[var(--text-3)] transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text)]',
-                            collapsed && 'absolute -right-3 top-5 z-50',
-                            collapsed && 'bg-[var(--surface-2)]',
-                            collapsed && 'border border-[var(--border)]',
-                            collapsed && 'shadow-lg'
-                        )}
+                        aria-label="Thu gọn thanh điều hướng"
+                        title="Thu gọn thanh điều hướng"
+                        className="hidden h-8 w-8 items-center justify-center rounded-lg text-[var(--text-3)] transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] lg:flex"
                     >
-                        <ChevronLeft className={cn('w-4 h-4 transition-transform', collapsed && 'rotate-180')} />
+                        <PanelLeftClose className="h-4 w-4" />
                     </button>
+                )}
+
+                {mobile && (
+                    <motion.button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Đóng menu"
+                        whileHover={{ rotate: 90, scale: 1.1 }}
+                        whileTap={{ scale: 0.85 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--sidebar-border)] bg-[var(--surface-2)] text-[var(--text-2)] shadow-sm transition-colors hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                    >
+                        <X className="h-5 w-5" />
+                    </motion.button>
                 )}
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto py-4 px-3">
-                <ul className="space-y-1">
+            <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+                <ul className="space-y-0.5">
                     {navItems.map((item) => (
                         <li key={item.path}>
                             <NavLink
                                 to={item.path}
                                 onClick={mobile ? onClose : undefined}
-                                className={({ isActive }) =>
-                                    cn(
-                                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                                        isActive
-                                            ? 'border border-[var(--surface-highlight-border)] bg-[var(--sidebar-item-active)] text-[var(--primary)] shadow-[var(--shadow-sm)]'
-                                            : 'text-[var(--text-2)]',
-                                        !isActive && 'hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text)]',
-                                        collapsed && 'justify-center px-2'
-                                    )
-                                }
-                                end={'end' in item ? item.end === true : false}
+                                title={t(item.labelKey)}
+                                className={({ isActive }) => cn(
+                                    'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                                    !mobile && collapsed ? 'gap-0 lg:group-hover/sidebar:gap-3' : 'gap-3',
+                                    isActive
+                                        ? 'border border-[var(--surface-highlight-border)] bg-[var(--sidebar-item-active)] text-[var(--primary)] shadow-[var(--shadow-sm)]'
+                                        : 'text-[var(--text-2)] hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text)]',
+                                    compactNavigationClass,
+                                )}
+                                end={item.end === true}
                             >
-                                <item.icon className="w-5 h-5 flex-shrink-0" />
-                                {!collapsed && <span>{item.label}</span>}
+                                <item.icon className="h-[18px] w-[18px] flex-shrink-0" />
+                                <span className={cn(
+                                    'whitespace-nowrap transition-all duration-200',
+                                    mobile && 'block',
+                                    !mobile && !collapsed && 'hidden lg:block',
+                                    !mobile && collapsed && 'hidden max-w-0 translate-x-1 overflow-hidden opacity-0 lg:block group-hover/sidebar:max-w-40 group-hover/sidebar:translate-x-0 group-hover/sidebar:opacity-100',
+                                )}>
+                                    {t(item.labelKey)}
+                                </span>
                             </NavLink>
                         </li>
                     ))}
                 </ul>
 
-                {/* Admin section for admin users */}
                 {isAdmin && !location.pathname.startsWith('/admin') && (
                     <>
                         <div className={cn('my-4 border-t border-[var(--divider)]', collapsed && 'mx-2')} />
-                        <div className={cn('px-3 mb-2', collapsed && 'hidden')}>
-                            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
-                                Admin
-                            </span>
-                        </div>
+                        {!collapsed && (
+                            <div className={cn('mb-2 px-3', !mobile && 'hidden lg:block')}>
+                                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-3)]">
+                                    Admin
+                                </span>
+                            </div>
+                        )}
                         <NavLink
                             to="/admin"
                             onClick={mobile ? onClose : undefined}
-                            className={({ isActive }) =>
-                                cn(
-                                    'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                                    isActive
-                                        ? 'border border-[var(--surface-highlight-border)] bg-[var(--sidebar-item-active)] text-[var(--primary)] shadow-[var(--shadow-sm)]'
-                                        : 'text-[var(--text-2)] hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text)]',
-                                    collapsed && 'justify-center px-2'
-                                )
-                            }
+                            title="Admin Panel"
+                            className={({ isActive }) => cn(
+                                'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                                !mobile && collapsed ? 'gap-0 lg:group-hover/sidebar:gap-3' : 'gap-3',
+                                isActive
+                                    ? 'border border-[var(--surface-highlight-border)] bg-[var(--sidebar-item-active)] text-[var(--primary)] shadow-[var(--shadow-sm)]'
+                                    : 'text-[var(--text-2)] hover:bg-[var(--sidebar-item-hover)] hover:text-[var(--text)]',
+                                compactNavigationClass,
+                            )}
                         >
-                            <Shield className="w-5 h-5 flex-shrink-0" />
-                            {!collapsed && <span>Admin Panel</span>}
+                            <Shield className="h-[18px] w-[18px] flex-shrink-0" />
+                            <span className={cn(
+                                'whitespace-nowrap transition-all duration-200',
+                                mobile && 'block',
+                                !mobile && !collapsed && 'hidden lg:block',
+                                !mobile && collapsed && 'hidden max-w-0 translate-x-1 overflow-hidden opacity-0 lg:block group-hover/sidebar:max-w-40 group-hover/sidebar:translate-x-0 group-hover/sidebar:opacity-100',
+                            )}>
+                                Admin Panel
+                            </span>
                         </NavLink>
                     </>
                 )}
             </nav>
 
-            {/* User info */}
             {!collapsed && user && (
                 <div className={cn(
-                    'p-4 border-t',
-                    'border-[var(--sidebar-border)]'
+                    'flex-shrink-0 border-t border-[var(--sidebar-border)] p-4',
+                    !mobile && 'hidden lg:block',
                 )}>
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-3)]">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[var(--surface-3)]">
                             <span className="text-sm font-medium text-[var(--text)]">
                                 {user.name.charAt(0).toUpperCase()}
                             </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="truncate text-sm font-medium text-[var(--text)]">
-                                {user.name}
-                            </p>
-                            <p className="truncate text-xs text-[var(--text-2)]">
-                                {user.email}
-                            </p>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-[var(--text)]">{user.name}</p>
+                            <p className="truncate text-xs text-[var(--text-2)]">{user.email}</p>
                         </div>
                     </div>
                 </div>
             )}
+
         </aside>
     );
 }

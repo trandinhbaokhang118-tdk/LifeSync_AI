@@ -28,15 +28,15 @@ export class ErrorBoundary extends React.Component<Props, State> {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+                <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] p-4 text-[var(--text)]">
                     <div className="max-w-md w-full text-center">
                         <div className="w-16 h-16 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
                             <AlertTriangle className="w-8 h-8 text-red-500" />
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        <h1 className="text-2xl font-bold text-[var(--text)] mb-2">
                             Đã xảy ra lỗi
                         </h1>
-                        <p className="text-gray-600 dark:text-gray-400 mb-6">
+                        <p className="text-[var(--text-2)] mb-6">
                             {this.state.error?.message || 'Có lỗi không mong muốn xảy ra'}
                         </p>
                         <div className="space-y-2">
@@ -62,10 +62,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
                         </div>
                         {import.meta.env.DEV && this.state.error && (
                             <details className="mt-6 text-left">
-                                <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                                <summary className="cursor-pointer text-sm text-[var(--text-2)] hover:text-[var(--text)]">
                                     Chi tiết lỗi (Development)
                                 </summary>
-                                <pre className="mt-2 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs overflow-auto">
+                                <pre className="mt-2 rounded-lg bg-[var(--surface-2)] p-4 text-xs text-[var(--text)] overflow-auto">
                                     {this.state.error.stack}
                                 </pre>
                             </details>

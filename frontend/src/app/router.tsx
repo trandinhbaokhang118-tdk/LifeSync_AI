@@ -12,6 +12,8 @@ const Login = lazy(() => import('../pages/Login').then((m) => ({ default: m.Logi
 const AdminLogin = lazy(() => import('../pages/AdminLogin').then((m) => ({ default: m.AdminLogin })));
 const Register = lazy(() => import('../pages/Register').then((m) => ({ default: m.Register })));
 const AuthCallback = lazy(() => import('../pages/AuthCallback').then((m) => ({ default: m.AuthCallback })));
+const ForgotPassword = lazy(() => import('../pages/ForgotPassword').then((m) => ({ default: m.ForgotPassword })));
+const ResetPassword = lazy(() => import('../pages/ResetPassword').then((m) => ({ default: m.ResetPassword })));
 const Dashboard = lazy(() => import('../pages/Dashboard').then((m) => ({ default: m.Dashboard })));
 const Tasks = lazy(() => import('../pages/Tasks').then((m) => ({ default: m.Tasks })));
 const Calendar = lazy(() => import('../pages/Calendar').then((m) => ({ default: m.Calendar })));
@@ -22,7 +24,9 @@ const Reminders = lazy(() => import('../pages/Reminders').then((m) => ({ default
 const Notifications = lazy(() => import('../pages/Notifications').then((m) => ({ default: m.Notifications })));
 const Settings = lazy(() => import('../pages/Settings').then((m) => ({ default: m.Settings })));
 const NotFound = lazy(() => import('../pages/NotFound').then((m) => ({ default: m.NotFound })));
+const RouteError = lazy(() => import('../pages/RouteError').then((m) => ({ default: m.RouteError })));
 const Subscription = lazy(() => import('../pages/Subscription').then((m) => ({ default: m.Subscription })));
+const Pricing = lazy(() => import('../pages/Pricing').then((m) => ({ default: m.Pricing })));
 const Fitness = lazy(() => import('../pages/Fitness').then((m) => ({ default: m.Fitness })));
 const FitnessProfile = lazy(() => import('../pages/FitnessProfile').then((m) => ({ default: m.FitnessProfile })));
 const FitnessDevices = lazy(() => import('../pages/FitnessDevices').then((m) => ({ default: m.FitnessDevices })));
@@ -34,6 +38,7 @@ const UserManagement = lazy(() => import('../pages/admin/UserManagement').then((
 const ActivityLogs = lazy(() => import('../pages/admin/ActivityLogs').then((m) => ({ default: m.ActivityLogs })));
 const DatabaseManagement = lazy(() => import('../pages/admin/DatabaseManagement').then((m) => ({ default: m.DatabaseManagement })));
 const SystemSettings = lazy(() => import('../pages/admin/SystemSettings').then((m) => ({ default: m.SystemSettings })));
+const FontTest = lazy(() => import('../pages/FontTest').then((m) => ({ default: m.default })));
 
 function LandingEntry() {
     const { isAuthenticated, user } = useAuthStore();
@@ -60,22 +65,42 @@ export const router = createBrowserRouter(
         {
             path: '/',
             element: <LandingEntry />,
+            errorElement: <RouteError />,
         },
         {
             path: '/login',
             element: <Login />,
+            errorElement: <RouteError />,
         },
         {
             path: '/admin/login',
             element: <AdminLogin />,
+            errorElement: <RouteError />,
         },
         {
             path: '/register',
             element: <Register />,
+            errorElement: <RouteError />,
+        },
+        {
+            path: '/font-test',
+            element: <FontTest />,
+            errorElement: <RouteError />,
         },
         {
             path: '/auth/callback',
             element: <AuthCallback />,
+            errorElement: <RouteError />,
+        },
+        {
+            path: '/forgot-password',
+            element: <ForgotPassword />,
+            errorElement: <RouteError />,
+        },
+        {
+            path: '/reset-password',
+            element: <ResetPassword />,
+            errorElement: <RouteError />,
         },
         {
             path: '/admin',
@@ -84,6 +109,7 @@ export const router = createBrowserRouter(
                     <AdminLayout />
                 </AdminRoute>
             ),
+            errorElement: <RouteError />,
             children: [
                 {
                     index: true,
@@ -114,6 +140,7 @@ export const router = createBrowserRouter(
                     <AppLayout />
                 </PrivateRoute>
             ),
+            errorElement: <RouteError />,
             children: [
                 {
                     index: true,
@@ -156,6 +183,10 @@ export const router = createBrowserRouter(
                     element: <Subscription />,
                 },
                 {
+                    path: 'pricing',
+                    element: <Pricing />,
+                },
+                {
                     path: 'fitness',
                     element: <Fitness />,
                 },
@@ -184,10 +215,12 @@ export const router = createBrowserRouter(
         {
             path: '/dashboard',
             element: <RoleHomeRedirect />,
+            errorElement: <RouteError />,
         },
         {
             path: '/404',
             element: <NotFound />,
+            errorElement: <RouteError />,
         },
         {
             path: '*',

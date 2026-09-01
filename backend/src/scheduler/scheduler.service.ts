@@ -1,11 +1,12 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import * as cron from 'node-cron';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
-export class SchedulerService implements OnModuleInit {
+export class SchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(SchedulerService.name);
+    private reminderJob?: cron.ScheduledTask;
 
     constructor(
         private prisma: PrismaService,
@@ -16,9 +17,15 @@ export class SchedulerService implements OnModuleInit {
         this.startReminderJob();
     }
 
+    onModuleDestroy() {
+        // Stop the cron task so timers don't leak when the app shuts down
+        // (e.g. between e2e test suites or on graceful restart).
+        this.reminderJob?.stop();
+    }
+
     private startReminderJob() {
         // Run every minute
-        cron.schedule('* * * * *', async () => {
+        this.reminderJob = cron.schedule('* * * * *', async () => {
             await this.processReminders();
         });
 

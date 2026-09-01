@@ -1,4 +1,4 @@
-# 🔐 TẠO TÀI KHOẢN ADMIN CHÍNH THỨC
+﻿# 🔐 TẠO TÀI KHOẢN ADMIN CHÍNH THỨC
 
 ## 🚀 Cách 1: Script tự động (Khuyên dùng)
 
@@ -30,7 +30,7 @@ User: tm_user
 Pass: tm_password
 ```
 
-### Bước 2: Chọn database `time_manager`
+### Bước 2: Chọn database `lifesync_ai`
 
 ### Bước 3: Vào table `users`
 
@@ -94,7 +94,7 @@ Content-Type: application/json
 ```
 Admin@2026!
 MySecure#Pass123
-TimeManager$2026
+LifeSyncAI$2026
 ```
 
 ### Không nên:

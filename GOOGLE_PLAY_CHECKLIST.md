@@ -1,4 +1,4 @@
-# ✅ Google Play Store Checklist
+﻿# ✅ Google Play Store Checklist
 
 ## 📋 Trước khi Submit
 
@@ -65,8 +65,8 @@
 - [ ] **Tags**: time management, productivity, task manager, pomodoro
 - [ ] **Content Rating**: Everyone / Teen
 - [ ] **Target Age**: 13+
-- [ ] **Contact Email**: support@timemanager.com
-- [ ] **Website**: https://timemanager.com
+- [ ] **Contact Email**: support@lifesyncai.com
+- [ ] **Website**: https://lifesyncai.com
 - [ ] **Phone Number** (optional)
 
 ### 6. Pricing & Distribution
@@ -128,7 +128,7 @@ Review report và fix issues!
 
 ### App Name
 ```
-TimeManager - AI Task Planner
+LifeSync AI - AI Task Planner
 ```
 
 ### Short Description (80 chars)
@@ -138,7 +138,7 @@ Smart time management with AI assistant, Pomodoro timer & task tracking
 
 ### Full Description (4000 chars)
 ```
-⏰ TimeManager - Quản lý Thời gian Thông minh với AI
+⏰ LifeSync AI - Quản lý Thời gian Thông minh với AI
 
 Tăng năng suất làm việc với ứng dụng quản lý thời gian hiện đại. 
 AI Assistant, Pomodoro Timer, và nhiều tính năng mạnh mẽ khác.
@@ -212,8 +212,8 @@ AI Assistant, Pomodoro Timer, và nhiều tính năng mạnh mẽ khác.
 • Full features
 
 👥 PHẢN HỒI
-Email: support@timemanager.com
-Website: https://timemanager.com
+Email: support@lifesyncai.com
+Website: https://lifesyncai.com
 
 ⭐ Đánh giá 5 sao nếu bạn thích app!
 ```
@@ -276,7 +276,7 @@ Professional quality
 ## 🔒 Privacy Policy Template
 
 ```markdown
-# Privacy Policy for TimeManager
+# Privacy Policy for LifeSync AI
 
 Last updated: [Date]
 
@@ -310,7 +310,7 @@ Last updated: [Date]
 - Opt-out of analytics
 
 ## Contact
-Email: privacy@timemanager.com
+Email: privacy@lifesyncai.com
 
 ## Changes
 We may update this policy. Check regularly.
@@ -323,13 +323,13 @@ We may update this policy. Check regularly.
 ### Developer Contact
 ```
 Email: trandinhbaokhang118@gmail.com
-Website: https://timemanager.com
+Website: https://lifesyncai.com
 GitHub: https://github.com/trandinhbaokhang118-tdk
 ```
 
 ### Support Email
 ```
-support@timemanager.com
+support@lifesyncai.com
 ```
 
 ---

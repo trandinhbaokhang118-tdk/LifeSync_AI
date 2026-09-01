@@ -54,8 +54,9 @@ docker-data/
 backend/uploads/*
 !backend/uploads/.gitignore
 
-# Prisma
-backend/prisma/migrations/
+# Keep existing local migrations ignored, but deploy the SePay schema change.
+backend/prisma/migrations/*
+!backend/prisma/migrations/20260824150000_add_sepay_payment_orders/
 
 # Test coverage
 coverage/
@@ -65,6 +66,23 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Local Codex runtime files and downloaded tunneling helper
+/.codex-run/
+/tools/cloudflared.exe
+
+# Local test artifacts and duplicate media
+*.lnk
+/backend/e2e-result*.txt
+/Video_login.mp4
+/image.png
+
+# Separate local worktree, not part of this application repository
+/Class-AI-Agent/
+/taste-skill/
+
+# Local security investigation notes may contain sensitive values
+/SECURITY_AUDIT_REPORT.md
 
 # Lock files (optional - uncomment if you want to ignore)
 # package-lock.json

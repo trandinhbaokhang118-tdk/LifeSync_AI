@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,13 +12,23 @@ import {
     Bell,
     Globe,
     Calendar as CalendarIcon,
+    Languages,
+    ChevronDown,
 } from 'lucide-react';
 import { Button, Input, UserAvatar } from '../components/ui';
+import { LanguageToggle } from '../components/ui/LanguageToggle';
 import { showToast } from '../components/ui/toast';
 import { useAuthStore } from '../store/auth.store';
 import { useDarkMode } from '../hooks/useDarkMode';
+import { useTranslation } from '../i18n';
 import api from '../services/api';
 import type { ApiError } from '../types';
+import {
+    getDevicePermissionState,
+    requestDevicePermission,
+    showDeviceNotification,
+    type DevicePermissionState,
+} from '../services/device-permissions.service';
 
 // Validation schemas
 const profileSchema = z.object({
@@ -41,8 +51,27 @@ type PasswordFormData = z.infer<typeof passwordSchema>;
 export function Settings() {
     const { user, setUser } = useAuthStore();
     const { darkMode, toggleDarkMode } = useDarkMode();
+    const { t } = useTranslation();
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [notificationPermission, setNotificationPermission] = useState<DevicePermissionState>('prompt');
+    const [passwordFormOpen, setPasswordFormOpen] = useState(false);
+
+    useEffect(() => {
+        void getDevicePermissionState('notifications').then(setNotificationPermission);
+    }, []);
+
+    const enableDeviceNotifications = async () => {
+        const state = await requestDevicePermission('notifications');
+        setNotificationPermission(state);
+
+        if (state === 'granted') {
+            showToast.success('Đã bật thông báo thiết bị', 'Âm thanh do cài đặt thông báo của hệ điều hành điều khiển.');
+            await showDeviceNotification('LifeSync AI đã sẵn sàng', 'Bạn sẽ nhận nhắc việc trực tiếp trên thiết bị này.');
+        } else if (state === 'denied') {
+            showToast.warning('Thông báo đang bị chặn', 'Hãy mở cài đặt quyền của trình duyệt để cho phép LifeSync AI.');
+        }
+    };
 
     // Profile form
     const profileForm = useForm<ProfileFormData>({
@@ -66,10 +95,10 @@ export function Settings() {
         },
         onSuccess: (data) => {
             setUser(data.data);
-            showToast.success('Cập nhật thông tin thành công');
+            showToast.success(t('settings.toast.profileUpdated'));
         },
         onError: () => {
-            showToast.error('Không thể cập nhật thông tin');
+            showToast.error(t('settings.toast.profileError'));
         },
     });
 
@@ -83,11 +112,12 @@ export function Settings() {
             return response.data;
         },
         onSuccess: () => {
-            showToast.success('Đổi mật khẩu thành công');
+            showToast.success(t('settings.toast.passwordChanged'));
             passwordForm.reset();
+            setPasswordFormOpen(false);
         },
         onError: (error: { response?: { data?: ApiError } }) => {
-            const message = error.response?.data?.error?.message || 'Không thể đổi mật khẩu';
+            const message = error.response?.data?.error?.message || t('settings.toast.passwordError');
             showToast.error(message);
         },
     });
@@ -104,12 +134,12 @@ export function Settings() {
         },
         onSuccess: (data) => {
             setUser(data.data);
-            showToast.success('Cập nhật ảnh đại diện thành công');
+            showToast.success(t('settings.toast.avatarUpdated'));
             setAvatarPreview(null);
             setAvatarFile(null);
         },
         onError: () => {
-            showToast.error('Không thể tải ảnh lên');
+            showToast.error(t('settings.toast.avatarError'));
         },
     });
 
@@ -117,7 +147,7 @@ export function Settings() {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
-                showToast.error('Kích thước ảnh không được vượt quá 5MB');
+                showToast.error(t('settings.toast.avatarTooLarge'));
                 return;
             }
             setAvatarFile(file);
@@ -147,9 +177,9 @@ export function Settings() {
         <div className="space-y-6 pb-20 md:pb-0">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-bold text-[var(--text)]">Cài đặt</h1>
+                <h1 className="text-2xl font-bold text-[var(--text)]">{t('settings.title')}</h1>
                 <p className="text-[var(--text-2)]">
-                    Quản lý tài khoản và tùy chỉnh ứng dụng
+                    {t('settings.subtitle')}
                 </p>
             </div>
 
@@ -158,7 +188,7 @@ export function Settings() {
                 <div className="p-4 border-b border-[var(--border)]">
                     <h2 className="text-lg font-semibold text-[var(--text)] flex items-center gap-2">
                         <User className="w-5 h-5" />
-                        Thông tin cá nhân
+                        {t('settings.profile.title')}
                     </h2>
                 </div>
                 <div className="p-6 space-y-6">
@@ -196,10 +226,10 @@ export function Settings() {
                         </div>
                         <div className="flex-1">
                             <h3 className="text-lg font-medium text-[var(--text)]">
-                                Ảnh đại diện
+                                {t('settings.profile.avatar')}
                             </h3>
                             <p className="text-sm text-[var(--text-2)] mb-3">
-                                JPG, PNG hoặc GIF. Tối đa 5MB.
+                                {t('settings.profile.avatarHint')}
                             </p>
                             {avatarPreview && (
                                 <div className="flex gap-2">
@@ -208,7 +238,7 @@ export function Settings() {
                                         onClick={handleUploadAvatar}
                                         loading={uploadAvatarMutation.isPending}
                                     >
-                                        Lưu ảnh
+                                        {t('settings.profile.saveAvatar')}
                                     </Button>
                                     <Button
                                         size="sm"
@@ -218,7 +248,7 @@ export function Settings() {
                                             setAvatarFile(null);
                                         }}
                                     >
-                                        Hủy
+                                        {t('common.cancel')}
                                     </Button>
                                 </div>
                             )}
@@ -230,11 +260,11 @@ export function Settings() {
                         <div>
                             <label className="label">
                                 <User className="w-4 h-4 inline mr-1" />
-                                Họ và tên
+                                {t('settings.profile.name')}
                             </label>
                             <Input
                                 {...profileForm.register('name')}
-                                placeholder="Nhập họ tên"
+                                placeholder={t('settings.profile.namePlaceholder')}
                                 error={profileForm.formState.errors.name?.message}
                             />
                         </div>
@@ -242,19 +272,19 @@ export function Settings() {
                         <div>
                             <label className="label">
                                 <Mail className="w-4 h-4 inline mr-1" />
-                                Email
+                                {t('settings.profile.email')}
                             </label>
                             <Input
                                 {...profileForm.register('email')}
                                 type="email"
-                                placeholder="Nhập email"
+                                placeholder={t('settings.profile.emailPlaceholder')}
                                 error={profileForm.formState.errors.email?.message}
                             />
                         </div>
 
                         <div className="flex items-center justify-between pt-2">
                             <span className="text-sm text-[var(--text-2)]">
-                                Vai trò: <span className="font-medium text-[var(--text)]">{user?.role}</span>
+                                {t('settings.profile.role')}: <span className="font-medium text-[var(--text)]">{user?.role}</span>
                             </span>
                             <Button
                                 type="submit"
@@ -262,7 +292,7 @@ export function Settings() {
                                 disabled={!profileForm.formState.isDirty}
                             >
                                 <Save className="w-4 h-4 mr-2" />
-                                Lưu thay đổi
+                                {t('common.saveChanges')}
                             </Button>
                         </div>
                     </form>
@@ -271,63 +301,85 @@ export function Settings() {
 
             {/* Change Password Section */}
             <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl">
-                <div className="p-4 border-b border-[var(--border)]">
-                    <h2 className="text-lg font-semibold text-[var(--text)] flex items-center gap-2">
+                <button
+                    type="button"
+                    aria-expanded={passwordFormOpen}
+                    aria-controls="change-password-form"
+                    disabled={changePasswordMutation.isPending}
+                    onClick={() => {
+                        setPasswordFormOpen((isOpen) => {
+                            if (isOpen) passwordForm.reset();
+                            return !isOpen;
+                        });
+                    }}
+                    className="flex w-full items-center justify-between gap-4 rounded-xl p-4 text-left transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <span className="flex items-center gap-2 text-lg font-semibold text-[var(--text)]">
                         <Lock className="w-5 h-5" />
-                        Đổi mật khẩu
-                    </h2>
-                </div>
-                <div className="p-6">
-                    <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-                        <div>
-                            <label className="label">Mật khẩu hiện tại</label>
-                            <Input
-                                {...passwordForm.register('currentPassword')}
-                                type="password"
-                                placeholder="Nhập mật khẩu hiện tại"
-                                error={passwordForm.formState.errors.currentPassword?.message}
-                            />
-                        </div>
+                        {t('settings.password.title')}
+                    </span>
+                    <ChevronDown
+                        aria-hidden="true"
+                        className={`h-5 w-5 flex-shrink-0 text-[var(--text-2)] transition-transform duration-200 ${passwordFormOpen ? 'rotate-180' : ''}`}
+                    />
+                </button>
 
-                        <div>
-                            <label className="label">Mật khẩu mới</label>
-                            <Input
-                                {...passwordForm.register('newPassword')}
-                                type="password"
-                                placeholder="Nhập mật khẩu mới"
-                                error={passwordForm.formState.errors.newPassword?.message}
-                            />
-                        </div>
+                {passwordFormOpen && (
+                    <div id="change-password-form" className="border-t border-[var(--border)] p-6">
+                        <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                            <div>
+                                <label className="label">{t('settings.password.current')}</label>
+                                <Input
+                                    {...passwordForm.register('currentPassword')}
+                                    type="password"
+                                    autoComplete="current-password"
+                                    placeholder={t('settings.password.currentPlaceholder')}
+                                    error={passwordForm.formState.errors.currentPassword?.message}
+                                />
+                            </div>
 
-                        <div>
-                            <label className="label">Xác nhận mật khẩu mới</label>
-                            <Input
-                                {...passwordForm.register('confirmPassword')}
-                                type="password"
-                                placeholder="Nhập lại mật khẩu mới"
-                                error={passwordForm.formState.errors.confirmPassword?.message}
-                            />
-                        </div>
+                            <div>
+                                <label className="label">{t('settings.password.new')}</label>
+                                <Input
+                                    {...passwordForm.register('newPassword')}
+                                    type="password"
+                                    autoComplete="new-password"
+                                    placeholder={t('settings.password.newPlaceholder')}
+                                    error={passwordForm.formState.errors.newPassword?.message}
+                                />
+                            </div>
 
-                        <div className="flex justify-end pt-2">
-                            <Button
-                                type="submit"
-                                loading={changePasswordMutation.isPending}
-                                disabled={!passwordForm.formState.isDirty}
-                            >
-                                <Lock className="w-4 h-4 mr-2" />
-                                Đổi mật khẩu
-                            </Button>
-                        </div>
-                    </form>
-                </div>
+                            <div>
+                                <label className="label">{t('settings.password.confirm')}</label>
+                                <Input
+                                    {...passwordForm.register('confirmPassword')}
+                                    type="password"
+                                    autoComplete="new-password"
+                                    placeholder={t('settings.password.confirmPlaceholder')}
+                                    error={passwordForm.formState.errors.confirmPassword?.message}
+                                />
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                                <Button
+                                    type="submit"
+                                    loading={changePasswordMutation.isPending}
+                                    disabled={!passwordForm.formState.isDirty}
+                                >
+                                    <Lock className="w-4 h-4 mr-2" />
+                                    {t('settings.password.submit')}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                )}
             </div>
 
             {/* Preferences Section */}
             <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl">
                 <div className="p-4 border-b border-[var(--border)]">
                     <h2 className="text-lg font-semibold text-[var(--text)]">
-                        Tùy chỉnh
+                        {t('settings.preferences.title')}
                     </h2>
                 </div>
                 <div className="divide-y divide-[var(--border)]">
@@ -347,29 +399,47 @@ export function Settings() {
                             </div>
                             <div>
                                 <p className="font-medium text-[var(--text)]">
-                                    Giao diện
+                                    {t('settings.preferences.theme')}
                                 </p>
                                 <p className="text-sm text-[var(--text-2)]">
-                                    {darkMode ? 'Chế độ tối' : 'Chế độ sáng'}
+                                    {darkMode ? t('settings.preferences.darkMode') : t('settings.preferences.lightMode')}
                                 </p>
                             </div>
                         </div>
                         <Button variant="secondary" size="sm" onClick={toggleDarkMode}>
-                            {darkMode ? 'Chuyển sang sáng' : 'Chuyển sang tối'}
+                            {darkMode ? t('settings.preferences.switchToLight') : t('settings.preferences.switchToDark')}
                         </Button>
+                    </div>
+
+                    {/* Language */}
+                    <div className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-[var(--surface-2)]">
+                                <Languages className="w-5 h-5 text-[var(--text-2)]" />
+                            </div>
+                            <div>
+                                <p className="font-medium text-[var(--text)]">
+                                    {t('settings.preferences.language')}
+                                </p>
+                                <p className="text-sm text-[var(--text-2)]">
+                                    {t('settings.preferences.languageHint')}
+                                </p>
+                            </div>
+                        </div>
+                        <LanguageToggle />
                     </div>
 
                     {/* Timezone */}
                     <div className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
-                                <Globe className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <div className="p-2 rounded-lg bg-[var(--surface-2)]">
+                                <Globe className="w-5 h-5 text-[var(--text-2)]" />
                             </div>
                             <div>
-                                <p className="font-medium text-gray-900 dark:text-white">
-                                    Múi giờ
+                                <p className="font-medium text-[var(--text)]">
+                                    {t('settings.preferences.timezone')}
                                 </p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                <p className="text-sm text-[var(--text-2)]">
                                     {Intl.DateTimeFormat().resolvedOptions().timeZone}
                                 </p>
                             </div>
@@ -379,15 +449,15 @@ export function Settings() {
                     {/* Week Start */}
                     <div className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
-                                <CalendarIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <div className="p-2 rounded-lg bg-[var(--surface-2)]">
+                                <CalendarIcon className="w-5 h-5 text-[var(--text-2)]" />
                             </div>
                             <div>
-                                <p className="font-medium text-gray-900 dark:text-white">
-                                    Tuần bắt đầu
+                                <p className="font-medium text-[var(--text)]">
+                                    {t('settings.preferences.weekStart')}
                                 </p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Thứ Hai
+                                <p className="text-sm text-[var(--text-2)]">
+                                    {t('settings.preferences.monday')}
                                 </p>
                             </div>
                         </div>
@@ -396,22 +466,26 @@ export function Settings() {
                     {/* Notifications */}
                     <div className="p-4 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
-                                <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                            <div className="p-2 rounded-lg bg-[var(--surface-2)]">
+                                <Bell className="w-5 h-5 text-[var(--text-2)]" />
                             </div>
                             <div>
-                                <p className="font-medium text-gray-900 dark:text-white">
-                                    Thông báo
+                                <p className="font-medium text-[var(--text)]">
+                                    {t('settings.preferences.notifications')}
                                 </p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    Nhận thông báo về tasks và reminders
+                                <p className="text-sm text-[var(--text-2)]">
+                                    {t('settings.preferences.notificationsHint')}
                                 </p>
                             </div>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" defaultChecked />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 dark:peer-focus:ring-primary-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary-600"></div>
-                        </label>
+                        <button
+                            type="button"
+                            onClick={() => void enableDeviceNotifications()}
+                            disabled={notificationPermission === 'granted' || notificationPermission === 'unsupported'}
+                            className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface-3)] disabled:cursor-default disabled:opacity-70"
+                        >
+                            {notificationPermission === 'granted' ? 'Đã bật' : notificationPermission === 'denied' ? 'Mở cài đặt' : 'Cho phép'}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -420,24 +494,24 @@ export function Settings() {
             <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl">
                 <div className="p-4 border-b border-[var(--border)]">
                     <h2 className="text-lg font-semibold text-[var(--text)]">
-                        Thông tin tài khoản
+                        {t('settings.account.title')}
                     </h2>
                 </div>
                 <div className="p-4 space-y-3">
                     <div className="flex justify-between py-2">
-                        <span className="text-[var(--text-2)]">ID tài khoản</span>
+                        <span className="text-[var(--text-2)]">{t('settings.account.id')}</span>
                         <span className="text-[var(--text)] font-mono text-sm">
                             {user?.id?.slice(0, 8)}...
                         </span>
                     </div>
                     <div className="flex justify-between py-2">
-                        <span className="text-[var(--text-2)]">Ngày tạo</span>
+                        <span className="text-[var(--text-2)]">{t('settings.account.createdAt')}</span>
                         <span className="text-[var(--text)]">
                             {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('vi-VN') : '-'}
                         </span>
                     </div>
                     <div className="flex justify-between py-2">
-                        <span className="text-[var(--text-2)]">Lần đăng nhập cuối</span>
+                        <span className="text-[var(--text-2)]">{t('settings.account.lastLogin')}</span>
                         <span className="text-[var(--text)]">
                             {new Date().toLocaleDateString('vi-VN')}
                         </span>

@@ -1,23 +1,16 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StartTrackingDto } from './dto/start-tracking.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 
-interface TrackingSession {
-  id: string;
-  startLat: number;
-  startLng: number;
-  locations: Array<{ lat: number; lng: number; timestamp: Date }>;
-  startTime: Date;
-  isActive: boolean;
-}
+type LatLng = { lat: number; lng: number };
 
-// In-memory storage for active tracking sessions (use Redis in production)
-const activeSessions: Map<string, TrackingSession> = new Map();
+const MIN_TRACK_POINT_DISTANCE_KM = 0.012;
+const MAX_TRACK_ACCURACY_METERS = 120;
 
 @Injectable()
 export class GpsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async startTracking(userId: string, dto: StartTrackingDto) {
     // Check premium access
@@ -26,7 +19,19 @@ export class GpsService {
       throw new ForbiddenException('GPS tracking requires Plus subscription');
     }
 
-    // Create exercise record first
+    const activeSession = await this.prisma.exercise.findFirst({
+      where: {
+        userId,
+        route: { is: { duration: null } },
+      },
+      select: { id: true },
+    });
+    if (activeSession) {
+      throw new ConflictException('A tracking session is already active');
+    }
+
+    // Create exercise record first. The GpsRoute row with a null `duration`
+    // represents an active session; `duration` is set when tracking ends.
     const exercise = await this.prisma.exercise.create({
       data: {
         userId,
@@ -39,19 +44,8 @@ export class GpsService {
       },
     });
 
-    // Store session in memory
-    const session: TrackingSession = {
-      id: exercise.id,
-      startLat: dto.latitude,
-      startLng: dto.longitude,
-      locations: [{ lat: dto.latitude, lng: dto.longitude, timestamp: new Date() }],
-      startTime: new Date(),
-      isActive: true,
-    };
-
-    activeSessions.set(exercise.id, session);
-
-    // Create initial GPS route
+    // Persist the initial GPS route so the session survives restarts and
+    // works across multiple instances (no in-memory state).
     await this.prisma.gpsRoute.create({
       data: {
         exerciseId: exercise.id,
@@ -60,6 +54,7 @@ export class GpsService {
         endLat: dto.latitude,
         endLng: dto.longitude,
         totalDistance: 0,
+        polyline: null,
       },
     });
 
@@ -70,101 +65,108 @@ export class GpsService {
     };
   }
 
-  async updateLocation(userId: string, sessionId: string, dto: UpdateLocationDto) {
-    const session = activeSessions.get(sessionId);
-
-    if (!session || !session.isActive) {
-      throw new NotFoundException('No active tracking session found');
-    }
-
-    // Verify ownership
+  /**
+   * Loads an active session (exercise + its route) for the given user, or
+   * throws. A session is "active" while its route has a null `duration`.
+   */
+  private async loadActiveSession(userId: string, sessionId: string) {
     const exercise = await this.prisma.exercise.findFirst({
       where: { id: sessionId, userId },
+      include: { route: true },
     });
 
     if (!exercise) {
-      throw new ForbiddenException('Access denied');
+      // Either the session does not exist or it belongs to someone else.
+      const exists = await this.prisma.exercise.findUnique({ where: { id: sessionId } });
+      if (exists) {
+        throw new ForbiddenException('Access denied');
+      }
+      throw new NotFoundException('No active tracking session found');
     }
 
-    // Add new location
-    session.locations.push({
-      lat: dto.latitude,
-      lng: dto.longitude,
-      timestamp: new Date(dto.timestamp || Date.now()),
-    });
-
-    // Calculate total distance
-    let totalDistance = 0;
-    for (let i = 1; i < session.locations.length; i++) {
-      totalDistance += this.calculateDistance(
-        session.locations[i - 1].lat,
-        session.locations[i - 1].lng,
-        session.locations[i].lat,
-        session.locations[i].lng,
-      );
+    if (!exercise.route) {
+      throw new NotFoundException('No active tracking session found');
     }
 
-    // Update GPS route
-    const lastLocation = session.locations[session.locations.length - 1];
+    return exercise;
+  }
+
+  async updateLocation(userId: string, sessionId: string, dto: UpdateLocationDto) {
+    const exercise = await this.loadActiveSession(userId, sessionId);
+    const route = exercise.route!;
+
+    if (route.duration !== null) {
+      throw new ConflictException('Tracking session has already ended');
+    }
+
+    const locations = route.polyline ? this.decodePolyline(route.polyline) : [];
+    const candidate = { lat: dto.latitude, lng: dto.longitude };
+    const previousLocation = locations[locations.length - 1] ?? { lat: route.startLat, lng: route.startLng };
+    const distanceFromPrevious = this.calculateDistance(
+      previousLocation.lat,
+      previousLocation.lng,
+      candidate.lat,
+      candidate.lng,
+    );
+    const accuracyFloorKm = Math.min((dto.accuracy ?? 0) / 1000, 0.04);
+    const minimumDistanceKm = Math.max(MIN_TRACK_POINT_DISTANCE_KM, accuracyFloorKm * 0.5);
+
+    if ((dto.accuracy && dto.accuracy > MAX_TRACK_ACCURACY_METERS) || distanceFromPrevious < minimumDistanceKm) {
+      return {
+        sessionId,
+        status: 'tracking',
+        ignored: true,
+        reason: 'stationary-or-low-accuracy',
+        locationCount: locations.length,
+        totalDistance: Math.round(route.totalDistance * 100) / 100,
+      };
+    }
+
+    const nextLocations = locations.length > 0 ? [...locations, candidate] : [previousLocation, candidate];
+
+    const totalDistance = this.totalDistance(nextLocations);
+    const lastLocation = nextLocations[nextLocations.length - 1];
+
     await this.prisma.gpsRoute.update({
       where: { exerciseId: sessionId },
       data: {
         endLat: lastLocation.lat,
         endLng: lastLocation.lng,
         totalDistance,
-        polyline: this.encodePolyline(session.locations),
+        polyline: this.encodePolyline(nextLocations),
       },
     });
 
     return {
       sessionId,
       status: 'tracking',
-      locationCount: session.locations.length,
+      locationCount: nextLocations.length,
       totalDistance: Math.round(totalDistance * 100) / 100,
     };
   }
 
   async endTracking(userId: string, sessionId: string) {
-    const session = activeSessions.get(sessionId);
+    const exercise = await this.loadActiveSession(userId, sessionId);
+    const route = exercise.route!;
 
-    if (!session) {
-      throw new NotFoundException('No active tracking session found');
+    if (route.duration !== null) {
+      throw new ConflictException('Tracking session has already ended');
     }
 
-    // Verify ownership
-    const exercise = await this.prisma.exercise.findFirst({
-      where: { id: sessionId, userId },
-    });
-
-    if (!exercise) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    // Mark session as inactive
-    session.isActive = false;
-
-    // Calculate final stats
+    const startTime = exercise.createdAt;
     const endTime = new Date();
-    const durationSeconds = Math.floor((endTime.getTime() - session.startTime.getTime()) / 1000);
+    const durationSeconds = Math.max(0, Math.floor((endTime.getTime() - startTime.getTime()) / 1000));
     const durationMinutes = Math.floor(durationSeconds / 60);
 
-    let totalDistance = 0;
-    for (let i = 1; i < session.locations.length; i++) {
-      totalDistance += this.calculateDistance(
-        session.locations[i - 1].lat,
-        session.locations[i - 1].lng,
-        session.locations[i].lat,
-        session.locations[i].lng,
-      );
-    }
+    const locations = route.polyline ? this.decodePolyline(route.polyline) : [];
+    const totalDistance = this.totalDistance(locations);
 
-    // Calculate average pace (min/km)
+    // Average pace (min/km)
     const avgPace = totalDistance > 0 ? durationMinutes / totalDistance : 0;
 
-    // Calculate calories (rough estimate: ~60 cal/km for running)
+    // Calories (rough estimate: ~60 cal/km for running)
     const caloriesBurned = Math.round(totalDistance * 60);
 
-    // Update exercise record
     await this.prisma.exercise.update({
       where: { id: sessionId },
       data: {
@@ -172,18 +174,18 @@ export class GpsService {
         distance: totalDistance,
         caloriesBurned,
         avgPace: Math.round(avgPace * 10) / 10,
-        performedAt: session.startTime,
+        performedAt: startTime,
       },
     });
 
-    // Update GPS route with duration
+    // Setting duration marks the session as ended.
     await this.prisma.gpsRoute.update({
       where: { exerciseId: sessionId },
       data: { duration: durationSeconds },
     });
 
-    // Clean up session
-    activeSessions.delete(sessionId);
+    const firstLocation = locations[0] ?? { lat: route.startLat, lng: route.startLng };
+    const lastLocation = locations[locations.length - 1] ?? { lat: route.endLat, lng: route.endLng };
 
     return {
       sessionId,
@@ -193,11 +195,8 @@ export class GpsService {
         distance: Math.round(totalDistance * 100) / 100,
         caloriesBurned,
         avgPace: Math.round(avgPace * 10) / 10,
-        startLocation: { lat: session.startLat, lng: session.startLng },
-        endLocation: {
-          lat: session.locations[session.locations.length - 1].lat,
-          lng: session.locations[session.locations.length - 1].lng,
-        },
+        startLocation: { lat: firstLocation.lat, lng: firstLocation.lng },
+        endLocation: { lat: lastLocation.lat, lng: lastLocation.lng },
       },
     };
   }
@@ -283,7 +282,12 @@ export class GpsService {
       where: { userId },
     });
 
-    if (!subscription || subscription.status !== 'ACTIVE') {
+    const hasEligibleStatus = subscription?.status === 'ACTIVE' || subscription?.status === 'TRIALING';
+    const isExpired = subscription?.currentPeriodEnd
+      ? subscription.currentPeriodEnd.getTime() <= Date.now()
+      : true;
+
+    if (!subscription || !hasEligibleStatus || isExpired) {
       return false;
     }
 
@@ -298,6 +302,20 @@ export class GpsService {
     const normalized = activityType.trim().toLowerCase();
     const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
     return `${label} Track Lab Session`;
+  }
+
+  // Sums the haversine distance (km) across an ordered list of points.
+  private totalDistance(locations: LatLng[]): number {
+    let total = 0;
+    for (let i = 1; i < locations.length; i++) {
+      total += this.calculateDistance(
+        locations[i - 1].lat,
+        locations[i - 1].lng,
+        locations[i].lat,
+        locations[i].lng,
+      );
+    }
+    return total;
   }
 
   // Haversine formula for distance calculation (km)

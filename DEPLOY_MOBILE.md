@@ -1,14 +1,14 @@
-# Deploy Backend lên Render
+﻿# Deploy Backend lên Render
 
 ## Bước 1: Tạo tài khoản Render
 1. Vào https://render.com đăng ký tài khoản (dùng GitHub)
 2. Click "New +" → "Web Service"
 
 ## Bước 2: Kết nối GitHub
-1. Chọn repository `TimeManager_React`
+1. Chọn repository `LifeSync AI_React`
 2. Chọn branch `main`
 3. Cấu hình:
-   - **Name:** `timemanager-api`
+   - **Name:** `lifesync-ai-api`
    - **Region:** Singapore (gần Việt Nam)
    - **Environment:** Node
    - **Build Command:** `npm install && npx prisma generate`
@@ -20,11 +20,11 @@ Thêm các biến môi trường:
 ```
 NODE_ENV=production
 PORT=10000
-DATABASE_URL=mysql://user:password@host:3306/time_manager
+DATABASE_URL=mysql://user:password@host:3306/lifesync_ai
 JWT_SECRET=your-secret-key-min-32-chars-long!
 JWT_EXPIRES_IN=15m
 REFRESH_TOKEN_EXPIRES_IN=7d
-FRONTEND_URL=https://timemanager-app.onrender.com
+FRONTEND_URL=https://lifesync-ai-app.onrender.com
 OPENAI_API_KEY=sk-your-openai-key
 ```
 
@@ -36,7 +36,7 @@ OPENAI_API_KEY=sk-your-openai-key
 ## Bước 5: Deploy
 1. Click "Create Web Service"
 2. Đợi build xong (khoảng 5-10 phút)
-3. Copy URL (vd: `https://timemanager-api.onrender.com`)
+3. Copy URL (vd: `https://lifesync-ai-api.onrender.com`)
 
 ---
 
@@ -46,7 +46,7 @@ OPENAI_API_KEY=sk-your-openai-key
 Sau khi có URL backend, cập nhật file `.env`:
 
 ```env
-VITE_API_URL=https://timemanager-api.onrender.com
+VITE_API_URL=https://lifesync-ai-api.onrender.com
 ```
 
 ## Bước 2: Build frontend

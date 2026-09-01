@@ -1,5 +1,5 @@
-# Entity Relationship Diagram (ERD)
-# Time Manager Database
+﻿# Entity Relationship Diagram (ERD)
+# LifeSync AI Database
 
 ## Database Schema
 

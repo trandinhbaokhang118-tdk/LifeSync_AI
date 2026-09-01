@@ -30,7 +30,7 @@ echo.
 echo phpMyAdmin: http://localhost:8080
 echo Username: tm_user
 echo Password: tm_password
-echo Database: time_manager
+echo Database: lifesync_ai
 echo.
 echo Nhan phim bat ky de dong cua so nay...
 pause

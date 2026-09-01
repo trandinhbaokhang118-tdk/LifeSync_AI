@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-    Search,
     Plus,
     Bell,
-    Moon,
-    Sun,
     Menu,
     LogOut,
     User,
     Settings,
-    Command,
-    Home,
+    Moon,
+    Sun,
 } from 'lucide-react';
 import { Button, UserAvatar } from '../ui';
 import {
@@ -30,19 +27,27 @@ import { useDarkMode } from '../../hooks/useDarkMode';
 import { cn } from '../../lib/utils';
 import { CommandPalette } from './CommandPalette';
 import { QuickAddModal } from './QuickAddModal';
+import { getActiveNavItem } from './navConfig';
+import { useTranslation } from '../../i18n';
 
 interface HeaderProps {
     sidebarCollapsed: boolean;
+    mobileMenuOpen: boolean;
     onMenuClick: () => void;
 }
 
-export function Header({ sidebarCollapsed, onMenuClick }: HeaderProps) {
+export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: HeaderProps) {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, logout } = useAuthStore();
     const { unreadCount, setNotifications } = useNotificationStore();
     const { darkMode, toggleDarkMode } = useDarkMode();
+    const { t } = useTranslation();
     const [commandOpen, setCommandOpen] = useState(false);
     const [quickAddOpen, setQuickAddOpen] = useState(false);
+
+    const activeItem = getActiveNavItem(location.pathname);
+    const activeLabel = activeItem ? t(activeItem.labelKey) : 'LifeSync AI';
 
     // Fetch notifications
     const { data: notificationsData } = useQuery({
@@ -70,8 +75,8 @@ export function Header({ sidebarCollapsed, onMenuClick }: HeaderProps) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate('/login');
     };
 
@@ -82,8 +87,8 @@ export function Header({ sidebarCollapsed, onMenuClick }: HeaderProps) {
                     'fixed top-0 right-0 z-30 h-16 bg-[var(--panel-glass)] backdrop-blur-2xl',
                     'border-b border-[var(--border)]',
                     'transition-all duration-300',
-                    sidebarCollapsed ? 'left-[72px]' : 'left-64',
-                    'max-md:left-0'
+                    'left-0 md:left-[60px]',
+                    sidebarCollapsed ? 'lg:left-[60px]' : 'lg:left-56'
                 )}
             >
                 <div className="h-full px-4 flex items-center justify-between gap-4">
@@ -91,53 +96,32 @@ export function Header({ sidebarCollapsed, onMenuClick }: HeaderProps) {
                     <div className="flex items-center gap-4">
                         {/* Mobile menu button */}
                         <button
+                            type="button"
                             onClick={onMenuClick}
-                            className="rounded-lg p-2 text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] md:hidden"
+                            aria-label="Mở menu điều hướng"
+                            aria-controls="mobile-navigation"
+                            aria-expanded={mobileMenuOpen}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] md:hidden"
                         >
                             <Menu className="w-5 h-5" />
                         </button>
 
-                        {/* Search / Command palette trigger */}
-                        <button
-                            onClick={() => setCommandOpen(true)}
-                            className={cn(
-                                'flex items-center gap-2 px-3 py-2 rounded-lg',
-                                'bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-2)] shadow-[var(--shadow-sm)]',
-                                'hover:bg-[var(--surface-3)] hover:text-[var(--text)] transition-colors',
-                                'w-64 max-md:w-auto'
-                            )}
-                        >
-                            <Search className="w-4 h-4" />
-                            <span className="text-sm max-md:hidden">Tìm kiếm...</span>
-                            <kbd className="ml-auto hidden items-center gap-1 rounded border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] px-1.5 py-0.5 text-xs font-medium text-[var(--primary)] md:inline-flex">
-                                <Command className="w-3 h-3" />K
-                            </kbd>
-                        </button>
+                        {/* Current section title */}
+                        <h1 className="text-lg font-semibold text-[var(--text)] md:text-xl">
+                            {activeLabel}
+                        </h1>
                     </div>
 
                     {/* Right side */}
                     <div className="flex items-center gap-2">
-                        {/* Home link */}
-                        <Link to="/app">
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                className="gap-1.5"
-                                title="Về trang chủ"
-                            >
-                                <Home className="w-4 h-4" />
-                                <span className="max-sm:hidden">Trang chủ</span>
-                            </Button>
-                        </Link>
-
-                        {/* Quick Add button */}
+                        {/* Quick Add button (desktop only - mobile uses FAB) */}
                         <Button
                             size="sm"
                             onClick={() => setQuickAddOpen(true)}
-                            className="gap-1.5"
+                            className="gap-1.5 max-md:hidden"
                         >
                             <Plus className="w-4 h-4" />
-                            <span className="max-sm:hidden">Thêm nhanh</span>
+                            <span className="max-sm:hidden">{t('header.quickAdd')}</span>
                         </Button>
 
                         {/* Notifications */}
@@ -157,6 +141,7 @@ export function Header({ sidebarCollapsed, onMenuClick }: HeaderProps) {
                         <button
                             onClick={toggleDarkMode}
                             className="rounded-lg p-2 text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                            title={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
                         >
                             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </button>
@@ -190,11 +175,6 @@ export function Header({ sidebarCollapsed, onMenuClick }: HeaderProps) {
                                     Cài đặt
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => navigate('/app')}>
-                                    <Home className="w-4 h-4 mr-2" />
-                                    Về trang chủ
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={handleLogout} className="text-red-600 dark:text-red-400">
                                     <LogOut className="w-4 h-4 mr-2" />
                                     Đăng xuất
@@ -204,6 +184,23 @@ export function Header({ sidebarCollapsed, onMenuClick }: HeaderProps) {
                     </div>
                 </div>
             </header>
+
+            {/* Mobile Quick Add FAB (bottom-left, mirrors the chat bubble) */}
+            <button
+                onClick={() => setQuickAddOpen(true)}
+                aria-label={t('header.quickAdd')}
+                title={t('header.quickAdd')}
+                className={cn(
+                    'fixed bottom-20 left-4 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-2xl md:hidden',
+                    'transition-transform duration-300 hover:scale-110 active:scale-95'
+                )}
+                style={{
+                    background: 'var(--primary-gradient)',
+                    boxShadow: '0 8px 32px rgba(18, 194, 255, 0.4)',
+                }}
+            >
+                <Plus className="h-7 w-7" />
+            </button>
 
             {/* Command Palette */}
             <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />

@@ -14,9 +14,9 @@ interface BackupGuideResponse {
 }
 
 const fallbackBackupCommand =
-    'docker exec time_manager_mysql mysqldump -u tm_user -ptm_password time_manager > backup.sql';
+    'docker exec lifesync_ai_mysql mysqldump -u tm_user -ptm_password lifesync_ai > backup.sql';
 const fallbackRestoreCommand =
-    'docker exec -i time_manager_mysql mysql -u tm_user -ptm_password time_manager < backup.sql';
+    'docker exec -i lifesync_ai_mysql mysql -u tm_user -ptm_password lifesync_ai < backup.sql';
 
 export function DatabaseManagement() {
     const [checking, setChecking] = useState(false);

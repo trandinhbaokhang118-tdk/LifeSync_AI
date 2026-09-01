@@ -51,12 +51,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     <CommandEmpty>Không tìm thấy kết quả.</CommandEmpty>
 
                     <CommandGroup heading="Tạo mới">
-                        <CommandItem onSelect={() => runCommand(() => navigate('/tasks?new=true'))}>
+                        <CommandItem onSelect={() => runCommand(() => navigate('/app/tasks?new=true'))}>
                             <Plus className="mr-2 h-4 w-4" />
                             <span>Tạo công việc mới</span>
                             <CommandShortcut>⌘N</CommandShortcut>
                         </CommandItem>
-                        <CommandItem onSelect={() => runCommand(() => navigate('/calendar?new=true'))}>
+                        <CommandItem onSelect={() => runCommand(() => navigate('/app/calendar?new=true'))}>
                             <Calendar className="mr-2 h-4 w-4" />
                             <span>Tạo sự kiện mới</span>
                         </CommandItem>
@@ -114,7 +114,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             <span>Chuyển đổi Dark Mode</span>
                             <CommandShortcut>⌘D</CommandShortcut>
                         </CommandItem>
-                        <CommandItem onSelect={() => runCommand(() => { logout(); navigate('/login'); })}>
+                        <CommandItem onSelect={() => runCommand(() => { void logout().finally(() => navigate('/login')); })}>
                             <LogOut className="mr-2 h-4 w-4" />
                             <span>Đăng xuất</span>
                         </CommandItem>

@@ -3,6 +3,7 @@ import { Filter, Download, Activity, Clock, User, FileText, Shield } from 'lucid
 import '../../admin-theme.css';
 import api from '../../services/api';
 import { showToast } from '../../components/ui/toast';
+import { includesNormalizedVietnamese, normalizeVietnameseText } from '../../lib/utils';
 
 interface Log {
     id: string;
@@ -46,7 +47,7 @@ export function ActivityLogs() {
     }, []);
 
     const filteredLogs = useMemo(() => {
-        const normalizedQuery = searchQuery.toLowerCase();
+        const normalizedQuery = normalizeVietnameseText(searchQuery);
 
         return logs.filter((log) => {
             const matchesFilter =
@@ -56,9 +57,9 @@ export function ActivityLogs() {
                 (filter === 'profile' && log.action.includes('PROFILE'));
 
             const matchesSearch =
-                log.userName.toLowerCase().includes(normalizedQuery) ||
-                log.action.toLowerCase().includes(normalizedQuery) ||
-                log.details.toLowerCase().includes(normalizedQuery);
+                includesNormalizedVietnamese(log.userName, normalizedQuery) ||
+                includesNormalizedVietnamese(log.action, normalizedQuery) ||
+                includesNormalizedVietnamese(log.details, normalizedQuery);
 
             return matchesFilter && matchesSearch;
         });

@@ -1,4 +1,4 @@
-# 📱 Hướng dẫn Setup Capacitor - Chuyển Web thành Mobile App
+﻿# 📱 Hướng dẫn Setup Capacitor - Chuyển Web thành Mobile App
 
 ## 🎯 Tổng quan
 
@@ -76,7 +76,7 @@ cd frontend
 npm install @capacitor/core @capacitor/cli
 
 # 2. Khởi tạo
-npx cap init TimeManager com.timemanager.app --web-dir=dist
+npx cap init LifeSyncAI com.lifesyncai.app --web-dir=dist
 
 # 3. Thêm Android platform
 npm install @capacitor/android
@@ -109,8 +109,8 @@ npx cap sync
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.timemanager.app',
-  appName: 'TimeManager',
+  appId: 'com.lifesyncai.app',
+  appName: 'LifeSync AI',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
@@ -187,7 +187,7 @@ export default defineConfig({
     <meta name="theme-color" content="#0F1520" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>TimeManager</title>
+    <title>LifeSync AI</title>
   </head>
   <body>
     <div id="root"></div>
@@ -263,12 +263,12 @@ npx cap open android
 
 ```bash
 # Tạo keystore file
-keytool -genkey -v -keystore timemanager-release.keystore -alias timemanager -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkey -v -keystore lifesync-ai-release.keystore -alias lifesyncai -keyalg RSA -keysize 2048 -validity 10000
 
 # Nhập thông tin:
 # Password: [your-password]
 # Name: Tran Dinh Bao Khang
-# Organization: TimeManager
+# Organization: LifeSync AI
 # City: Ho Chi Minh
 # State: HCM
 # Country: VN
@@ -280,8 +280,8 @@ Tạo file `android/key.properties`:
 ```properties
 storePassword=[your-password]
 keyPassword=[your-password]
-keyAlias=timemanager
-storeFile=../timemanager-release.keystore
+keyAlias=lifesyncai
+storeFile=../lifesync-ai-release.keystore
 ```
 
 Update `android/app/build.gradle`:

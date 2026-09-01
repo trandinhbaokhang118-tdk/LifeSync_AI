@@ -12,10 +12,10 @@ async function main() {
 
     // Create Admin User
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@timemanager.com' },
+        where: { email: 'admin@lifesyncai.com' },
         update: {},
         create: {
-            email: 'admin@timemanager.com',
+            email: 'admin@lifesyncai.com',
             passwordHash: adminPassword,
             name: 'Admin User',
             role: 'ADMIN',
@@ -180,7 +180,7 @@ async function main() {
             data: {
                 userId: user.id,
                 title: 'Chào mừng!',
-                message: 'Chào mừng bạn đến với Time Manager! 🎉',
+                message: 'Chào mừng bạn đến với LifeSync AI! 🎉',
             },
         }),
         prisma.notification.create({
@@ -199,7 +199,7 @@ async function main() {
     console.log('📝 Demo Accounts:');
     console.log('');
     console.log('👤 Admin:');
-    console.log('   Email: admin@timemanager.com');
+    console.log('   Email: admin@lifesyncai.com');
     console.log('   Password: admin123');
     console.log('');
     console.log('👤 User:');

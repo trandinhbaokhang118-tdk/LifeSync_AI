@@ -1,5 +1,5 @@
-# User Manual
-# Time Manager Application
+﻿# User Manual
+# LifeSync AI Application
 
 ## 1. Getting Started
 
@@ -10,8 +10,8 @@
 ### 1.2 Demo Accounts
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@timemanager.com | admin123 |
-| User | demo@timemanager.com | demo123 |
+| User | user@demo.com | user123 |
+| Admin | admin@lifesyncai.com | admin123 |
 
 ## 2. Registration
 

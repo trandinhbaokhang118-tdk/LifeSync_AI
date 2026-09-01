@@ -1,4 +1,4 @@
-# 🎯 TẠO TÀI KHOẢN ADMIN CỦA BẠN
+﻿# 🎯 TẠO TÀI KHOẢN ADMIN CỦA BẠN
 
 ## ⚡ Cách nhanh nhất:
 
@@ -43,7 +43,7 @@ Nên có:
 Ví dụ tốt:
 - `Admin@2026!`
 - `MySecure#Pass123`
-- `TimeManager$2026`
+- `LifeSyncAI$2026`
 
 ---
 

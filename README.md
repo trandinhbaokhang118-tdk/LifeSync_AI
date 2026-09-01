@@ -1,8 +1,8 @@
-# ⏰ LifeSync_AI - Ứng dụng Quản lý Thời gian Thông minh
+﻿# ⏰ LifeSync AI - Ứng dụng Quản lý Thời gian Thông minh
 
-LifeSync_AI là web quản lý thời gian và công việc, hỗ trợ đăng ký/đăng nhập, quản lý Tasks, Tags, Calendar/Planner với time block và kéo thả, nhắc nhở/thông báo và thống kê. Ứng dụng dùng React + TypeScript, backend NestJS REST API, ORM Prisma và CSDL MySQL, xác thực JWT + Refresh Token.
+LifeSync AI là web quản lý thời gian và công việc, hỗ trợ đăng ký/đăng nhập, quản lý Tasks, Tags, Calendar/Planner với time block và kéo thả, nhắc nhở/thông báo và thống kê. Ứng dụng dùng React + TypeScript, backend NestJS REST API, ORM Prisma và CSDL MySQL, xác thực JWT + Refresh Token.
 
-![LifeSync_AI](https://img.shields.io/badge/React-18.3-blue) ![NestJS](https://img.shields.io/badge/NestJS-10.0-red) ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
+![LifeSync AI](https://img.shields.io/badge/React-18.3-blue) ![NestJS](https://img.shields.io/badge/NestJS-10.0-red) ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange) ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
 
 ## ✨ Tính năng
 
@@ -25,6 +25,9 @@ LifeSync_AI là web quản lý thời gian và công việc, hỗ trợ đăng k
 - 🔑 **OAuth2** - Đăng nhập Google, Facebook
 - 👥 **Role-based Access** - Admin & User roles
 - 🛡️ **Security Best Practices** - CORS, Rate limiting, Helmet
+- 🌐 **Cloudflare Protection** - DDoS, WAF, Bot Fight, IP Firewall
+- 🚫 **Rate Limiting** - Chống brute force (5 login/15min)
+- 🔍 **Real IP Detection** - Lấy IP thật qua Cloudflare proxy
 
 ## 🚀 Tech Stack
 
@@ -140,6 +143,9 @@ start-app.bat
 - [Hướng dẫn xem Database](./HUONG_DAN_XEM_DATABASE.md)
 - [Cấu hình OpenAI API](./SETUP_OPENAI_API.md)
 - [Testing Guide](./TESTING_GUIDE.md)
+- [Cloudflare Security Setup](./CLOUDFLARE_SECURITY_SETUP.md) ⭐ NEW
+- [Cloudflare Quick Checklist](./CLOUDFLARE_QUICK_CHECKLIST.md) ⭐ NEW
+- [Security Improvements Summary](./SECURITY_IMPROVEMENTS_SUMMARY.md) ⭐ NEW
 
 ## 🎯 Scripts hữu ích
 
@@ -163,7 +169,7 @@ stop-mysql-docker.bat      # Dừng MySQL Docker
 
 ### Database
 ```env
-DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/LifeSync_AI"
+DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/lifesync_ai"
 ```
 
 ### JWT

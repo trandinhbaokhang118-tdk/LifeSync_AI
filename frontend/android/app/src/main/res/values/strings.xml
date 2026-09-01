@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TimeManager</string>
-    <string name="title_activity_main">TimeManager</string>
-    <string name="package_name">com.timemanager.app</string>
-    <string name="custom_url_scheme">com.timemanager.app</string>
+    <string name="app_name">LifeSync AI</string>
+    <string name="title_activity_main">LifeSync AI</string>
+    <string name="package_name">com.lifesyncai.app</string>
+    <string name="custom_url_scheme">com.lifesyncai.app</string>
 </resources>

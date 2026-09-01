@@ -1,146 +1,108 @@
-# Hướng dẫn sử dụng Social Login
+# Social Login Setup - LifeSync AI
 
-## Tính năng đã thêm
+LifeSync AI supports real Google and Facebook OAuth login through the backend.
+The frontend starts at `/auth/google` or `/auth/facebook`, the provider returns
+to the backend callback, then the backend redirects to `/auth/callback` on the
+frontend.
 
-✅ **Đăng nhập với Google** - OAuth 2.0
-✅ **Đăng nhập với Facebook** - OAuth 2.0  
-✅ **Đăng nhập với số điện thoại** - OTP qua SMS
+## Local URLs
 
-## Cách sử dụng
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3000`
+- Google callback: `http://localhost:3000/auth/google/callback`
+- Facebook callback: `http://localhost:3000/auth/facebook/callback`
 
-### 1. Đăng nhập với Email (có sẵn)
-- Nhập email và mật khẩu
-- Click "Đăng nhập"
+## Backend `.env`
 
-### 2. Đăng nhập với Google
-- Click nút "Đăng nhập với Google"
-- Chọn tài khoản Google
-- Cho phép quyền truy cập
-- Tự động đăng nhập vào hệ thống
+Set these values in `backend/.env`:
 
-### 3. Đăng nhập với Facebook
-- Click nút "Đăng nhập với Facebook"
-- Đăng nhập Facebook (nếu chưa)
-- Cho phép quyền truy cập
-- Tự động đăng nhập vào hệ thống
+```env
+FRONTEND_URL="http://localhost:5173"
 
-### 4. Đăng nhập với số điện thoại
-- Chuyển sang tab "Số điện thoại"
-- Nhập số điện thoại (10 chữ số)
-- Click "Gửi mã OTP"
-- Nhập mã OTP nhận được (qua SMS hoặc console log)
-- Click "Xác thực"
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_REDIRECT_URI="http://localhost:3000/auth/google/callback"
 
-## Cấu hình Backend
+FACEBOOK_APP_ID="your-facebook-app-id"
+FACEBOOK_APP_SECRET="your-facebook-app-secret"
+FACEBOOK_REDIRECT_URI="http://localhost:3000/auth/facebook/callback"
+FACEBOOK_API_VERSION="v25.0"
+```
 
-### Bước 1: Cài đặt dependencies
-```bash
+For production, replace the redirect URIs with your deployed backend domain,
+for example:
+
+```env
+FRONTEND_URL="https://lifesync-ai.com"
+GOOGLE_REDIRECT_URI="https://api.lifesync-ai.com/auth/google/callback"
+FACEBOOK_REDIRECT_URI="https://api.lifesync-ai.com/auth/facebook/callback"
+```
+
+## Frontend `.env`
+
+Set the frontend API URL:
+
+```env
+VITE_API_URL="http://localhost:3000"
+```
+
+For production:
+
+```env
+VITE_API_URL="https://api.lifesync-ai.com"
+```
+
+## Google Console
+
+1. Open Google Cloud Console.
+2. Configure OAuth consent screen.
+3. Create OAuth Client ID with application type `Web application`.
+4. Add authorized JavaScript origins:
+   - `http://localhost:5173`
+   - your production frontend origin
+5. Add authorized redirect URIs:
+   - `http://localhost:3000/auth/google/callback`
+   - your production backend callback URL
+6. Copy Client ID and Client Secret into `backend/.env`.
+
+## Meta / Facebook Developers
+
+1. Open Meta for Developers and create an app.
+2. Add the Facebook Login product.
+3. In Facebook Login settings, enable Client OAuth Login and Web OAuth Login.
+4. Add Valid OAuth Redirect URIs:
+   - `http://localhost:3000/auth/facebook/callback`
+   - your production backend callback URL
+5. Copy App ID and App Secret into `backend/.env`.
+6. While the app is in development mode, only app admins/developers/testers can log in.
+
+## Test
+
+```powershell
 cd backend
-npm install axios
+npm run build
+npm run start:prod
 ```
 
-### Bước 2: Chạy migration database
-```bash
-npx prisma migrate dev
-```
-
-### Bước 3: Cấu hình OAuth (xem file `backend/OAUTH_SETUP.md`)
-
-**Google OAuth:**
-1. Tạo project tại Google Cloud Console
-2. Lấy Client ID và Client Secret
-3. Thêm vào `.env`
-
-**Facebook OAuth:**
-1. Tạo app tại Facebook Developers
-2. Lấy App ID và App Secret
-3. Thêm vào `.env`
-
-**SMS/OTP (Twilio):**
-1. Đăng ký Twilio
-2. Lấy Account SID, Auth Token, Phone Number
-3. Thêm vào `.env`
-4. Cài đặt: `npm install twilio`
-5. Uncomment code trong `auth.service.ts`
-
-### Bước 4: Khởi động backend
-```bash
-npm run start:dev
-```
-
-## Cấu hình Frontend
-
-Frontend đã được cấu hình sẵn, chỉ cần:
-
-```bash
+```powershell
 cd frontend
 npm run dev
 ```
 
-## Testing
+Then open `http://localhost:5173/login` and click Google or Facebook.
 
-### Test trong Development
+## Demo Email Accounts
 
-**OTP Mode (Console Log):**
-- Mã OTP sẽ được in ra console của backend
-- Không cần cấu hình SMS service
-- Phù hợp cho development
+- User login: `user@demo.com` / `user123`
+- Admin login: `admin@lifesyncai.com` / `admin123`
 
-**Production Mode:**
-- Cấu hình Twilio hoặc SMS service khác
-- Uncomment code trong `auth.service.ts`
-- Mã OTP sẽ được gửi qua SMS thật
+Admin accounts must use `/admin/login`; normal `/login` intentionally rejects
+admin accounts.
 
-### Test OAuth
+## Notes
 
-1. Đảm bảo backend chạy ở `http://localhost:3000`
-2. Frontend chạy ở `http://localhost:5173`
-3. Cấu hình redirect URIs đúng trong Google/Facebook console
-4. Test flow đăng nhập
-
-## Bảo mật
-
-- ✅ OTP hết hạn sau 5 phút
-- ✅ OTP chỉ dùng được 1 lần
-- ✅ OAuth tokens được validate
-- ✅ User tự động tạo nếu chưa tồn tại
-- ⚠️ Nên thêm rate limiting cho endpoint OTP
-- ⚠️ Nên dùng Redis thay vì Map trong production
-
-## Troubleshooting
-
-**Lỗi "Invalid redirect URI":**
-- Kiểm tra lại redirect URI trong Google/Facebook console
-- Đảm bảo khớp với `GOOGLE_REDIRECT_URI` / `FACEBOOK_REDIRECT_URI` trong `.env`
-
-**Không nhận được OTP:**
-- Check console log của backend
-- Nếu dùng Twilio, check Twilio dashboard
-- Kiểm tra số điện thoại có đúng format không
-
-**OAuth callback không hoạt động:**
-- Kiểm tra `FRONTEND_URL` trong backend `.env`
-- Đảm bảo route `/auth/callback` tồn tại ở frontend
-- Check browser console để xem lỗi
-
-## API Endpoints
-
-```
-POST /auth/login              - Email login
-POST /auth/register           - Register
-POST /auth/send-otp           - Send OTP to phone
-POST /auth/verify-otp         - Verify OTP and login
-GET  /auth/google             - Redirect to Google OAuth
-GET  /auth/google/callback    - Google OAuth callback
-GET  /auth/facebook           - Redirect to Facebook OAuth
-GET  /auth/facebook/callback  - Facebook OAuth callback
-GET  /auth/me                 - Get current user (requires token)
-POST /auth/refresh            - Refresh access token
-POST /auth/logout             - Logout
-```
-
-## Demo Accounts
-
-Email login vẫn hoạt động với các tài khoản demo:
-- `demo@timemanager.com` / `demo123`
-- `admin@timemanager.com` / `admin123`
+- Provider redirect URIs must match the `.env` callback URL exactly.
+- Tokens are returned to the frontend in the URL fragment after callback.
+- The backend sets and verifies an HTTP-only OAuth state cookie during login.
+- Facebook may not return an email for every account. The app rejects that case
+  because LifeSync requires an email identity.

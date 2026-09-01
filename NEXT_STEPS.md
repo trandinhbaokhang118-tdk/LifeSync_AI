@@ -1,4 +1,4 @@
-# 🚀 Next Steps - Đưa App lên Google Play
+﻿# 🚀 Next Steps - Đưa App lên Google Play
 
 ## ✅ Đã hoàn thành
 
@@ -105,7 +105,7 @@ FRONTEND_URL="http://192.168.x.x:5173"  # Cho real device
 #### App crash khi mở
 ```bash
 # Xem logs
-adb logcat | findstr TimeManager
+adb logcat | findstr LifeSync AI
 
 # Hoặc trong Android Studio: Logcat tab
 ```
@@ -135,19 +135,19 @@ adb install frontend\android\app\build\outputs\apk\release\app-release.apk
 
 **Generate keystore:**
 ```bash
-keytool -genkey -v -keystore timemanager-release.keystore -alias timemanager -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkey -v -keystore lifesync-ai-release.keystore -alias lifesyncai -keyalg RSA -keysize 2048 -validity 10000
 ```
 
 **Nhập thông tin:**
 - Password: [tạo password mạnh]
 - Name: Tran Dinh Bao Khang
-- Organization: TimeManager
+- Organization: LifeSync AI
 - City: Ho Chi Minh
 - State: HCM
 - Country: VN
 
 **Lưu file:**
-- Đặt ở: `frontend/android/timemanager-release.keystore`
+- Đặt ở: `frontend/android/lifesync-ai-release.keystore`
 - **QUAN TRỌNG:** Backup file này! Mất là không lấy lại được!
 
 ---
@@ -158,8 +158,8 @@ keytool -genkey -v -keystore timemanager-release.keystore -alias timemanager -ke
 ```properties
 storePassword=[your-password]
 keyPassword=[your-password]
-keyAlias=timemanager
-storeFile=timemanager-release.keystore
+keyAlias=lifesyncai
+storeFile=lifesync-ai-release.keystore
 ```
 
 **Update:** `frontend/android/app/build.gradle`
@@ -286,7 +286,7 @@ adb logcat
 adb install path/to/app.apk
 
 # Uninstall app
-adb uninstall com.timemanager.app
+adb uninstall com.lifesyncai.app
 ```
 
 ---

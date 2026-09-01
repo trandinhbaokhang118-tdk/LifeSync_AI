@@ -1,4 +1,4 @@
-# 🤖 SETUP OPENAI API - CHATBOT THÔNG MINH
+﻿# 🤖 SETUP OPENAI API - CHATBOT THÔNG MINH
 
 ## 🎯 Mục đích
 
@@ -21,7 +21,7 @@ https://platform.openai.com/signup
 1. Đăng nhập: https://platform.openai.com/
 2. Vào: https://platform.openai.com/api-keys
 3. Click: **"Create new secret key"**
-4. Đặt tên: `TimeManager-Chatbot`
+4. Đặt tên: `LifeSync AI-Chatbot`
 5. Copy key (dạng: `sk-proj-...`)
 
 ⚠️ **LƯU Ý**: Copy ngay, không xem lại được!
@@ -60,7 +60,7 @@ Tìm dòng:
 
 Sửa thành (bỏ dấu #):
 ```bash
-OPENAI_API_KEY="sk-proj-YOUR-ACTUAL-KEY-HERE"
+OPENAI_API_KEY="YOUR_OPENAI_API_KEY"
 ```
 
 ### 2.3. Lưu file
@@ -235,7 +235,7 @@ npm run dev
 
 ### Prompt hiện tại:
 ```
-Bạn là trợ lý AI thông minh cho Time Manager...
+Bạn là trợ lý AI thông minh cho LifeSync AI...
 ```
 
 ### Prompt cải tiến:
@@ -244,7 +244,7 @@ return `Bạn là trợ lý AI thông minh và thân thiện.
 
 NHIỆM VỤ:
 1. Trả lời MỌI câu hỏi (không chỉ về quản lý thời gian)
-2. Giúp quản lý công việc trong Time Manager
+2. Giúp quản lý công việc trong LifeSync AI
 3. Đề xuất tối ưu thời gian
 4. Tạo/cập nhật tasks khi cần
 

@@ -24,7 +24,7 @@ echo.
 echo MySQL dang chay tai: localhost:3306
 echo Username: tm_user
 echo Password: tm_password
-echo Database: time_manager
+echo Database: lifesync_ai
 echo.
 echo Xem database:
 echo - Prisma Studio: chay open-prisma-studio.bat

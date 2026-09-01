@@ -1,24 +1,10 @@
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { router } from './app/router';
 import { Toaster } from './components/ui/toast';
-import { NotificationListener } from './components/notifications/NotificationToast';
 import { ErrorBoundary } from './components/ErrorBoundary';
-
-// Create query client with optimized settings
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            staleTime: 1000 * 60 * 5,
-            retry: 1,
-            refetchOnWindowFocus: false,
-        },
-        mutations: {
-            retry: 0,
-        },
-    },
-});
+import { queryClient, enablePersistCache } from './cache';
 
 // Loading component
 function PageLoader() {
@@ -30,6 +16,12 @@ function PageLoader() {
 }
 
 function App() {
+    // Cache Layer 2: bật persistent cache cho dữ liệu query khi app khởi động.
+    useEffect(() => {
+        const unsubscribe = enablePersistCache(queryClient);
+        return unsubscribe;
+    }, []);
+
     return (
         <ErrorBoundary>
             <QueryClientProvider client={queryClient}>
@@ -37,7 +29,6 @@ function App() {
                     <RouterProvider router={router} />
                 </Suspense>
                 <Toaster />
-                <NotificationListener />
             </QueryClientProvider>
         </ErrorBoundary>
     );

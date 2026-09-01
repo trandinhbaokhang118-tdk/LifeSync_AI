@@ -1,8 +1,8 @@
-# 🤖 AI CHATBOT - HƯỚNG DẪN SỬ DỤNG
+﻿# 🤖 AI CHATBOT - HƯỚNG DẪN SỬ DỤNG
 
 ## 📋 Tổng quan
 
-AI Chatbot là trợ lý thông minh giúp bạn quản lý công việc, lên lịch và tối ưu thời gian trong Time Manager.
+AI Chatbot là trợ lý thông minh giúp bạn quản lý công việc, lên lịch và tối ưu thời gian trong LifeSync AI.
 
 ## ✨ Tính năng
 
@@ -248,6 +248,6 @@ Lấy gợi ý nhanh
 
 ---
 
-**Phát triển bởi**: Time Manager Team  
+**Phát triển bởi**: LifeSync AI Team  
 **Cập nhật**: January 2026  
 **Version**: 1.0.0

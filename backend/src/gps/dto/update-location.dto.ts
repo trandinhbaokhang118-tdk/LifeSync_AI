@@ -18,6 +18,11 @@ export class UpdateLocationDto {
   @ApiProperty({ required: false })
   @IsNumber()
   @IsOptional()
+  accuracy?: number;
+
+  @ApiProperty({ required: false })
+  @IsNumber()
+  @IsOptional()
   speed?: number;
 
   @ApiProperty({ required: false })

@@ -1,4 +1,4 @@
-# 🔧 Hướng dẫn Khắc phục Sự cố
+﻿# 🔧 Hướng dẫn Khắc phục Sự cố
 
 ## Lỗi "Không tải được dữ liệu"
 
@@ -59,8 +59,8 @@ localStorage.clear()
 ```
 
 2. Reload trang và đăng nhập lại với:
-   - Email: `demo@timemanager.com`
-   - Password: `demo123`
+   - Email: `user@demo.com`
+   - Password: `user123`
 
 ### Giải pháp 2: Khởi động lại Backend
 

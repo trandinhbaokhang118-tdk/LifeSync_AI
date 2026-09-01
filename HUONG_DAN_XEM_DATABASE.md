@@ -1,4 +1,4 @@
-# 📊 Hướng dẫn xem Database
+﻿# 📊 Hướng dẫn xem Database
 
 ## 🚀 Cách nhanh nhất (1 click)
 
@@ -13,7 +13,7 @@ Trình duyệt sẽ tự động mở: **http://localhost:8080**
 **Thông tin đăng nhập:**
 - **Username:** `tm_user`
 - **Password:** `tm_password`
-- **Database:** `time_manager`
+- **Database:** `lifesync_ai`
 
 ---
 
@@ -55,7 +55,7 @@ Sau khi đăng nhập, bạn sẽ thấy các bảng:
 ## 🎯 Các thao tác trong phpMyAdmin
 
 ### Xem dữ liệu
-1. Click vào database `time_manager` (bên trái)
+1. Click vào database `lifesync_ai` (bên trái)
 2. Click vào tên bảng (VD: `User`)
 3. Click tab "Browse" để xem dữ liệu
 
@@ -150,12 +150,12 @@ xem-database.bat
 ## 💡 Tips
 
 1. **Backup database trước khi sửa:**
-   - Click database `time_manager`
+   - Click database `lifesync_ai`
    - Click tab "Export"
    - Click "Go"
 
 2. **Import database:**
-   - Click database `time_manager`
+   - Click database `lifesync_ai`
    - Click tab "Import"
    - Chọn file .sql
    - Click "Go"
@@ -165,7 +165,7 @@ xem-database.bat
    - Click tab "Structure"
 
 4. **Xem quan hệ giữa các bảng:**
-   - Click database `time_manager`
+   - Click database `lifesync_ai`
    - Click tab "Designer"
 
 ---
@@ -195,8 +195,8 @@ phpmyadmin:
 docker ps
 
 # Xem logs
-docker logs time_manager_mysql
-docker logs time_manager_phpmyadmin
+docker logs lifesync_ai_mysql
+docker logs lifesync_ai_phpmyadmin
 
 # Restart
 docker-compose restart
@@ -205,5 +205,5 @@ docker-compose restart
 ### Quên mật khẩu
 Xem trong file `backend/.env`:
 ```
-DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/time_manager"
+DATABASE_URL="mysql://tm_user:tm_password@localhost:3306/lifesync_ai"
 ```

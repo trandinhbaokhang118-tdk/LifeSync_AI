@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.timemanager.app',
-  appName: 'TimeManager',
+  appId: 'com.lifesyncai.app',
+  appName: 'LifeSync AI',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
@@ -23,7 +23,6 @@ const config: CapacitorConfig = {
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',
       iconColor: '#3B82F6',
-      sound: 'beep.wav',
     },
     StatusBar: {
       style: 'dark',

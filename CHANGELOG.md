@@ -1,4 +1,4 @@
-# Changelog - Time Manager UI/UX Upgrade
+﻿# Changelog - LifeSync AI UI/UX Upgrade
 
 ## [2.1.0] - 2026-01-16
 
@@ -201,8 +201,8 @@ npx prisma studio
 - Prisma Studio: http://localhost:5555
 
 ### Demo Accounts
-- User: `demo@timemanager.com` / `demo123`
-- Admin: `admin@timemanager.com` / `admin123`
+- User: `demo@lifesyncai.com` / `demo123`
+- Admin: `admin@lifesyncai.com` / `admin123`
 
 ---
 

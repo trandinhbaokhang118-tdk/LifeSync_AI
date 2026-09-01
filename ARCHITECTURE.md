@@ -1,8 +1,8 @@
-# Kiến trúc Hệ thống TimeManager
+﻿# Kiến trúc Hệ thống LifeSync AI
 
 ## 🏗 Tổng quan Kiến trúc
 
-TimeManager sử dụng kiến trúc **Client-Server** với **RESTful API**.
+LifeSync AI sử dụng kiến trúc **Client-Server** với **RESTful API**.
 
 ```
 ┌─────────────────────────────────────────────────────────┐

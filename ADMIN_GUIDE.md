@@ -1,4 +1,4 @@
-# Hướng dẫn Admin Panel
+﻿# Hướng dẫn Admin Panel
 
 ## Truy cập Admin Panel
 
@@ -13,7 +13,7 @@ http://localhost:5173/admin
 
 ### Tài khoản Admin mặc định
 ```
-Email: admin@timemanager.com
+Email: admin@lifesyncai.com
 Password: admin123
 ```
 

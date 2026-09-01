@@ -1,0 +1,88 @@
+:root {
+  --color-paper: oklch(14% 0.022 238);
+  --color-paper-2: oklch(18% 0.025 238);
+  --color-paper-3: oklch(23% 0.024 238);
+  --color-rule: oklch(34% 0.022 238);
+  --color-neutral: oklch(62% 0.018 230);
+  --color-muted: oklch(75% 0.016 225);
+  --color-ink: oklch(95% 0.012 215);
+  --color-ink-2: oklch(88% 0.014 220);
+  --color-accent: oklch(78% 0.145 205);
+  --color-accent-ink: oklch(17% 0.03 230);
+  --color-focus: oklch(16% 0.026 238);
+  --color-focus-paper: oklch(13% 0.022 238);
+  --color-focus-paper-2: oklch(17% 0.024 238);
+  --color-focus-paper-3: oklch(21% 0.025 238);
+  --color-focus-rule: oklch(31% 0.022 238);
+  --color-focus-rule-strong: oklch(43% 0.03 230);
+  --color-focus-muted: oklch(72% 0.018 220);
+  --color-focus-ink: oklch(95% 0.012 215);
+  --color-focus-accent: oklch(78% 0.145 205);
+  --color-focus-accent-ink: oklch(17% 0.03 230);
+  --color-focus-ring: oklch(84% 0.16 205);
+  --color-focus-danger: oklch(72% 0.16 28);
+  --color-focus-success: oklch(76% 0.12 158);
+  --color-sync-mask-solid: oklch(0% 0 0);
+  --color-sync-clock-border: oklch(94.01% 0.0326 238.14);
+  --color-sync-clock-blue: oklch(61.27% 0.1742 252.38);
+  --color-sync-clock-blue-dark: oklch(30.18% 0.1058 259.06);
+  --color-sync-clock-tick: oklch(31.34% 0.0851 255.23);
+  --color-sync-clock-face: oklch(98.62% 0.0068 247.89);
+  --color-sync-clock-face-edge: oklch(90.44% 0.0395 237.59);
+  --color-sync-clock-metal-light: oklch(95.5% 0.0267 230.34);
+  --color-sync-clock-metal-dark: oklch(42.13% 0.1133 253.28);
+  --color-sync-clock-hand: oklch(34.91% 0.101 254.35);
+  --color-sync-impact: oklch(96.1% 0.0274 219.76);
+
+  --font-display: "Bricolage Grotesque", "Noto Sans", sans-serif;
+  --font-body: "Manrope", "Noto Sans", sans-serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.25rem;
+  --text-lg: 1.5625rem;
+  --text-xl: 1.953rem;
+  --text-2xl: 2.441rem;
+  --text-3xl: 3.052rem;
+  --text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem);
+  --text-focus-timer: clamp(4.75rem, 16vw, 12rem);
+
+  --space-3xs: 0.125rem;
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+  --space-4xl: 9rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.5rem;
+
+  --rule-hair: 1px;
+  --rule-progress: 0.25rem;
+  --status-dot: 0.5rem;
+  --focus-ring-outer: 0.25rem;
+  --page-gutter: clamp(1rem, 4vw, 4.75rem);
+  --page-max: 88rem;
+  --banner-height: 4.5rem;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms;
+  --dur-short: 220ms;
+  --dur-long: 420ms;
+
+  --z-base: 1;
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+}

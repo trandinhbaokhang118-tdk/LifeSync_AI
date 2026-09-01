@@ -1,4 +1,4 @@
-# 🎨 HƯỚNG DẪN HỆ THỐNG MÀU - TIME MANAGER
+﻿# 🎨 HƯỚNG DẪN HỆ THỐNG MÀU - LifeSync AI
 
 ## ⚠️ VẤN ĐỀ: Tại sao `text-blue-500` không hoạt động?
 

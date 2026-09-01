@@ -1,4 +1,4 @@
-# 🎨 Android Customization Guide
+﻿# 🎨 Android Customization Guide
 
 ## Hướng dẫn chỉnh layout và theme cho mobile app
 
@@ -18,7 +18,7 @@ frontend/android/
 │   │   │   │   └── styles.xml       # Themes, styles
 │   │   │   └── xml/
 │   │   │       └── config.xml       # Capacitor config
-│   │   └── java/com/timemanager/app/
+│   │   └── java/com/LifeSync AI/app/
 │   │       └── MainActivity.java    # Main activity
 │   └── build.gradle                 # Build config
 └── build.gradle                      # Project build config
@@ -116,10 +116,10 @@ app/res/mipmap-xxxhdpi/ic_launcher.png    (192x192)
 ### File: `app/res/values/strings.xml`
 ```xml
 <resources>
-    <string name="app_name">TimeManager</string>
-    <string name="title_activity_main">TimeManager</string>
-    <string name="package_name">com.timemanager.app</string>
-    <string name="custom_url_scheme">timemanager</string>
+    <string name="app_name">LifeSync AI</string>
+    <string name="title_activity_main">LifeSync AI</string>
+    <string name="package_name">com.lifesyncai.app</string>
+    <string name="custom_url_scheme">lifesyncai</string>
 </resources>
 ```
 
@@ -260,7 +260,7 @@ Run → Run 'app'
 
 ---
 
-## 🎨 Recommended Colors for TimeManager
+## 🎨 Recommended Colors for LifeSync AI
 
 ```xml
 <!-- Light Mode -->
@@ -295,7 +295,7 @@ Run → Run 'app'
 # Rebuild
 ./gradlew build
 # Uninstall app
-adb uninstall com.timemanager.app
+adb uninstall com.lifesyncai.app
 # Install lại
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```

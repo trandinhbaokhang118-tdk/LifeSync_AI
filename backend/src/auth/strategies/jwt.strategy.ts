@@ -6,6 +6,8 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 interface JwtPayload {
     sub: string;
+    portal?: 'user' | 'admin';
+    purpose?: string;
     iat: number;
     exp: number;
 }
@@ -24,6 +26,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(payload: JwtPayload) {
+        if (payload.purpose) {
+            throw new UnauthorizedException({
+                code: 'AUTH_TOKEN_INVALID',
+                message: 'Invalid access token',
+            });
+        }
+
         const user = await this.prisma.user.findUnique({
             where: { id: payload.sub },
             select: {
@@ -41,6 +50,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             });
         }
 
-        return user;
+        return {
+            ...user,
+            portal: payload.portal === 'admin' ? 'admin' : 'user',
+        };
     }
 }

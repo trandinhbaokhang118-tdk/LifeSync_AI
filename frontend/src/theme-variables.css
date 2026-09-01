@@ -170,7 +170,7 @@
     --text-primary: rgba(248, 250, 252, 0.95);
     --text-secondary: rgba(248, 250, 252, 0.72);
     --text-tertiary: rgba(248, 250, 252, 0.52);
-    --text-disabled: #4B5563;
+    --text-disabled: #94A3B8;
     --text-inverse: #0B1220;
 
     /* Borders */
@@ -223,7 +223,7 @@
     --input-border: rgba(255, 255, 255, 0.10);
     --input-border-hover: rgba(255, 255, 255, 0.18);
     --input-text: rgba(248, 250, 252, 0.95);
-    --input-placeholder: #6B7280;
+    --input-placeholder: #94A3B8;
 
     /* Card */
     --card-bg: rgba(22, 22, 22, 0.95);
@@ -389,6 +389,11 @@
 /* ============================================
    SECTION 6: UTILITY CLASSES
    ============================================ */
+
+/* Text shadow for readability on video backgrounds */
+.text-shadow {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
 
 /* Gradient Backgrounds */
 .gradient-primary {
