@@ -22,11 +22,7 @@
       - key: REFRESH_TOKEN_EXPIRES_IN
         value: 7d
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: lifesync-ai-frontend
-          envVarKey: RENDER_EXTERNAL_URL
-        value: https://lifesync-ai-frontend.onrender.com
+        value: https://life-sync-ai-seven.vercel.app
       - key: OPENAI_API_KEY
         sync: false
       - key: AI_BASE_URL
