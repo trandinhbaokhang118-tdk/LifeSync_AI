@@ -132,7 +132,9 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
         }
 
         const message =
-          status === 429
+          !error.response
+            ? 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.'
+            : status === 429
             ? 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau.'
             : error.response?.data?.error?.message || 'Email hoặc mật khẩu không đúng.';
 
