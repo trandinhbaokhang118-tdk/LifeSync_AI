@@ -54,9 +54,8 @@ docker-data/
 backend/uploads/*
 !backend/uploads/.gitignore
 
-# Keep existing local migrations ignored, but deploy the SePay schema change.
-backend/prisma/migrations/*
-!backend/prisma/migrations/20260824150000_add_sepay_payment_orders/
+# Prisma migrations are part of the application and must be versioned so a
+# clean production checkout can build the complete database schema in order.
 
 # Test coverage
 coverage/
