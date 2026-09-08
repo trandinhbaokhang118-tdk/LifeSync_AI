@@ -40,7 +40,9 @@ export default defineConfig({
       },
     }),
   ],
-  base: './',
+  // Vercel serves the SPA from the domain root. Absolute asset URLs keep
+  // direct visits such as /admin/login from resolving assets under /admin/.
+  base: '/',
   build: {
     rollupOptions: {
       output: {
