@@ -1,5 +1,12 @@
 [
   {
+    "date": "2026-09-10",
+    "macrostructure": "Long Document",
+    "theme": "Cobalt",
+    "enrichment": "none",
+    "brief": "Minimal, bright technical admin login for internal administrators with the existing MFA flow preserved."
+  },
+  {
     "date": "2026-08-24",
     "macrostructure": "Split Studio",
     "theme": "custom",

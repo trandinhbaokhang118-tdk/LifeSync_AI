@@ -1,8 +1,8 @@
 {
-  "scanned_at": "2026-07-29",
+  "scanned_at": "2026-09-10",
   "framework": "React 19 + Vite + TypeScript + Tailwind CSS",
   "font_stack": ["Manrope", "Noto Sans"],
-  "palette": "Existing LifeSync blue system plus landing-specific mint/cream tokens",
+  "palette": "Existing LifeSync light and dark blue system; admin login uses an isolated light cobalt surface",
   "motion": ["framer-motion", "three"],
   "spacing": "Existing Tailwind and CSS spacing conventions",
   "preserve": [
