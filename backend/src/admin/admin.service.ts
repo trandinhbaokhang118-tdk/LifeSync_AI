@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, Role } from '@prisma/client';
+import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 
 @Injectable()
@@ -61,6 +63,56 @@ export class AdminService {
             },
             orderBy: { createdAt: 'desc' },
         });
+    }
+
+    async createUser(dto: CreateAdminUserDto) {
+        const phone = dto.phone || null;
+        const duplicate = await this.prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: dto.email },
+                    ...(phone ? [{ phone }] : []),
+                ],
+            },
+            select: { email: true, phone: true },
+        });
+
+        if (duplicate?.email === dto.email) {
+            throw new ConflictException('Email is already in use');
+        }
+
+        if (phone && duplicate?.phone === phone) {
+            throw new ConflictException('Phone number is already in use');
+        }
+
+        const passwordHash = await argon2.hash(dto.password);
+
+        try {
+            return await this.prisma.user.create({
+                data: {
+                    name: dto.name,
+                    email: dto.email,
+                    passwordHash,
+                    phone,
+                    role: dto.role ?? Role.USER,
+                },
+                select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    phone: true,
+                    role: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                throw new ConflictException('Email or phone number is already in use');
+            }
+
+            throw error;
+        }
     }
 
     async updateUser(userId: string, dto: UpdateAdminUserDto) {

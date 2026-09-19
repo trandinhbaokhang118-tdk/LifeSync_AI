@@ -24,6 +24,11 @@ interface EditUserForm {
     phone: string;
 }
 
+interface CreateUserForm extends EditUserForm {
+    password: string;
+    role: UserRole;
+}
+
 interface ApiErrorBody {
     error?: {
         message?: string;
@@ -35,6 +40,12 @@ const emptyEditForm: EditUserForm = {
     name: '',
     email: '',
     phone: '',
+};
+
+const emptyCreateForm: CreateUserForm = {
+    ...emptyEditForm,
+    password: '',
+    role: 'USER',
 };
 
 function getApiErrorMessage(error: unknown, fallback: string) {
@@ -55,6 +66,9 @@ export function UserManagement() {
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [editForm, setEditForm] = useState<EditUserForm>(emptyEditForm);
     const [savingEdit, setSavingEdit] = useState(false);
+    const [creatingUser, setCreatingUser] = useState(false);
+    const [createForm, setCreateForm] = useState<CreateUserForm>(emptyCreateForm);
+    const [savingCreate, setSavingCreate] = useState(false);
     const { user: currentUser, setUser: setCurrentUser } = useAuthStore();
 
     useEffect(() => {
@@ -95,6 +109,53 @@ export function UserManagement() {
             showToast.success('Thành công', `Đã cập nhật quyền thành ${newRole}`);
         } catch {
             showToast.error('Lỗi', 'Không thể cập nhật quyền');
+        }
+    };
+
+    const closeCreateUser = () => {
+        if (savingCreate) return;
+
+        setCreatingUser(false);
+        setCreateForm(emptyCreateForm);
+    };
+
+    const updateCreateForm = (field: keyof CreateUserForm, value: string) => {
+        setCreateForm((currentForm) => ({
+            ...currentForm,
+            [field]: value,
+        }));
+    };
+
+    const handleCreateUser = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (savingCreate) return;
+
+        const payload = {
+            name: createForm.name.trim(),
+            email: createForm.email.trim().toLowerCase(),
+            password: createForm.password,
+            phone: createForm.phone.trim(),
+            role: createForm.role,
+        };
+
+        if (!payload.name || !payload.email || !payload.password) {
+            showToast.error('Lỗi', 'Vui lòng nhập đầy đủ tên, email và mật khẩu');
+            return;
+        }
+
+        setSavingCreate(true);
+
+        try {
+            const response = await api.post<ApiResponse<User>>('/admin/users', payload);
+            setUsers((currentUsers) => [response.data.data, ...currentUsers]);
+            setCreatingUser(false);
+            setCreateForm(emptyCreateForm);
+            showToast.success('Thành công', 'Đã thêm người dùng');
+        } catch (error) {
+            showToast.error('Lỗi', getApiErrorMessage(error, 'Không thể thêm người dùng'));
+        } finally {
+            setSavingCreate(false);
         }
     };
 
@@ -210,10 +271,16 @@ export function UserManagement() {
                     <h1 className="admin-title mb-2">Quản lý người dùng</h1>
                     <p className="admin-title-sub">{users.length} người dùng trong hệ thống</p>
                 </div>
-                <button className="admin-btn admin-btn-primary">
-                    <UserPlus className="w-5 h-5" />
-                    Thêm người dùng
-                </button>
+                {currentUser?.role === 'ADMIN' && (
+                    <button
+                        type="button"
+                        onClick={() => setCreatingUser(true)}
+                        className="admin-btn admin-btn-primary"
+                    >
+                        <UserPlus className="w-5 h-5" />
+                        Thêm người dùng
+                    </button>
+                )}
             </div>
 
             <div className="admin-glass-card p-4 mb-6">
@@ -295,6 +362,134 @@ export function UserManagement() {
                     </table>
                 </div>
             </div>
+
+            {creatingUser && (
+                <div
+                    className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="create-user-title"
+                >
+                    <form onSubmit={handleCreateUser} className="admin-glass-card max-h-[90vh] w-full max-w-lg overflow-y-auto p-6 shadow-2xl">
+                        <div className="mb-6 flex items-start justify-between gap-4">
+                            <div>
+                                <h2 id="create-user-title" className="text-xl font-semibold text-white">
+                                    Thêm người dùng
+                                </h2>
+                                <p className="mt-1 text-sm text-[var(--admin-text-muted)]">
+                                    Tạo tài khoản mới trong hệ thống
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeCreateUser}
+                                disabled={savingCreate}
+                                className="admin-btn admin-btn-secondary !px-3 !py-3 disabled:cursor-not-allowed disabled:opacity-60"
+                                aria-label="Đóng"
+                                title="Đóng"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-[var(--admin-text-secondary)]">
+                                    Tên người dùng
+                                </span>
+                                <input
+                                    className="admin-input"
+                                    value={createForm.name}
+                                    onChange={(event) => updateCreateForm('name', event.target.value)}
+                                    minLength={2}
+                                    maxLength={120}
+                                    required
+                                    autoFocus
+                                    autoComplete="name"
+                                />
+                            </label>
+
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-[var(--admin-text-secondary)]">
+                                    Email
+                                </span>
+                                <input
+                                    className="admin-input"
+                                    type="email"
+                                    value={createForm.email}
+                                    onChange={(event) => updateCreateForm('email', event.target.value)}
+                                    maxLength={191}
+                                    required
+                                    autoComplete="email"
+                                />
+                            </label>
+
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-[var(--admin-text-secondary)]">
+                                    Mật khẩu
+                                </span>
+                                <input
+                                    className="admin-input"
+                                    type="password"
+                                    value={createForm.password}
+                                    onChange={(event) => updateCreateForm('password', event.target.value)}
+                                    minLength={6}
+                                    maxLength={128}
+                                    required
+                                    autoComplete="new-password"
+                                />
+                            </label>
+
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-[var(--admin-text-secondary)]">
+                                    Số điện thoại
+                                </span>
+                                <input
+                                    className="admin-input"
+                                    value={createForm.phone}
+                                    onChange={(event) => updateCreateForm('phone', event.target.value)}
+                                    maxLength={32}
+                                    autoComplete="tel"
+                                />
+                            </label>
+
+                            <label className="block">
+                                <span className="mb-2 block text-sm font-semibold text-[var(--admin-text-secondary)]">
+                                    Quyền
+                                </span>
+                                <select
+                                    className="admin-select w-full"
+                                    value={createForm.role}
+                                    onChange={(event) => updateCreateForm('role', event.target.value)}
+                                >
+                                    <option value="USER">User</option>
+                                    <option value="MODERATOR">Moderator</option>
+                                    <option value="ADMIN">Admin</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={closeCreateUser}
+                                disabled={savingCreate}
+                                className="admin-btn admin-btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={savingCreate}
+                                className="admin-btn admin-btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                {savingCreate ? 'Đang tạo...' : 'Tạo người dùng'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
 
             {editingUser && (
                 <div

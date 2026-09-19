@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import { createTestApp, api } from './utils/e2e-app';
+import { createTestApp, api, uniqueEmail } from './utils/e2e-app';
 import { registerAndLogin, promoteToAdmin, cleanupUsers, TestUser } from './utils/auth-helper';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
@@ -61,6 +61,43 @@ describe('Admin RBAC flow (e2e)', () => {
 
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body.data)).toBe(true);
+    });
+
+    it('allows an admin to create a user and rejects a duplicate email', async () => {
+        const email = uniqueEmail('admin-created');
+        const create = await api<{
+            data: { id: string; email: string; name: string; role: string; passwordHash?: string };
+        }>(baseUrl, '/admin/users', {
+            method: 'POST',
+            token: adminToken,
+            body: {
+                name: 'Admin Created User',
+                email,
+                password: 'password123',
+                role: 'USER',
+            },
+        });
+
+        expect(create.status).toBe(201);
+        expect(create.body.data).toMatchObject({
+            email,
+            name: 'Admin Created User',
+            role: 'USER',
+        });
+        expect(create.body.data.passwordHash).toBeUndefined();
+        createdUserIds.push(create.body.data.id);
+
+        const duplicate = await api(baseUrl, '/admin/users', {
+            method: 'POST',
+            token: adminToken,
+            body: {
+                name: 'Duplicate User',
+                email,
+                password: 'password123',
+            },
+        });
+
+        expect(duplicate.status).toBe(409);
     });
 
     it('rejects unauthenticated access to admin routes (401)', async () => {

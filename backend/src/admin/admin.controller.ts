@@ -6,6 +6,7 @@ import { AdminSessionGuard } from '../auth/guards/admin-session.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AdminService } from './admin.service';
+import { CreateAdminUserDto } from './dto/create-admin-user.dto';
 import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 
 @ApiTags('Admin')
@@ -27,6 +28,13 @@ export class AdminController {
     @ApiOperation({ summary: 'Get all users' })
     async getAllUsers() {
         return this.adminService.getAllUsers();
+    }
+
+    @Post('users')
+    @Roles('ADMIN')
+    @ApiOperation({ summary: 'Create user account' })
+    async createUser(@Body() body: CreateAdminUserDto) {
+        return this.adminService.createUser(body);
     }
 
     @Patch('users/:id')
