@@ -1,8 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, ArrowUpRight, CheckCircle2, Download, RefreshCw, ShieldCheck, TrendingUp, Users, Zap } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { gsap } from "gsap";
-import * as THREE from "three";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Activity, ArrowUpRight, BarChart3, CheckCircle2, ChevronDown, Clock3, Download, LayoutDashboard, RefreshCw, ShieldCheck, Target, Users, Zap } from "lucide-react";
+import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import api from "../../services/api";
 import { showToast } from "../../components/ui/toast";
 import "../../admin-theme.css";
@@ -10,26 +8,56 @@ import "../../admin-theme.css";
 type Stats = { totalUsers:number; activeUsers:number; totalTasks:number; completedTasks:number; avgTasksPerUser:number; newUsersToday:number };
 type ActivityLog = { id:string; userName:string; action:string; details:string; timestamp:string };
 const emptyStats: Stats = { totalUsers:0, activeUsers:0, totalTasks:0, completedTasks:0, avgTasksPerUser:0, newUsersToday:0 };
+const colors = ["#3876ff", "#a8c3ff", "#73a0ff", "#dce7ff"];
 
-function AmbientScene() {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (!ref.current) return; const el = ref.current; const scene = new THREE.Scene(); const camera = new THREE.PerspectiveCamera(40, 1, .1, 100); camera.position.z = 5; const renderer = new THREE.WebGLRenderer({ alpha:true, antialias:true }); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); renderer.setSize(420, 260); el.appendChild(renderer.domElement); const group = new THREE.Group(); scene.add(group); const geo = new THREE.IcosahedronGeometry(1.35, 2); const mat = new THREE.MeshBasicMaterial({ color:0x80a99a, wireframe:true, transparent:true, opacity:.3 }); group.add(new THREE.Mesh(geo, mat)); const dots = new THREE.Points(new THREE.SphereGeometry(1.7, 18, 18), new THREE.PointsMaterial({ color:0xd89f65, size:.035, transparent:true, opacity:.8 })); group.add(dots); const tick = () => { group.rotation.y += .002; group.rotation.x = Math.sin(Date.now()*.00035)*.12; renderer.render(scene,camera); }; gsap.ticker.add(tick); return () => { gsap.ticker.remove(tick); renderer.dispose(); geo.dispose(); mat.dispose(); el.removeChild(renderer.domElement); }; }, []);
-  return <div ref={ref} className="admin-ambient" aria-hidden="true" />;
-}
+function Skeleton({ className = "" }: { className?: string }) { return <div className={`admin-skeleton ${className}`} aria-hidden="true" />; }
 
 export function AdminDashboard() {
-  const [stats,setStats] = useState<Stats>(emptyStats); const [logs,setLogs] = useState<ActivityLog[]>([]); const [loading,setLoading] = useState(true); const [refreshing,setRefreshing] = useState(false); const [lastUpdate,setLastUpdate] = useState(new Date()); const cardsRef = useRef<HTMLDivElement>(null);
-  const fetchDashboard = useCallback(async (refresh=false) => { try { if(refresh) setRefreshing(true); const [s,l] = await Promise.all([api.get("/admin/stats"), api.get("/admin/activity-logs")]); setStats(s.data.data); setLogs(l.data.data || []); setLastUpdate(new Date()); } catch { showToast.error("Không thể tải dữ liệu", "Kiểm tra kết nối máy chủ và thử lại."); } finally { setLoading(false); setRefreshing(false); } }, []);
+  const [stats, setStats] = useState<Stats>(emptyStats);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [visible, setVisible] = useState({ metrics:false, charts:false, activity:false });
+  const [range, setRange] = useState("7 ngày qua");
+
+  const fetchDashboard = useCallback(async (refresh = false) => {
+    try {
+      if (refresh) setRefreshing(true);
+      const [s, l] = await Promise.all([api.get("/admin/stats"), api.get("/admin/activity-logs")]);
+      setStats(s.data.data ?? emptyStats);
+      setLogs(l.data.data ?? []);
+    } catch { showToast.error("Không thể tải dữ liệu", "Kiểm tra kết nối máy chủ và thử lại."); }
+    finally { setLoading(false); setRefreshing(false); }
+  }, []);
+
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
-  useEffect(() => { if (!cardsRef.current) return; gsap.fromTo(cardsRef.current.querySelectorAll(".admin-metric"), { y:18, opacity:0 }, { y:0, opacity:1, duration:.65, stagger:.08, ease:"power3.out" }); }, [loading]);
-  const series = useMemo(() => { const days = ["T2","T3","T4","T5","T6","T7","CN"]; return days.map((day,i) => ({ day, users: logs.filter(l => new Date(l.timestamp).getDay() === (i+1)%7).length })); }, [logs]);
-  const completion = stats.totalTasks ? Math.round(stats.completedTasks/stats.totalTasks*100) : 0;
-  const exportData = () => { const blob = new Blob([JSON.stringify({stats,logs},null,2)], {type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="lifesync-admin-export.json"; a.click(); URL.revokeObjectURL(url); showToast.success("Đã xuất dữ liệu", "Tệp JSON đã được tải xuống."); };
-  if (loading) return <div className="admin-loading"><div className="admin-loader" /> Đang tải bảng điều khiển...</div>;
-  const metrics = [{label:"Tổng người dùng",value:stats.totalUsers,delta:`+${stats.newUsersToday} hôm nay`,icon:Users,tone:"mint"},{label:"Đang hoạt động",value:stats.activeUsers,delta:`${stats.totalUsers ? Math.round(stats.activeUsers/stats.totalUsers*100) : 0}% tổng số`,icon:Activity,tone:"sky"},{label:"Tổng nhiệm vụ",value:stats.totalTasks,delta:`${stats.completedTasks} đã hoàn tất`,icon:CheckCircle2,tone:"amber"},{label:"Tỷ lệ hoàn thành",value:`${completion}%`,delta:`${stats.avgTasksPerUser.toFixed(1)} nhiệm vụ / người`,icon:TrendingUp,tone:"violet"}];
-  return <div className="admin-page"><section className="admin-hero"><div><p className="admin-eyebrow"><span /> LIVE OVERVIEW · {lastUpdate.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}</p><h1>Chào buổi sáng, <em>admin.</em></h1><p className="admin-hero-copy">Một góc nhìn rõ ràng về nhịp vận hành của LifeSync hôm nay.</p><div className="admin-hero-actions"><button className="admin-btn primary" onClick={() => fetchDashboard(true)} disabled={refreshing}><RefreshCw size={15} className={refreshing ? "spin" : ""} /> Cập nhật dữ liệu</button><button className="admin-btn" onClick={exportData}><Download size={15} /> Xuất báo cáo</button></div></div><AmbientScene /></section>
-    <div className="admin-metrics" ref={cardsRef}>{metrics.map(({label,value,delta,icon:Icon,tone}) => <article className={`admin-metric ${tone}`} key={label}><div className="admin-metric-top"><span>{label}</span><div><Icon size={18}/></div></div><strong>{value}</strong><small><ArrowUpRight size={13}/> {delta}</small></article>)}</div>
-    <div className="admin-grid"><section className="admin-panel chart-panel"><div className="admin-panel-head"><div><p className="admin-kicker">TĂNG TRƯỞNG</p><h2>Người dùng mới</h2></div><span className="admin-panel-note"><span /> 7 ngày gần nhất</span></div><ResponsiveContainer width="100%" height={250}><LineChart data={series}><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill:"#89928e",fontSize:12}}/><YAxis hide/><Tooltip contentStyle={{background:"#18342f",border:0,borderRadius:10,color:"#fff"}}/><Line type="monotone" dataKey="users" stroke="#4f9b83" strokeWidth={3} dot={{r:4,fill:"#fff",strokeWidth:3,stroke:"#4f9b83"}}/></LineChart></ResponsiveContainer></section><section className="admin-panel completion-panel"><div className="admin-panel-head"><div><p className="admin-kicker">SỨC KHỎE CÔNG VIỆC</p><h2>Tiến độ nhiệm vụ</h2></div><Zap size={19} color="#d89f65"/></div><div className="completion-ring" style={{"--progress":`${completion*3.6}deg`} as React.CSSProperties}><div><strong>{completion}%</strong><span>hoàn thành</span></div></div><div className="completion-legend"><span><i className="done"/> Đã xong <b>{stats.completedTasks}</b></span><span><i className="open"/> Đang mở <b>{Math.max(stats.totalTasks-stats.completedTasks,0)}</b></span></div></section></div>
-    <section className="admin-panel activity-panel"><div className="admin-panel-head"><div><p className="admin-kicker">DÒNG THỜI GIAN</p><h2>Hoạt động gần đây</h2></div><a href="/admin/activity">Xem tất cả <ArrowUpRight size={15}/></a></div>{logs.length ? <div className="admin-activity-list">{logs.slice(0,5).map((log)=><div className="admin-activity-row" key={log.id}><div className="activity-icon"><ShieldCheck size={16}/></div><div><strong>{log.action}</strong><p>{log.userName} · {log.details}</p></div><time>{new Date(log.timestamp).toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit"})}</time></div>)}</div> : <div className="admin-empty">Chưa có hoạt động gần đây.</div>}</section>
+  useEffect(() => {
+    if (loading) return;
+    const timers = [window.setTimeout(() => setVisible(v => ({ ...v, metrics:true })), 120), window.setTimeout(() => setVisible(v => ({ ...v, charts:true })), 300), window.setTimeout(() => setVisible(v => ({ ...v, activity:true })), 480)];
+    return () => timers.forEach(window.clearTimeout);
+  }, [loading]);
+
+  const completion = stats.totalTasks ? Math.round(stats.completedTasks / stats.totalTasks * 100) : 0;
+  const trend = useMemo(() => ["T2","T3","T4","T5","T6","T7","CN"].map((day, i) => ({ day, users: logs.filter(log => new Date(log.timestamp).getDay() === (i + 1) % 7).length })), [logs]);
+  const taskMix = [{ name:"Hoàn thành", value:stats.completedTasks }, { name:"Đang xử lý", value:Math.max(stats.totalTasks - stats.completedTasks, 0) }];
+  const exportData = () => { const blob = new Blob([JSON.stringify({ stats, logs }, null, 2)], { type:"application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "lifesync-admin-export.json"; a.click(); URL.revokeObjectURL(url); showToast.success("Đã xuất dữ liệu", "Tệp JSON đã được tải xuống."); };
+  const metricCards = [
+    { label:"Tổng người dùng", value:stats.totalUsers, note:`+${stats.newUsersToday} hôm nay`, icon:Users, tone:"blue" },
+    { label:"Người dùng hoạt động", value:stats.activeUsers, note:`${stats.totalUsers ? Math.round(stats.activeUsers / stats.totalUsers * 100) : 0}% tổng số`, icon:Activity, tone:"violet" },
+    { label:"Tổng nhiệm vụ", value:stats.totalTasks, note:`${stats.completedTasks} đã hoàn tất`, icon:Target, tone:"amber" },
+    { label:"Tỷ lệ hoàn thành", value:`${completion}%`, note:`${stats.avgTasksPerUser.toFixed(1)} nhiệm vụ / người`, icon:CheckCircle2, tone:"green" },
+  ];
+
+  return <div className="admin-page">
+    <section className="admin-page-head"><div><p className="admin-eyebrow"><span /> LIFE SYNC / WORKSPACE</p><h1>Trung tâm vận hành</h1><p className="admin-hero-copy">Theo dõi nhịp làm việc, người dùng và sức khỏe hệ thống trong một màn hình.</p></div><div className="admin-head-actions"><label className="admin-range"><Clock3 size={15}/><select value={range} onChange={e => setRange(e.target.value)}><option>7 ngày qua</option><option>30 ngày qua</option><option>Quý này</option></select><ChevronDown size={14}/></label><button className="admin-btn primary" onClick={() => fetchDashboard(true)} disabled={refreshing}><RefreshCw size={15} className={refreshing ? "spin" : ""}/> Cập nhật</button><button className="admin-btn" onClick={exportData}><Download size={15}/> Xuất báo cáo</button></div></section>
+    <div className={`admin-metrics ${visible.metrics ? "is-visible" : ""}`} aria-busy={!visible.metrics}>{visible.metrics ? metricCards.map(({label,value,note,icon:Icon,tone}) => <article className={`admin-metric ${tone}`} key={label}><div className="admin-metric-top"><span>{label}</span><div><Icon size={18}/></div></div><strong>{value}</strong><small><ArrowUpRight size={13}/> {note}</small></article>) : Array.from({length:4}, (_,i) => <article className="admin-metric" key={i}><Skeleton className="sk-label"/><Skeleton className="sk-value"/><Skeleton className="sk-note"/></article>)}</div>
+    <div className={`admin-dashboard-grid ${visible.charts ? "is-visible" : ""}`} aria-busy={!visible.charts}>
+      {!visible.charts ? <><section className="admin-panel chart-panel"><Skeleton className="sk-title"/><Skeleton className="sk-chart"/></section><section className="admin-panel completion-panel"><Skeleton className="sk-title"/><Skeleton className="sk-donut"/></section></> : <>
+        <section className="admin-panel chart-panel"><div className="admin-panel-head"><div><p className="admin-kicker">TĂNG TRƯỞNG</p><h2>Người dùng mới</h2><span className="admin-panel-sub">Hoạt động đăng ký trong {range.toLowerCase()}</span></div><span className="admin-panel-note"><i/> Cập nhật trực tiếp</span></div><ResponsiveContainer width="100%" height={250}><LineChart data={trend} margin={{ left:0, right:4, top:15, bottom:0 }}><CartesianGrid stroke="#e8edf5" vertical={false}/><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill:"#8290a8",fontSize:12}}/><YAxis hide/><Tooltip contentStyle={{background:"#17243d",border:0,borderRadius:8,color:"#fff"}}/><Line type="monotone" dataKey="users" stroke="#3876ff" strokeWidth={3} dot={{r:4,fill:"#fff",strokeWidth:3,stroke:"#3876ff"}}/></LineChart></ResponsiveContainer></section>
+        <section className="admin-panel completion-panel"><div className="admin-panel-head"><div><p className="admin-kicker">SỨC KHỎE CÔNG VIỆC</p><h2>Tiến độ nhiệm vụ</h2><span className="admin-panel-sub">Tổng quan trạng thái hiện tại</span></div><Zap size={19} color="#f0a23a"/></div><div className="admin-donut-wrap"><ResponsiveContainer width="100%" height={175}><PieChart><Pie data={taskMix} innerRadius={57} outerRadius={76} startAngle={90} endAngle={-270} dataKey="value" stroke="none">{taskMix.map((_, i) => <Cell key={i} fill={colors[i]}/>)}</Pie></PieChart></ResponsiveContainer><div className="admin-donut-label"><strong>{completion}%</strong><span>hoàn thành</span></div></div><div className="completion-legend"><span><i className="done"/> Đã xong <b>{stats.completedTasks}</b></span><span><i className="open"/> Đang mở <b>{Math.max(stats.totalTasks - stats.completedTasks, 0)}</b></span></div></section>
+      </>}
+    </div>
+    <section className={`admin-panel activity-panel ${visible.activity ? "is-visible" : ""}`} aria-busy={!visible.activity}><div className="admin-panel-head"><div><p className="admin-kicker">DÒNG THỜI GIAN</p><h2>Hoạt động gần đây</h2><span className="admin-panel-sub">Các hành động mới nhất trên hệ thống</span></div><a href="/admin/activity">Xem tất cả <ArrowUpRight size={15}/></a></div>{visible.activity ? (logs.length ? <div className="admin-activity-list">{logs.slice(0,6).map(log => <div className="admin-activity-row" key={log.id}><div className="activity-icon"><ShieldCheck size={16}/></div><div><strong>{log.action}</strong><p>{log.userName} · {log.details}</p></div><time>{new Date(log.timestamp).toLocaleTimeString("vi-VN", { hour:"2-digit", minute:"2-digit" })}</time></div>)}</div> : <div className="admin-empty">Chưa có hoạt động gần đây.</div>) : <div className="admin-activity-list">{Array.from({length:4}, (_,i) => <div className="admin-activity-row" key={i}><Skeleton className="sk-avatar"/><div className="sk-copy"><Skeleton/><Skeleton/></div><Skeleton className="sk-time"/></div>)}</div>}</section>
+    <section className="admin-quick-row"><div><BarChart3 size={18}/><div><strong>Đọc báo cáo chuyên sâu</strong><span>So sánh tiến độ theo tuần và khu vực.</span></div></div><div><LayoutDashboard size={18}/><div><strong>Quản lý workspace</strong><span>Cấu hình quyền và dữ liệu người dùng.</span></div></div></section>
   </div>;
 }
