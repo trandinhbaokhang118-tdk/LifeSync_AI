@@ -35,10 +35,13 @@ export async function registerServiceWorker(
         // Import động: chỉ tải code đăng ký SW khi thực sự cần.
         const { registerSW } = await import('virtual:pwa-register');
 
-        registerSW({
+        const updateSW = registerSW({
             immediate: true,
             onNeedRefresh() {
                 options.onNeedRefresh?.();
+                if (window.location.pathname.startsWith('/admin')) {
+                    void updateSW(true);
+                }
             },
             onOfflineReady() {
                 options.onOfflineReady?.();
