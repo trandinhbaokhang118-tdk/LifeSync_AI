@@ -1,63 +1,50 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, ArrowUpRight, BarChart3, CheckCircle2, ChevronDown, Clock3, Download, LayoutDashboard, RefreshCw, ShieldCheck, Target, Users, Zap } from "lucide-react";
-import { CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import api from "../../services/api";
-import { showToast } from "../../components/ui/toast";
-import "../../admin-theme.css";
+import { useMemo, useState, useEffect, useRef, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
+import { Users, CheckCircle2, Clock3, RefreshCw, Download, Search, ArrowRight } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
+import api from '../../services/api';
+import './admin-dashboard.css';
 
-type Stats = { totalUsers:number; activeUsers:number; totalTasks:number; completedTasks:number; avgTasksPerUser:number; newUsersToday:number };
-type ActivityLog = { id:string; userName:string; action:string; details:string; timestamp:string };
-const emptyStats: Stats = { totalUsers:0, activeUsers:0, totalTasks:0, completedTasks:0, avgTasksPerUser:0, newUsersToday:0 };
-const colors = ["#3876ff", "#a8c3ff", "#73a0ff", "#dce7ff"];
-
-function Skeleton({ className = "" }: { className?: string }) { return <div className={`admin-skeleton ${className}`} aria-hidden="true" />; }
-
+type Stats = { totalUsers:number; activeUsers:number; totalTasks:number; completedTasks:number; newUsersToday:number; avgTasksPerUser:number };
+type User = { id:string; name:string; createdAt:string };
+type Log = { id:string; userName:string; action:string; details:string; timestamp:string };
+function Reveal({children, delay=0}: {children:ReactNode; delay?:number}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => { const observer = new IntersectionObserver(([entry]) => { if(entry.isIntersecting) { setShown(true); observer.disconnect(); } }, {rootMargin:'80px'}); if(ref.current) observer.observe(ref.current); return () => observer.disconnect(); }, []);
+  return <div ref={ref} className={`px-reveal ${shown ? 'shown' : ''}`} style={{transitionDelay:`${delay}ms`}}>{children}</div>;
+}
 export function AdminDashboard() {
-  const [stats, setStats] = useState<Stats>(emptyStats);
-  const [logs, setLogs] = useState<ActivityLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [visible, setVisible] = useState({ metrics:false, charts:false, activity:false });
-  const [range, setRange] = useState("7 ngày qua");
-
-  const fetchDashboard = useCallback(async (refresh = false) => {
-    try {
-      if (refresh) setRefreshing(true);
-      const [s, l] = await Promise.all([api.get("/admin/stats"), api.get("/admin/activity-logs")]);
-      setStats(s.data.data ?? emptyStats);
-      setLogs(l.data.data ?? []);
-    } catch { showToast.error("Không thể tải dữ liệu", "Kiểm tra kết nối máy chủ và thử lại."); }
-    finally { setLoading(false); setRefreshing(false); }
-  }, []);
-
-  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
-  useEffect(() => {
-    if (loading) return;
-    const timers = [window.setTimeout(() => setVisible(v => ({ ...v, metrics:true })), 120), window.setTimeout(() => setVisible(v => ({ ...v, charts:true })), 300), window.setTimeout(() => setVisible(v => ({ ...v, activity:true })), 480)];
-    return () => timers.forEach(window.clearTimeout);
-  }, [loading]);
-
-  const completion = stats.totalTasks ? Math.round(stats.completedTasks / stats.totalTasks * 100) : 0;
-  const trend = useMemo(() => ["T2","T3","T4","T5","T6","T7","CN"].map((day, i) => ({ day, users: logs.filter(log => new Date(log.timestamp).getDay() === (i + 1) % 7).length })), [logs]);
-  const taskMix = [{ name:"Hoàn thành", value:stats.completedTasks }, { name:"Đang xử lý", value:Math.max(stats.totalTasks - stats.completedTasks, 0) }];
-  const exportData = () => { const blob = new Blob([JSON.stringify({ stats, logs }, null, 2)], { type:"application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "lifesync-admin-export.json"; a.click(); URL.revokeObjectURL(url); showToast.success("Đã xuất dữ liệu", "Tệp JSON đã được tải xuống."); };
-  const metricCards = [
-    { label:"Tổng người dùng", value:stats.totalUsers, note:`+${stats.newUsersToday} hôm nay`, icon:Users, tone:"blue" },
-    { label:"Người dùng hoạt động", value:stats.activeUsers, note:`${stats.totalUsers ? Math.round(stats.activeUsers / stats.totalUsers * 100) : 0}% tổng số`, icon:Activity, tone:"violet" },
-    { label:"Tổng nhiệm vụ", value:stats.totalTasks, note:`${stats.completedTasks} đã hoàn tất`, icon:Target, tone:"amber" },
-    { label:"Tỷ lệ hoàn thành", value:`${completion}%`, note:`${stats.avgTasksPerUser.toFixed(1)} nhiệm vụ / người`, icon:CheckCircle2, tone:"green" },
-  ];
-
-  return <div className="admin-page">
-    <section className="admin-page-head"><div><p className="admin-eyebrow"><span /> LIFE SYNC / WORKSPACE</p><h1>Trung tâm vận hành</h1><p className="admin-hero-copy">Theo dõi nhịp làm việc, người dùng và sức khỏe hệ thống trong một màn hình.</p></div><div className="admin-head-actions"><label className="admin-range"><Clock3 size={15}/><select value={range} onChange={e => setRange(e.target.value)}><option>7 ngày qua</option><option>30 ngày qua</option><option>Quý này</option></select><ChevronDown size={14}/></label><button className="admin-btn primary" onClick={() => fetchDashboard(true)} disabled={refreshing}><RefreshCw size={15} className={refreshing ? "spin" : ""}/> Cập nhật</button><button className="admin-btn" onClick={exportData}><Download size={15}/> Xuất báo cáo</button></div></section>
-    <div className={`admin-metrics ${visible.metrics ? "is-visible" : ""}`} aria-busy={!visible.metrics}>{visible.metrics ? metricCards.map(({label,value,note,icon:Icon,tone}) => <article className={`admin-metric ${tone}`} key={label}><div className="admin-metric-top"><span>{label}</span><div><Icon size={18}/></div></div><strong>{value}</strong><small><ArrowUpRight size={13}/> {note}</small></article>) : Array.from({length:4}, (_,i) => <article className="admin-metric" key={i}><Skeleton className="sk-label"/><Skeleton className="sk-value"/><Skeleton className="sk-note"/></article>)}</div>
-    <div className={`admin-dashboard-grid ${visible.charts ? "is-visible" : ""}`} aria-busy={!visible.charts}>
-      {!visible.charts ? <><section className="admin-panel chart-panel"><Skeleton className="sk-title"/><Skeleton className="sk-chart"/></section><section className="admin-panel completion-panel"><Skeleton className="sk-title"/><Skeleton className="sk-donut"/></section></> : <>
-        <section className="admin-panel chart-panel"><div className="admin-panel-head"><div><p className="admin-kicker">TĂNG TRƯỞNG</p><h2>Người dùng mới</h2><span className="admin-panel-sub">Hoạt động đăng ký trong {range.toLowerCase()}</span></div><span className="admin-panel-note"><i/> Cập nhật trực tiếp</span></div><ResponsiveContainer width="100%" height={250}><LineChart data={trend} margin={{ left:0, right:4, top:15, bottom:0 }}><CartesianGrid stroke="#e8edf5" vertical={false}/><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill:"#8290a8",fontSize:12}}/><YAxis hide/><Tooltip contentStyle={{background:"#17243d",border:0,borderRadius:8,color:"#fff"}}/><Line type="monotone" dataKey="users" stroke="#3876ff" strokeWidth={3} dot={{r:4,fill:"#fff",strokeWidth:3,stroke:"#3876ff"}}/></LineChart></ResponsiveContainer></section>
-        <section className="admin-panel completion-panel"><div className="admin-panel-head"><div><p className="admin-kicker">SỨC KHỎE CÔNG VIỆC</p><h2>Tiến độ nhiệm vụ</h2><span className="admin-panel-sub">Tổng quan trạng thái hiện tại</span></div><Zap size={19} color="#f0a23a"/></div><div className="admin-donut-wrap"><ResponsiveContainer width="100%" height={175}><PieChart><Pie data={taskMix} innerRadius={57} outerRadius={76} startAngle={90} endAngle={-270} dataKey="value" stroke="none">{taskMix.map((_, i) => <Cell key={i} fill={colors[i]}/>)}</Pie></PieChart></ResponsiveContainer><div className="admin-donut-label"><strong>{completion}%</strong><span>hoàn thành</span></div></div><div className="completion-legend"><span><i className="done"/> Đã xong <b>{stats.completedTasks}</b></span><span><i className="open"/> Đang mở <b>{Math.max(stats.totalTasks - stats.completedTasks, 0)}</b></span></div></section>
-      </>}
+  const [days,setDays] = useState(30);
+  const [search,setSearch] = useState('');
+  const [page,setPage] = useState(0);
+  const query = useQuery({queryKey:['admin','overview'],queryFn:async () => {
+    const [s,u,l] = await Promise.all([api.get('/admin/stats'),api.get('/admin/users'),api.get('/admin/activity-logs')]);
+    return {stats:s.data.data as Stats, users:u.data.data as User[], logs:l.data.data as Log[]};
+  }});
+  const series = useMemo(() => Array.from({length:days},(_,i) => {
+    const date = new Date(); date.setHours(0,0,0,0); date.setDate(date.getDate()-days+1+i);
+    const next = new Date(date); next.setDate(next.getDate()+1);
+    return {day:date.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}), users:query.data?.users.filter(u => new Date(u.createdAt)>=date && new Date(u.createdAt)<next).length ?? 0};
+  }),[days,query.data]);
+  const filtered = useMemo(() => (query.data?.logs ?? []).filter(l => `${l.action} ${l.userName} ${l.details}`.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>new Date(b.timestamp).getTime()-new Date(a.timestamp).getTime()),[query.data,search]);
+  const stats=query.data?.stats;
+  const completion=stats?.totalTasks ? Math.round(stats.completedTasks/stats.totalTasks*100):0;
+  const active=stats?.totalUsers ? Math.round(stats.activeUsers/stats.totalUsers*100):0;
+  const exportReport=()=>{ const url=URL.createObjectURL(new Blob([JSON.stringify(query.data,null,2)],{type:'application/json'})); const a=document.createElement('a');a.href=url;a.download='lifesync-overview.json';a.click();URL.revokeObjectURL(url); };
+  if(query.isError) return <div className="px-dashboard"><div className="px-error" role="alert"><h1>Không thể tải tổng quan</h1><p>Dữ liệu chưa sẵn sàng. Vui lòng thử lại.</p><button onClick={()=>query.refetch()}>Thử lại</button></div></div>;
+  return <div className="px-dashboard" aria-busy={query.isPending}>
+    <Reveal><header className="px-heading"><div><h1>Tổng quan LifeSync</h1><p>Nhịp hoạt động của người dùng và công việc trên toàn hệ thống.</p></div><div className="px-actions"><button aria-label="Cập nhật dữ liệu" disabled={query.isFetching} onClick={()=>query.refetch()}><RefreshCw size={17} className={query.isFetching?'spin':''}/></button><button disabled={!query.data} onClick={exportReport}><Download size={16}/>Xuất báo cáo</button></div></header>
+    <div className="px-summary">{[{icon:Users,value:stats?.newUsersToday,label:'người dùng mới',note:'Đăng ký hôm nay',tone:'green'},{icon:Clock3,value:stats?stats.totalTasks-stats.completedTasks:undefined,label:'việc đang mở',note:'Chưa hoàn thành',tone:'orange'},{icon:CheckCircle2,value:stats?.completedTasks,label:'việc hoàn thành',note:'Tổng cộng trên hệ thống',tone:'blue'}].map(({icon:Icon,value,label,note,tone})=><div className="px-summary-item" key={label}><span className={`px-summary-icon ${tone}`}><Icon size={23}/></span><div>{query.isPending?<div className="px-skeleton"/>:<strong>{value?.toLocaleString('vi-VN')} {label}</strong>}<p>{note}</p></div></div>)}</div></Reveal>
+    <Reveal delay={60}><section className="px-main-chart"><div className="px-section-head"><div><h2>Tăng trưởng người dùng</h2><p>Số tài khoản đăng ký mới theo ngày</p></div><select aria-label="Khoảng thời gian biểu đồ" value={days} onChange={e=>setDays(Number(e.target.value))}><option value={7}>7 ngày gần nhất</option><option value={30}>30 ngày gần nhất</option><option value={90}>90 ngày gần nhất</option></select></div>{query.isPending?<div className="px-skeleton px-chart-skeleton"/>:<><div className="px-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={series} margin={{top:25,right:12,left:0,bottom:10}}><CartesianGrid stroke="var(--px-line)" horizontal={false}/><XAxis dataKey="day" minTickGap={55} axisLine={false} tickLine={false} tick={{fill:'var(--px-muted)',fontSize:12}}/><YAxis allowDecimals={false} width={28} axisLine={false} tickLine={false} tick={{fill:'var(--px-muted)',fontSize:12}}/><Tooltip contentStyle={{background:'var(--px-white)',border:'1px solid var(--px-line)',borderRadius:6}}/><Line name="Đăng ký mới" type="linear" dataKey="users" stroke="var(--px-blue)" strokeWidth={2} dot={false} activeDot={{r:5}}/></LineChart></ResponsiveContainer></div><div className="px-chart-caption"><span><i/>Đăng ký mới</span><span>{series.reduce((sum,d)=>sum+d.users,0)} tài khoản trong {days} ngày</span></div></>}</section></Reveal>
+    <div className="px-card-grid">
+      <Reveal><article className="px-card"><div className="px-section-head"><div><h3>Tổng người dùng</h3><p>Tất cả tài khoản</p></div><strong className="px-number">{stats?.totalUsers ?? '—'}</strong></div><div className="px-mini-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={series.slice(-7)}><Bar name="Đăng ký mới" dataKey="users" fill="var(--px-blue)" radius={[3,3,0,0]} maxBarSize={9}/><XAxis dataKey="day" hide/><Tooltip cursor={false}/></BarChart></ResponsiveContainer></div><div className="px-legend"><span><i/>Đăng ký trong 7 ngày gần nhất</span><b>{query.data?series.slice(-7).reduce((s,d)=>s+d.users,0):'—'}</b></div><Link to="/admin/users">Quản lý người dùng <ArrowRight size={14}/></Link></article></Reveal>
+      <Reveal delay={60}><article className="px-card"><div className="px-section-head"><div><h3>Khối lượng công việc</h3><p>Tổng cộng trên hệ thống</p></div><strong className="px-number">{stats?.totalTasks ?? '—'}</strong></div><div className="px-task-display"><strong>{stats?.avgTasksPerUser.toFixed(1) ?? '—'}</strong><span>công việc / người dùng</span></div><div className="px-legend"><span><i/>Đã hoàn thành</span><b>{stats?.completedTasks ?? '—'}</b></div><div className="px-legend muted"><span><i/>Chưa hoàn thành</span><b>{stats?stats.totalTasks-stats.completedTasks:'—'}</b></div></article></Reveal>
+      <Reveal><article className="px-card"><div><h3>Tiến độ nhiệm vụ</h3><p>Phân bố trạng thái công việc</p></div><div className="px-ring" style={{background:`conic-gradient(var(--px-blue) ${completion}%, var(--px-pale) 0)`}}><span><strong>{stats?.totalTasks?`${completion}%`:'—'}</strong></span></div><div className="px-legend"><span><i/>Hoàn thành</span><b>{completion}%</b></div><div className="px-legend muted"><span><i/>{stats?.totalTasks?'Chưa hoàn thành':'Chưa có công việc'}</span><b>{stats?.totalTasks?`${100-completion}%`:'—'}</b></div></article></Reveal>
+      <Reveal delay={60}><article className="px-card"><div><h3>Mức độ hoạt động</h3><p>Tài khoản được cập nhật trong 7 ngày qua</p></div><div className="px-gauge"><svg viewBox="0 0 200 115" aria-label={`${active}% tài khoản hoạt động`}><path d="M20 95 A80 80 0 0 1 180 95" fill="none" stroke="var(--px-pale)" strokeWidth="15" strokeLinecap="round"/><path d="M20 95 A80 80 0 0 1 180 95" fill="none" stroke="var(--px-blue)" strokeWidth="15" strokeLinecap="round" pathLength="100" strokeDasharray={`${active} 100`}/><text x="100" y="91" textAnchor="middle" fill="var(--px-ink)" fontSize="25">{active}%</text></svg></div><div className="px-legend"><span><i/>Có hoạt động</span><b>{stats?.activeUsers ?? '—'}</b></div><div className="px-legend muted"><span><i/>Còn lại</span><b>{stats?stats.totalUsers-stats.activeUsers:'—'}</b></div></article></Reveal>
     </div>
-    <section className={`admin-panel activity-panel ${visible.activity ? "is-visible" : ""}`} aria-busy={!visible.activity}><div className="admin-panel-head"><div><p className="admin-kicker">DÒNG THỜI GIAN</p><h2>Hoạt động gần đây</h2><span className="admin-panel-sub">Các hành động mới nhất trên hệ thống</span></div><a href="/admin/activity">Xem tất cả <ArrowUpRight size={15}/></a></div>{visible.activity ? (logs.length ? <div className="admin-activity-list">{logs.slice(0,6).map(log => <div className="admin-activity-row" key={log.id}><div className="activity-icon"><ShieldCheck size={16}/></div><div><strong>{log.action}</strong><p>{log.userName} · {log.details}</p></div><time>{new Date(log.timestamp).toLocaleTimeString("vi-VN", { hour:"2-digit", minute:"2-digit" })}</time></div>)}</div> : <div className="admin-empty">Chưa có hoạt động gần đây.</div>) : <div className="admin-activity-list">{Array.from({length:4}, (_,i) => <div className="admin-activity-row" key={i}><Skeleton className="sk-avatar"/><div className="sk-copy"><Skeleton/><Skeleton/></div><Skeleton className="sk-time"/></div>)}</div>}</section>
-    <section className="admin-quick-row"><div><BarChart3 size={18}/><div><strong>Đọc báo cáo chuyên sâu</strong><span>So sánh tiến độ theo tuần và khu vực.</span></div></div><div><LayoutDashboard size={18}/><div><strong>Quản lý workspace</strong><span>Cấu hình quyền và dữ liệu người dùng.</span></div></div></section>
+    <Reveal><section className="px-table-section"><div className="px-section-head"><div><h2>Hoạt động gần đây</h2><p>Nhật ký thay đổi và thao tác quản trị</p></div><div className="px-table-tools"><label><Search size={16}/><input aria-label="Tìm hoạt động" placeholder="Tìm hoạt động..." value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}}/></label><Link to="/admin/activity">Xem tất cả <ArrowRight size={15}/></Link></div></div><div className="px-table-scroll"><table><thead><tr><th>Người dùng</th><th>Hoạt động</th><th>Chi tiết</th><th>Thời gian</th></tr></thead><tbody>{query.isPending?<tr><td colSpan={4}><div className="px-skeleton"/></td></tr>:filtered.slice(page*6,page*6+6).map(log=><tr key={log.id}><td><span className="px-person"><span>{log.userName?.charAt(0)||'U'}</span>{log.userName||'Người dùng'}</span></td><td><span className="px-action-tag">{log.action}</span></td><td>{log.details||'—'}</td><td><time>{new Date(log.timestamp).toLocaleString('vi-VN')}</time></td></tr>)}{!query.isPending&&!filtered.length&&<tr><td colSpan={4} className="px-empty">{search?'Không tìm thấy hoạt động phù hợp.':'Chưa có hoạt động được ghi nhận.'}</td></tr>}</tbody></table></div><div className="px-pagination"><span>{filtered.length ? `${page*6+1}–${Math.min((page+1)*6,filtered.length)} trên ${filtered.length}`:'0 hoạt động'}</span><div><button disabled={!page} onClick={()=>setPage(p=>p-1)}>Trước</button><button disabled={(page+1)*6>=filtered.length} onClick={()=>setPage(p=>p+1)}>Tiếp</button></div></div></section></Reveal>
+    <footer className="px-footer"><span>LifeSync AI · Không gian quản trị</span><span>Dữ liệu từ hệ thống LifeSync</span></footer>
   </div>;
 }

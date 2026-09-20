@@ -1,31 +1,18 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
-import "../../admin-theme.css";
-import { LayoutDashboard, Users, Settings, Activity, Database, LogOut, Search, Bell, ChevronDown, ChevronRight, Menu, X, ShieldCheck } from "lucide-react";
-import { useAuthStore } from "../../store/auth.store";
-import { useState } from "react";
-
-export function AdminLayout() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ workspace: true, management: true });
-  const navItems = [
-    { to: "/admin", icon: LayoutDashboard, label: "Tổng quan", end: true },
-    { to: "/admin/users", icon: Users, label: "Người dùng" },
-    { to: "/admin/activity", icon: Activity, label: "Hoạt động" },
-    { to: "/admin/database", icon: Database, label: "Dữ liệu" },
-    { to: "/admin/settings", icon: Settings, label: "Cài đặt" },
-  ];
-  const handleLogout = async () => { await logout(); navigate("/admin/login", { replace: true }); };
-  return (<div className="admin-theme min-h-screen"><div className={`admin-sidebar ${mobileOpen ? "is-open" : ""}`}>
-    <div className="admin-brand"><div className="admin-brand-mark"><ShieldCheck size={20} /></div><div><strong>LifeSync</strong><span>ADMIN CONSOLE</span></div><button className="admin-mobile-close" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
-    <div className="admin-workspace"><span className="admin-workspace-dot" /> LifeSync workspace <ChevronDown size={14} /></div>
-    <nav className="admin-nav" aria-label="Điều hướng admin">
-      <button className="admin-nav-label admin-nav-label-button" onClick={() => setOpenGroups(v => ({ ...v, workspace: !v.workspace }))}><span>WORKSPACE</span>{openGroups.workspace ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}</button>
-      {openGroups.workspace && navItems.slice(0, 3).map(({ to, icon: Icon, label, end }) => <NavLink key={to} to={to} end={end} onClick={() => setMobileOpen(false)} className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}><Icon size={18} /><span>{label}</span>{label === "Hoạt động" && <em>24</em>}</NavLink>)}
-      <button className="admin-nav-label admin-nav-label-button" onClick={() => setOpenGroups(v => ({ ...v, management: !v.management }))}><span>QUẢN TRỊ</span>{openGroups.management ? <ChevronDown size={13}/> : <ChevronRight size={13}/>}</button>
-      {openGroups.management && navItems.slice(3).map(({ to, icon: Icon, label, end }) => <NavLink key={to} to={to} end={end} onClick={() => setMobileOpen(false)} className={({ isActive }) => `admin-nav-item ${isActive ? "active" : ""}`}><Icon size={18} /><span>{label}</span></NavLink>)}
-    </nav>
-    <div className="admin-sidebar-bottom"><div className="admin-status"><span /><div><strong>Hệ thống ổn định</strong><small>Đồng bộ vừa xong</small></div></div><div className="admin-user"><div className="admin-avatar">{user?.name?.charAt(0).toUpperCase() || "A"}</div><div className="admin-user-copy"><strong>{user?.name || "Administrator"}</strong><small>{user?.email || "admin@lifesync.ai"}</small></div><button aria-label="Đăng xuất" onClick={handleLogout}><LogOut size={16} /></button></div></div>
-  </div>{mobileOpen && <button className="admin-backdrop" aria-label="Đóng menu" onClick={() => setMobileOpen(false)} />}<main className="admin-main"><header className="admin-topbar"><button className="admin-menu-toggle" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div className="admin-breadcrumb"><span>Workspace</span><b>/</b><strong>Admin console</strong></div><div className="admin-top-actions"><label className="admin-search"><Search size={16} /><input placeholder="Tìm kiếm nhanh..." /><kbd>⌘ K</kbd></label><button className="admin-icon-btn" aria-label="Thông báo"><Bell size={18} /><i /></button><div className="admin-top-profile"><div className="admin-avatar small">{user?.name?.charAt(0).toUpperCase() || "A"}</div><ChevronDown size={15} /></div></div></header><Outlet /></main></div>);
+import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom';
+import { Activity, Users, Database, Settings, ChevronDown, Menu, X, PanelLeftClose, PanelLeftOpen, LogOut, Search, Layers, ArrowUpRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuthStore } from '../../store/auth.store';
+import '../../admin-theme.css';
+import '../../pages/admin/admin-dashboard.css';
+const groups=[{label:'Tổng quan',icon:Activity,links:[{to:'/admin',label:'Bảng điều khiển',end:true},{to:'/admin/activity',label:'Nhật ký hoạt động'}]},{label:'Người dùng',icon:Users,links:[{to:'/admin/users',label:'Danh sách tài khoản'}]},{label:'Hệ thống',icon:Database,links:[{to:'/admin/database',label:'Quản lý dữ liệu'},{to:'/admin/settings',label:'Cấu hình hệ thống'}]}];
+export function AdminLayout(){
+ const {user,logout}=useAuthStore();const navigate=useNavigate();
+ const [mobile,setMobile]=useState(false);const [collapsed,setCollapsed]=useState(false);const [search,setSearch]=useState('');const [open,setOpen]=useState<Record<string,boolean>>({'Tổng quan':true,'Người dùng':true,'Hệ thống':true});
+ useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setMobile(false);setSearch('');}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[]);
+ const results=groups.flatMap(g=>g.links).filter(l=>l.label.toLowerCase().includes(search.toLowerCase()));
+ return <div className={`admin-theme px-shell ${collapsed?'px-collapsed':''}`}>
+ <header className="px-topbar"><Link to="/admin" className="px-brand"><Layers size={30}/><span>LifeSync<span> AI</span></span></Link><button className="px-mobile-button" aria-label="Mở điều hướng" aria-expanded={mobile} onClick={()=>setMobile(true)}><Menu size={21}/></button><div className="px-search-wrap"><label className="px-global-search"><Search size={18}/><input aria-label="Tìm trang quản trị" placeholder="Tìm trang quản trị..." value={search} onChange={e=>setSearch(e.target.value)}/></label>{search&&<div className="px-search-results">{results.length?results.map(r=><Link key={r.to} to={r.to} onClick={()=>setSearch('')}>{r.label}<ArrowUpRight size={14}/></Link>):<p>Không tìm thấy trang phù hợp.</p>}</div>}</div><div className="px-top-tools"><Link to="/admin/settings" aria-label="Cấu hình hệ thống"><Settings size={20}/></Link><Link to="/app" className="px-app-link">Mở ứng dụng <ArrowUpRight size={15}/></Link><span className="px-profile" title={user?.name}>{user?.name?.charAt(0)||'A'}</span></div></header>
+ {mobile&&<button className="px-overlay" aria-label="Đóng điều hướng" onClick={()=>setMobile(false)}/>}
+ <aside className={`px-sidebar ${mobile?'open':''}`}><button className="px-mobile-close" aria-label="Đóng điều hướng" onClick={()=>setMobile(false)}><X size={20}/></button><nav aria-label="Điều hướng quản trị"><p className="px-nav-caption">KHÔNG GIAN LÀM VIỆC</p>{groups.map(({label,icon:Icon,links})=><div className="px-nav-group" key={label}><button title={label} aria-expanded={!!open[label]} onClick={()=>{if(collapsed)setCollapsed(false);setOpen(o=>({...o,[label]:!o[label]}));}}><ChevronDown size={12} className={open[label]?'':'closed'}/><Icon size={18}/><span>{label}</span></button>{open[label]&&<div className="px-subnav">{links.map(link=><NavLink key={link.to} to={link.to} end={'end' in link?link.end:false} onClick={()=>setMobile(false)}>{link.label}</NavLink>)}</div>}</div>)}<p className="px-nav-caption">LIFESYNC AI</p><Link className="px-return" to="/app"><ArrowUpRight size={18}/><span>Không gian cá nhân</span></Link></nav><div className="px-sidebar-footer"><button onClick={()=>setCollapsed(v=>!v)} aria-label={collapsed?'Mở rộng sidebar':'Thu gọn sidebar'} className="px-collapse">{collapsed?<PanelLeftOpen size={18}/>:<PanelLeftClose size={18}/>}<span>Thu gọn menu</span></button><button className="px-signout" onClick={async()=>{await logout();navigate('/admin/login',{replace:true});}} title="Đăng xuất"><LogOut size={17}/><span>Đăng xuất</span></button></div></aside>
+ <main className="px-main"><Outlet/></main></div>;
 }
