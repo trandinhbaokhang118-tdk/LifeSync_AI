@@ -254,3 +254,12 @@ Nếu gặp thông báo xung đột phiên bản, giữ/sao chép thay đổi c�
 - `GET/PUT /admin/landing`, `POST /admin/landing/publish`, `POST /admin/landing/assets`: JWT + phiên admin + role ADMIN. Save/publish kiểm tra revision để chống ghi đè.
 - Không nhập HTML, JavaScript hoặc CSS tùy ý: nội dung là text thuần, màu HEX, URL HTTPS hoặc đường dẫn nội bộ. Các phần tử có `data-cms` là hợp đồng định danh nội dung; không đổi các mã này khi sửa layout nếu muốn giữ nội dung đã biên tập.
 - Thêm bài viết hiện là khối nội dung trên landing page, chưa phải hệ thống blog có URL riêng, bình luận hoặc lịch xuất bản tự động.
+
+
+### Chỉ số kinh doanh tháng và trạng thái sử dụng
+
+- `/admin/monthly-kpis` chỉ dành cho ADMIN; doanh thu là các đơn PAID theo paidAt, tính từ đầu tháng đến hiện tại theo giờ Việt Nam. So sánh cùng thời điểm tháng trước, giới hạn ngày theo độ dài tháng.
+- Tổng khách hàng và đăng ký mới chỉ gồm role USER hiện còn trong hệ thống. Dữ liệu không tái dựng tài khoản đã xóa hoặc lịch sử chuyển vai trò. Kỳ trước bằng 0 sẽ hiện chưa có cơ sở so sánh thay vì tỷ lệ tăng giả định.
+- Ứng dụng gửi heartbeat khi đăng nhập và tab đang hiển thị, mỗi 60 giây. Online nghĩa là có tín hiệu trong 120 giây gần nhất. Tạm ngưng là khách hàng còn lại, không phải bị khóa. Chưa lưu lịch sử online để so sánh tăng/giảm.
+- Chi tiết doanh thu trên cùng trang gồm tổng doanh thu và số đơn PAID từ trước đến nay, cùng biểu đồ và số liệu từng ngày trong 30 ngày gần nhất.
+- Triển khai backend cần chạy migration `20260922010000_user_presence` trước khi phục vụ API; startCommand hiện có đã chạy `prisma migrate deploy`.

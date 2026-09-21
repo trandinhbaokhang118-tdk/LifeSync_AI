@@ -6,6 +6,7 @@ import { Toaster } from './components/ui/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { queryClient, enablePersistCache } from './cache';
 import { LoginTransition } from './components/login/LoginTransition';
+import { PresenceHeartbeat } from './components/PresenceHeartbeat';
 
 // Loading component
 function PageLoader() {
@@ -30,6 +31,7 @@ function App() {
                     <RouterProvider router={router} />
                 </Suspense>
                 <LoginTransition />
+                <PresenceHeartbeat />
                 <Toaster />
             </QueryClientProvider>
         </ErrorBoundary>

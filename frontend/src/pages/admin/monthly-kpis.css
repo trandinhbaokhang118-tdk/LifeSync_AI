@@ -1,0 +1,22 @@
+/* Hallmark · pre-emit critique: P4 H5 E4 S5 R5 V4 */
+.monthly-kpis { --kpi-red:#b73545; --kpi-accent:#4a6599; margin:28px 0 12px; }
+.kpi-grid { display:grid; grid-template-columns:1.2fr 1fr 1fr 1.12fr; gap:16px; }
+.kpi-card { min-width:0; padding:22px; border:1px solid var(--px-line); border-radius:14px; background:var(--px-white); display:flex; flex-direction:column; animation:kpi-arrive .5s both; }
+.kpi-card:nth-child(2) { animation-delay:70ms; }.kpi-card:nth-child(3) { animation-delay:140ms; }.kpi-card:nth-child(4) { animation-delay:210ms; }
+.kpi-primary { background:var(--px-pale); border-color:var(--px-pale); }
+.kpi-label { display:flex; gap:9px; align-items:center; color:var(--kpi-accent); }
+.px-dashboard .kpi-label h2 { font-size:14px; font-weight:650; color:var(--px-ink); margin:0; overflow-wrap:anywhere; }
+.kpi-label svg { flex-shrink:0; }.px-dashboard .kpi-card p { font-size:11px; line-height:1.6; margin-top:9px; }
+.kpi-value { font-size:clamp(27px,2.4vw,40px); font-weight:650; line-height:1.15; letter-spacing:-.04em; padding:24px 0 18px; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.kpi-value small { font-size:17px; letter-spacing:0; }.kpi-growth { display:flex; align-items:center; flex-wrap:wrap; gap:3px; font-size:12px; margin-top:auto; }
+.kpi-growth.positive { color:var(--px-green); }.kpi-growth.negative { color:var(--kpi-red); }.kpi-growth.neutral { color:var(--px-muted); }
+.kpi-growth>span { flex-basis:100%; color:var(--px-muted); font-size:10px; margin-top:4px; }
+.kpi-detail { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--kpi-accent); margin-top:16px; white-space:nowrap; }
+.kpi-detail:hover { text-decoration:underline; }.kpi-detail:focus-visible { outline:2px solid var(--px-blue); outline-offset:4px; }.kpi-detail:active { opacity:.7; }
+.px-dashboard .kpi-footnote { font-size:10px; margin-top:16px; }.kpi-presence dl { margin:14px 0 0; }.kpi-presence dl>div { display:flex; justify-content:space-between; gap:8px; align-items:center; padding:12px 0; }.kpi-presence dl>div+div { border-top:1px solid var(--px-line); }
+.kpi-presence dt { font-size:11px; }.kpi-presence dt i { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--px-muted); margin-right:6px; }.kpi-presence dt .kpi-online-dot { background:var(--px-green); }.kpi-presence dd { margin:0; font-size:23px; font-weight:650; text-align:right; }.kpi-presence dd small { display:block; color:var(--px-muted); font-size:9px; font-weight:400; }
+.px-dashboard .kpi-context { font-size:10px; margin-top:12px; max-width:100%; }.kpi-error { padding:24px 0; }
+@keyframes kpi-arrive { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+@media(max-width:1200px) { .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) { .kpi-grid { grid-template-columns:minmax(0,1fr); gap:12px; }.kpi-card { padding:20px; }.kpi-value { font-size:34px; } }
+@media(prefers-reduced-motion:reduce) { .kpi-card { animation:none; } }

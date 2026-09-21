@@ -9,6 +9,12 @@ import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 export class AdminService {
     constructor(private prisma: PrismaService) { }
 
+    async recordPresence(userId: string) {
+        const seenAt = new Date();
+        await this.prisma.userPresence.upsert({ where: { userId }, create: { userId, seenAt }, update: { seenAt } });
+        return { ok: true };
+    }
+
     async getSystemStats() {
         const [totalUsers, totalTasks, completedTasks, adminCount, moderatorCount] = await Promise.all([
             this.prisma.user.count(),
@@ -96,17 +102,47 @@ export class AdminService {
         const offset = 7 * 3600000;
         const local = new Date(now.getTime() + offset);
         const start = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() - 29) - offset);
-        const orders = await this.prisma.paymentOrder.findMany({
+        const [orders, lifetime] = await Promise.all([this.prisma.paymentOrder.findMany({
             where: { status: 'PAID', paidAt: { gte: start, lte: now } },
             select: { amountVND: true, paidAt: true },
-        });
+        }), this.prisma.paymentOrder.aggregate({ where: { status: 'PAID', paidAt: { lte: now } }, _sum: { amountVND: true }, _count: true })]);
         const points = Array.from({ length: 30 }, (_, i) => {
             const date = new Date(start.getTime() + i * 86400000);
             const next = new Date(date.getTime() + 86400000);
             const paid = orders.filter(o => o.paidAt && o.paidAt >= date && o.paidAt < next);
             return { day: date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }), revenue: paid.reduce((s, o) => s + o.amountVND, 0), orders: paid.length };
         });
-        return { revenue: orders.reduce((s, o) => s + o.amountVND, 0), paidOrders: orders.length, points, clicks: null };
+        return { revenue: orders.reduce((s, o) => s + o.amountVND, 0), paidOrders: orders.length, lifetimeRevenue: lifetime._sum.amountVND ?? 0, lifetimePaidOrders: lifetime._count, points, clicks: null };
+    }
+
+    async getMonthlyKpis() {
+        const now = new Date();
+        const offset = 7 * 3600000;
+        const local = new Date(now.getTime() + offset);
+        const year = local.getUTCFullYear(), month = local.getUTCMonth();
+        const start = new Date(Date.UTC(year, month, 1) - offset);
+        const previousStart = new Date(Date.UTC(year, month - 1, 1) - offset);
+        const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        const previousEnd = new Date(Date.UTC(year, month - 1, Math.min(local.getUTCDate(), lastDay), local.getUTCHours(), local.getUTCMinutes(), local.getUTCSeconds(), local.getUTCMilliseconds()) - offset);
+        const paid = (from: Date, to: Date) => this.prisma.paymentOrder.aggregate({ where: { status: 'PAID', paidAt: { gte: from, lte: to } }, _sum: { amountVND: true } });
+        const customer = { role: Role.USER };
+        const [revenue, previousRevenue, total, previousTotal, registrations, previousRegistrations, present] = await Promise.all([
+            paid(start, now), paid(previousStart, previousEnd),
+            this.prisma.user.count({ where: customer }),
+            this.prisma.user.count({ where: { ...customer, createdAt: { lte: previousEnd } } }),
+            this.prisma.user.count({ where: { ...customer, createdAt: { gte: start, lte: now } } }),
+            this.prisma.user.count({ where: { ...customer, createdAt: { gte: previousStart, lte: previousEnd } } }),
+            this.prisma.userPresence.findMany({ where: { seenAt: { gte: new Date(now.getTime() - 120000) } }, select: { userId: true } }),
+        ]);
+        const online = present.length ? await this.prisma.user.count({ where: { ...customer, id: { in: present.map(p => p.userId) } } }) : 0;
+        const metric = (value: number, previous: number) => ({ value, previous, growth: previous ? Math.round((value - previous) / previous * 1000) / 10 : value ? null : 0 });
+        return {
+            revenue: metric(revenue._sum.amountVND ?? 0, previousRevenue._sum.amountVND ?? 0),
+            customers: metric(total, previousTotal), registrations: metric(registrations, previousRegistrations),
+            online: Math.min(online, total), inactive: Math.max(0, total - online), onlineShare: total ? Math.round(Math.min(online, total) / total * 1000) / 10 : 0,
+            registrationShare: total ? Math.round(registrations / total * 1000) / 10 : 0,
+            asOf: now, month: month + 1, year, comparison: 'Cùng kỳ tháng trước; khách hàng tính trên tài khoản USER hiện còn trong hệ thống.',
+        };
     }
 
     async getAllUsers() {

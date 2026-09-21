@@ -36,6 +36,10 @@ export class AdminController {
         return this.adminService.getBusinessStats();
     }
 
+    @Get('monthly-kpis')
+    @Roles('ADMIN')
+    async monthlyKpis() { return this.adminService.getMonthlyKpis(); }
+
     @Get('users')
     @Roles('ADMIN', 'MODERATOR')
     @ApiOperation({ summary: 'Get all users' })

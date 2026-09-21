@@ -5,7 +5,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 import api from '../../services/api';
 import { useAuthStore } from '../../store/auth.store';
 import './overview-bento.css';
-type Business = { revenue: number; paidOrders: number; points: { day: string; revenue: number }[] };
+type Business = { lifetimeRevenue: number; lifetimePaidOrders: number; revenue: number; paidOrders: number; points: { day: string; revenue: number }[] };
 type Operations = { plannedMinutes: number; activeMinutes: number; workouts: number };
 const number = (n?: number) => n === undefined ? '—' : n.toLocaleString('vi-VN');
 export function OverviewBento() {
@@ -13,9 +13,9 @@ export function OverviewBento() {
   const business = useQuery({ queryKey: ['admin', 'business'], enabled: isAdmin, queryFn: async () => (await api.get('/admin/business-stats')).data.data as Business });
   const operations = useQuery({ queryKey: ['admin', 'operations'], queryFn: async () => (await api.get('/admin/operations-stats')).data.data as Operations });
   return <section className="overview-bento" aria-label="Kinh doanh và hai mảng vận hành">
-    <article className="bento-tile bento-revenue"><h3>Doanh thu đã thanh toán</h3><p>30 ngày gần nhất · VND · Giờ Việt Nam</p>
+    <article id="revenue-details" className="bento-tile bento-revenue" style={{ scrollMarginTop: 130 }}><h3>Chi tiết doanh thu</h3><p>30 ngày gần nhất · VND · Giờ Việt Nam</p>
       {!isAdmin ? <p>Chỉ quản trị viên được xem doanh thu.</p> : business.isError ? <div role="alert"><p>Chưa tải được doanh thu.</p><button onClick={() => business.refetch()}>Thử lại</button></div> : <>
-        <strong className="bento-value">{number(business.data?.revenue)} ₫</strong><p>{number(business.data?.paidOrders)} đơn đã thanh toán</p>
+        <strong className="bento-value">{number(business.data?.lifetimeRevenue)} ₫</strong><p>Tổng doanh thu từ trước đến nay · {number(business.data?.lifetimePaidOrders)} đơn đã thanh toán</p><p>30 ngày gần nhất: {number(business.data?.revenue)} ₫ · {number(business.data?.paidOrders)} đơn</p>
         <div className="bento-chart">{business.isPending ? <p role="status">Đang tải...</p> : <ResponsiveContainer width="100%" height="100%"><AreaChart data={business.data?.points}><CartesianGrid stroke="var(--px-line)" vertical={false}/><XAxis dataKey="day" minTickGap={45} tick={{fontSize:11}}/><YAxis width={58} tickFormatter={v=>new Intl.NumberFormat('vi-VN',{notation:'compact'}).format(v)} tick={{fontSize:11}}/><Tooltip formatter={v=>[Number(v).toLocaleString('vi-VN')+' ₫','Doanh thu']}/><Area dataKey="revenue" stroke="var(--bento-time)" fill="var(--bento-time-soft)" isAnimationActive={false}/></AreaChart></ResponsiveContainer>}</div>
         {business.data && <details><summary>Xem doanh thu từng ngày</summary><div className="bento-data">{business.data.points.map(p=><div key={p.day}><span>{p.day}</span><span>{number(p.revenue)} ₫</span></div>)}</div></details>}
       </>}
