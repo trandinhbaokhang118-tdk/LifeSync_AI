@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Filter, Download, Activity, Clock, User, FileText, Shield } from 'lucide-react';
+import { Download, Activity, User, FileText, Shield } from 'lucide-react';
 import '../../admin-theme.css';
+import './admin-records.css';
 import api from '../../services/api';
 import { showToast } from '../../components/ui/toast';
 import { includesNormalizedVietnamese, normalizeVietnameseText } from '../../lib/utils';
@@ -53,6 +54,7 @@ export function ActivityLogs() {
             const matchesFilter =
                 filter === 'all' ||
                 (filter === 'login' && log.action.includes('LOGIN')) ||
+                (filter === 'register' && log.action === 'REGISTER') ||
                 (filter === 'task' && log.action.includes('TASK')) ||
                 (filter === 'profile' && log.action.includes('PROFILE'));
 
@@ -123,31 +125,31 @@ export function ActivityLogs() {
     };
 
     return (
-        <div className="admin-theme admin-container p-6 md:p-8">
-            <div className="flex items-center justify-between mb-8">
+        <div className="admin-theme admin-records">
+            <div className="records-heading">
                 <div>
                     <h1 className="admin-title mb-2">Nhật ký hoạt động</h1>
                     <p className="admin-title-sub">Theo dõi mọi hoạt động trong hệ thống</p>
                 </div>
-                <button className="admin-btn admin-btn-primary" onClick={handleExport}>
+                <button className="admin-btn admin-btn-primary" onClick={handleExport} disabled={loading || !filteredLogs.length}>
                     <Download className="w-5 h-5" />
                     Xuất báo cáo
                 </button>
             </div>
 
-            <div className="admin-glass-card p-4 mb-6">
-                <div className="flex flex-col md:flex-row gap-4">
-                    <div className="flex-1">
+            <div className="admin-glass-card records-toolbar">
+                    <label className="records-search">
+                        <span className="records-label">Tìm trong nhật ký</span>
                         <input
                             type="text"
-                            placeholder="Tìm kiếm..."
+                            placeholder="Tên người dùng, hành động hoặc nội dung..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="admin-input"
                         />
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Filter className="w-5 h-5" style={{ color: 'var(--admin-text-muted)' }} />
+                    </label>
+                    <label className="records-filter">
+                        <span className="records-label">Loại hoạt động</span>
                         <select
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
@@ -155,23 +157,25 @@ export function ActivityLogs() {
                         >
                             <option value="all">Tất cả hoạt động</option>
                             <option value="login">Đăng nhập</option>
+                            <option value="register">Đăng ký tài khoản</option>
                             <option value="task">Công việc</option>
                             <option value="profile">Hồ sơ</option>
                         </select>
-                    </div>
-                </div>
+                    </label>
+                    {(searchQuery || filter !== 'all') && <button className="admin-btn" onClick={() => { setSearchQuery(''); setFilter('all'); }}>Xóa bộ lọc</button>}
             </div>
 
             <div className="admin-glass-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="admin-table">
+                <div className="records-count" role="status"><span>{loading ? 'Đang tải nhật ký...' : <><strong>{filteredLogs.length}</strong> / {logs.length} hoạt động đã tải</>}</span><span>Xuất CSV theo bộ lọc hiện tại</span></div>
+                <div className="records-scroll" tabIndex={0} role="region" aria-label="Danh sách hoạt động">
+                    <table className="admin-table records-logs">
                         <thead>
                             <tr>
                                 <th>Thời gian</th>
                                 <th>Người dùng</th>
                                 <th>Hành động</th>
                                 <th>Chi tiết</th>
-                                <th>IP Address</th>
+                                <th>Địa chỉ IP</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -193,10 +197,10 @@ export function ActivityLogs() {
                                 filteredLogs.map((log) => (
                                     <tr key={log.id}>
                                         <td>
-                                            <div className="flex items-center gap-2">
-                                                <Clock className="w-4 h-4" style={{ color: 'var(--admin-neon-primary)', opacity: 0.5 }} />
-                                                {new Date(log.timestamp).toLocaleString('vi-VN')}
-                                            </div>
+                                            <time className="records-time" dateTime={log.timestamp}>
+                                                {new Date(log.timestamp).toLocaleTimeString('vi-VN')}
+                                                <small>{new Date(log.timestamp).toLocaleDateString('vi-VN')}</small>
+                                            </time>
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-3">
@@ -208,7 +212,7 @@ export function ActivityLogs() {
                                         </td>
                                         <td>
                                             <span
-                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${getActionColor(log.action)}`}
+                                                className={`admin-badge ${getActionColor(log.action)}`}
                                             >
                                                 {getActionIcon(log.action)}
                                                 {log.action}

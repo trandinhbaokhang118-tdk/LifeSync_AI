@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import type { AxiosError } from 'axios';
 import { UserPlus, Edit, Trash2, Shield, Users, Crown, Save, X } from 'lucide-react';
 import '../../admin-theme.css';
+import './admin-records.css';
 import { showToast } from '../../components/ui/toast';
 import api from '../../services/api';
 import { includesNormalizedVietnamese } from '../../lib/utils';
@@ -63,6 +64,7 @@ export function UserManagement() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [roleFilter, setRoleFilter] = useState('all');
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [editForm, setEditForm] = useState<EditUserForm>(emptyEditForm);
     const [savingEdit, setSavingEdit] = useState(false);
@@ -249,8 +251,9 @@ export function UserManagement() {
 
     const filteredUsers = users.filter(
         (user) =>
-            includesNormalizedVietnamese(user.name, searchQuery) ||
-            includesNormalizedVietnamese(user.email, searchQuery),
+            (roleFilter === 'all' || user.role === roleFilter) &&
+            (includesNormalizedVietnamese(user.name, searchQuery) ||
+            includesNormalizedVietnamese(user.email, searchQuery)),
     );
 
     if (loading) {
@@ -265,8 +268,8 @@ export function UserManagement() {
     }
 
     return (
-        <div className="admin-theme admin-container p-6 md:p-8">
-            <div className="flex items-center justify-between mb-8">
+        <div className="admin-theme admin-records">
+            <div className="records-heading">
                 <div>
                     <h1 className="admin-title mb-2">Quản lý người dùng</h1>
                     <p className="admin-title-sub">{users.length} người dùng trong hệ thống</p>
@@ -283,18 +286,32 @@ export function UserManagement() {
                 )}
             </div>
 
-            <div className="admin-glass-card p-4 mb-6">
+            <div className="admin-glass-card records-toolbar">
+                <label className="records-search">
+                <span className="records-label">Tìm tài khoản</span>
                 <input
                     className="admin-input"
                     placeholder="Tìm kiếm theo tên hoặc email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                </label>
+                <label className="records-filter">
+                    <span className="records-label">Quyền truy cập</span>
+                    <select className="admin-select" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+                        <option value="all">Tất cả quyền</option>
+                        <option value="USER">User</option>
+                        <option value="MODERATOR">Moderator</option>
+                        <option value="ADMIN">Admin</option>
+                    </select>
+                </label>
+                {(searchQuery || roleFilter !== 'all') && <button className="admin-btn" onClick={() => { setSearchQuery(''); setRoleFilter('all'); }}>Xóa bộ lọc</button>}
             </div>
 
             <div className="admin-glass-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="admin-table">
+                <div className="records-count" role="status"><span><strong>{filteredUsers.length}</strong> / {users.length} tài khoản</span><span>Quản lý hồ sơ và quyền truy cập</span></div>
+                <div className="records-scroll" tabIndex={0} role="region" aria-label="Danh sách tài khoản">
+                    <table className="admin-table records-users">
                         <thead>
                             <tr>
                                 <th>Người dùng</th>
@@ -306,6 +323,7 @@ export function UserManagement() {
                             </tr>
                         </thead>
                         <tbody>
+                            {filteredUsers.length === 0 && <tr><td colSpan={6} className="records-empty">Không tìm thấy tài khoản phù hợp. Hãy thử tên hoặc email khác.</td></tr>}
                             {filteredUsers.map((user) => (
                                 <tr key={user.id}>
                                     <td>
