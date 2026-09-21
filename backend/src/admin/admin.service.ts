@@ -91,6 +91,24 @@ export class AdminService {
         };
     }
 
+    async getBusinessStats() {
+        const now = new Date();
+        const offset = 7 * 3600000;
+        const local = new Date(now.getTime() + offset);
+        const start = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() - 29) - offset);
+        const orders = await this.prisma.paymentOrder.findMany({
+            where: { status: 'PAID', paidAt: { gte: start, lte: now } },
+            select: { amountVND: true, paidAt: true },
+        });
+        const points = Array.from({ length: 30 }, (_, i) => {
+            const date = new Date(start.getTime() + i * 86400000);
+            const next = new Date(date.getTime() + 86400000);
+            const paid = orders.filter(o => o.paidAt && o.paidAt >= date && o.paidAt < next);
+            return { day: date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }), revenue: paid.reduce((s, o) => s + o.amountVND, 0), orders: paid.length };
+        });
+        return { revenue: orders.reduce((s, o) => s + o.amountVND, 0), paidOrders: orders.length, points, clicks: null };
+    }
+
     async getAllUsers() {
         return this.prisma.user.findMany({
             select: {

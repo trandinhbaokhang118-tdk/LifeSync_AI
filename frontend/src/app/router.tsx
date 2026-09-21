@@ -116,6 +116,8 @@ export const router = createBrowserRouter(
             children: [
                 { path: 'landing', element: <LandingEditor /> },
                 { path: 'operations', element: <OperationsAnalytics /> },
+                { path: 'work', element: <OperationsAnalytics mode="work" /> },
+                { path: 'health', element: <OperationsAnalytics mode="health" /> },
                 {
                     index: true,
                     element: <AdminDashboard />,

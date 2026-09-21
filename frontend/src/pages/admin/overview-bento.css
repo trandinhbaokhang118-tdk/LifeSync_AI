@@ -1,0 +1,26 @@
+/* Hallmark · Bento grid · existing admin palette · P4 H4 E4 S4 R5 V4 */
+.overview-bento { --bento-time:#5b7cbd; --bento-time-soft:#eaf0fb; --bento-health:#4e8b7b; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:20px; margin:26px 0; }
+.bento-tile { background:var(--px-white); border:1px solid var(--px-line); border-radius:14px; padding:24px; min-width:0; color:var(--px-ink); }
+.bento-revenue { grid-column:span 4; }
+.bento-engagement { grid-column:span 2; display:flex; flex-direction:column; gap:16px; }
+.bento-engagement>svg { color:var(--bento-time); }
+.bento-value { display:block; font-size:32px; margin:20px 0 8px; letter-spacing:-.03em; }
+.bento-tile p { font-size:12px; }
+.bento-chart { height:200px; margin:16px 0; }
+.bento-engagement>strong { font-size:20px; font-weight:600; color:var(--px-muted); }
+.bento-engagement a { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--bento-time); margin-top:auto; }
+.bento-domain { grid-column:span 3; display:flex; align-items:flex-start; gap:16px; }
+.bento-domain>div { flex:1; min-width:0; }
+.bento-domain>svg { color:var(--bento-time); flex-shrink:0; }
+.bento-domain strong { display:block; font-size:24px; margin-top:20px; }
+.bento-domain small { display:block; font-size:12px; font-weight:400; color:var(--px-muted); margin-top:4px; }
+.bento-health>svg { color:var(--bento-health); }
+.bento-domain:hover { border-color:var(--bento-time); }
+.bento-health:hover { border-color:var(--bento-health); }
+.bento-tile summary { cursor:pointer; padding:8px 0; color:var(--px-muted); font-size:12px; }
+.bento-data { max-height:200px; overflow:auto; }
+.bento-data>div { display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid var(--px-line); font-size:12px; }
+.px-dashboard .px-summary { gap:24px; padding:28px 0; }
+.px-dashboard .px-summary-item { flex:1; min-width:180px; }
+@media(max-width:1100px) { .bento-revenue,.bento-engagement { grid-column:span 6; } }
+@media(max-width:600px) { .overview-bento { gap:14px; } .bento-tile { padding:18px; } .bento-domain { grid-column:span 6; } }

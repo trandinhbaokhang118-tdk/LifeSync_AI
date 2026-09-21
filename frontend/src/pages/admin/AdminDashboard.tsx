@@ -1,10 +1,11 @@
 import { useMemo, useState, useEffect, useRef, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Users, CheckCircle2, Clock3, RefreshCw, Download, Search, ArrowRight } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from 'recharts';
 import api from '../../services/api';
 import './admin-dashboard.css';
+import { OverviewBento } from './OverviewBento';
 
 type Stats = { totalUsers:number; activeUsers:number; totalTasks:number; completedTasks:number; newUsersToday:number; avgTasksPerUser:number };
 type User = { id:string; name:string; createdAt:string };
@@ -16,6 +17,7 @@ function Reveal({children, delay=0}: {children:ReactNode; delay?:number}) {
   return <div ref={ref} className={`px-reveal ${shown ? 'shown' : ''}`} style={{transitionDelay:`${delay}ms`}}>{children}</div>;
 }
 export function AdminDashboard() {
+  const queryClient = useQueryClient();
   const [days,setDays] = useState(30);
   const [search,setSearch] = useState('');
   const [page,setPage] = useState(0);
@@ -35,9 +37,10 @@ export function AdminDashboard() {
   const exportReport=()=>{ const url=URL.createObjectURL(new Blob([JSON.stringify(query.data,null,2)],{type:'application/json'})); const a=document.createElement('a');a.href=url;a.download='lifesync-overview.json';a.click();URL.revokeObjectURL(url); };
   if(query.isError) return <div className="px-dashboard"><div className="px-error" role="alert"><h1>Không thể tải tổng quan</h1><p>Dữ liệu chưa sẵn sàng. Vui lòng thử lại.</p><button onClick={()=>query.refetch()}>Thử lại</button></div></div>;
   return <div className="px-dashboard" aria-busy={query.isPending}>
-    <Reveal><header className="px-heading"><div><h1>Tổng quan LifeSync</h1><p>Nhịp hoạt động của người dùng và công việc trên toàn hệ thống.</p></div><div className="px-actions"><button aria-label="Cập nhật dữ liệu" disabled={query.isFetching} onClick={()=>query.refetch()}><RefreshCw size={17} className={query.isFetching?'spin':''}/></button><button disabled={!query.data} onClick={exportReport}><Download size={16}/>Xuất báo cáo</button></div></header>
+    <Reveal><header className="px-heading"><div><h1>Tổng quan LifeSync</h1><p>Người dùng, kinh doanh, công việc và sức khỏe trong cùng một góc nhìn.</p></div><div className="px-actions"><button aria-label="Cập nhật dữ liệu" disabled={query.isFetching} onClick={()=>queryClient.invalidateQueries({queryKey:['admin']})}><RefreshCw size={17} className={query.isFetching?'spin':''}/></button><button disabled={!query.data} onClick={exportReport}><Download size={16}/>Xuất báo cáo tài khoản</button></div></header>
     <div className="px-summary">{[{icon:Users,value:stats?.newUsersToday,label:'người dùng mới',note:'Đăng ký hôm nay',tone:'green'},{icon:Clock3,value:stats?stats.totalTasks-stats.completedTasks:undefined,label:'việc đang mở',note:'Chưa hoàn thành',tone:'orange'},{icon:CheckCircle2,value:stats?.completedTasks,label:'việc hoàn thành',note:'Tổng cộng trên hệ thống',tone:'blue'}].map(({icon:Icon,value,label,note,tone})=><div className="px-summary-item" key={label}><span className={`px-summary-icon ${tone}`}><Icon size={23}/></span><div>{query.isPending?<div className="px-skeleton"/>:<strong>{value?.toLocaleString('vi-VN')} {label}</strong>}<p>{note}</p></div></div>)}</div></Reveal>
     <Reveal delay={60}><section className="px-main-chart"><div className="px-section-head"><div><h2>Tăng trưởng người dùng</h2><p>Số tài khoản đăng ký mới theo ngày</p></div><select aria-label="Khoảng thời gian biểu đồ" value={days} onChange={e=>setDays(Number(e.target.value))}><option value={7}>7 ngày gần nhất</option><option value={30}>30 ngày gần nhất</option><option value={90}>90 ngày gần nhất</option></select></div>{query.isPending?<div className="px-skeleton px-chart-skeleton"/>:<><div className="px-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={series} margin={{top:25,right:12,left:0,bottom:10}}><CartesianGrid stroke="var(--px-line)" horizontal={false}/><XAxis dataKey="day" minTickGap={55} axisLine={false} tickLine={false} tick={{fill:'var(--px-muted)',fontSize:12}}/><YAxis allowDecimals={false} width={28} axisLine={false} tickLine={false} tick={{fill:'var(--px-muted)',fontSize:12}}/><Tooltip contentStyle={{background:'var(--px-white)',border:'1px solid var(--px-line)',borderRadius:6}}/><Line name="Đăng ký mới" type="linear" dataKey="users" stroke="var(--px-blue)" strokeWidth={2} dot={false} activeDot={{r:5}}/></LineChart></ResponsiveContainer></div><div className="px-chart-caption"><span><i/>Đăng ký mới</span><span>{series.reduce((sum,d)=>sum+d.users,0)} tài khoản trong {days} ngày</span></div></>}</section></Reveal>
+    <Reveal><OverviewBento /></Reveal>
     <div className="px-card-grid">
       <Reveal><article className="px-card"><div className="px-section-head"><div><h3>Tổng người dùng</h3><p>Tất cả tài khoản</p></div><strong className="px-number">{stats?.totalUsers ?? '—'}</strong></div><div className="px-mini-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={series.slice(-7)}><Bar name="Đăng ký mới" dataKey="users" fill="var(--px-blue)" radius={[3,3,0,0]} maxBarSize={9}/><XAxis dataKey="day" hide/><Tooltip cursor={false}/></BarChart></ResponsiveContainer></div><div className="px-legend"><span><i/>Đăng ký trong 7 ngày gần nhất</span><b>{query.data?series.slice(-7).reduce((s,d)=>s+d.users,0):'—'}</b></div><Link to="/admin/users">Quản lý người dùng <ArrowRight size={14}/></Link></article></Reveal>
       <Reveal delay={60}><article className="px-card"><div className="px-section-head"><div><h3>Khối lượng công việc</h3><p>Tổng cộng trên hệ thống</p></div><strong className="px-number">{stats?.totalTasks ?? '—'}</strong></div><div className="px-task-display"><strong>{stats?.avgTasksPerUser.toFixed(1) ?? '—'}</strong><span>công việc / người dùng</span></div><div className="px-legend"><span><i/>Đã hoàn thành</span><b>{stats?.completedTasks ?? '—'}</b></div><div className="px-legend muted"><span><i/>Chưa hoàn thành</span><b>{stats?stats.totalTasks-stats.completedTasks:'—'}</b></div></article></Reveal>

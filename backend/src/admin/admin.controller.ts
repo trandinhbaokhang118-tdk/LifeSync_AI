@@ -30,6 +30,12 @@ export class AdminController {
         return this.adminService.getOperationsStats();
     }
 
+    @Get('business-stats')
+    @Roles('ADMIN')
+    async getBusinessStats() {
+        return this.adminService.getBusinessStats();
+    }
+
     @Get('users')
     @Roles('ADMIN', 'MODERATOR')
     @ApiOperation({ summary: 'Get all users' })
