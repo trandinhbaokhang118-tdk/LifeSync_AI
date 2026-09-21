@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { useLoginTransition } from '../../store/login-transition.store';
 import { Outlet, NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,6 +20,17 @@ import { LifeSyncFlowBackground } from '../ui';
 import { cn } from '../../lib/utils';
 
 export function AppLayout() {
+    const entranceRef = useRef<HTMLDivElement>(null);
+    useLayoutEffect(() => {
+        const phase = useLoginTransition.getState().phase;
+        if (phase === 'idle') return;
+        if (phase === 'cover') useLoginTransition.getState().setPhase('reveal');
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        const context = gsap.context(() => {
+            gsap.fromTo(entranceRef.current, { y: 26, opacity: 0 }, { y: 0, opacity: 1, duration: 0.85, delay: 0.12, ease: 'power3.out' });
+        }, entranceRef);
+        return () => context.revert();
+    }, []);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
         if (typeof window === 'undefined') {
             return false;
@@ -128,7 +141,7 @@ export function AppLayout() {
                     sidebarCollapsed ? 'lg:pl-[60px]' : 'lg:pl-56'
                 )}
             >
-                <div className="page-shell p-4 md:p-6 lg:p-8">
+                <div ref={entranceRef} className="page-shell p-4 md:p-6 lg:p-8">
                     <Outlet />
                 </div>
             </main>

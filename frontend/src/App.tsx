@@ -5,6 +5,7 @@ import { router } from './app/router';
 import { Toaster } from './components/ui/toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { queryClient, enablePersistCache } from './cache';
+import { LoginTransition } from './components/login/LoginTransition';
 
 // Loading component
 function PageLoader() {
@@ -28,6 +29,7 @@ function App() {
                 <Suspense fallback={<PageLoader />}>
                     <RouterProvider router={router} />
                 </Suspense>
+                <LoginTransition />
                 <Toaster />
             </QueryClientProvider>
         </ErrorBoundary>
