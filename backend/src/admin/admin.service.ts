@@ -50,6 +50,47 @@ export class AdminService {
         };
     }
 
+    async getOperationsStats() {
+        const offset = 7 * 60 * 60 * 1000;
+        const now = new Date();
+        const local = new Date(now.getTime() + offset);
+        const since = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate() - 13) - offset);
+        const until = new Date(since.getTime() + 14 * 86400000);
+        const [activities, exercises, profiles, timeBlocks, recentWorkouts] = await Promise.all([
+            this.prisma.dailyActivity.findMany({ where: { date: { gte: since, lt: until } }, select: { date: true, steps: true, activeMinutes: true, calories: true } }),
+            this.prisma.exercise.findMany({ where: { performedAt: { gte: since, lte: now } }, select: { performedAt: true } }),
+            this.prisma.fitnessProfile.count({ where: { healthConnect: true } }),
+            this.prisma.timeBlock.findMany({ where: { startAt: { lt: until }, endAt: { gt: since } }, select: { startAt: true, endAt: true } }),
+            this.prisma.exercise.findMany({ where: { performedAt: { gte: since, lte: now } }, orderBy: { performedAt: 'desc' }, take: 50, select: { id: true, name: true, category: true, duration: true, performedAt: true, user: { select: { name: true } } } }),
+        ]);
+        const day = (value: Date) => new Date(value.getTime() + offset).toISOString().slice(0, 10);
+        const points = Array.from({ length: 14 }, (_, index) => {
+            const date = new Date(since.getTime() + index * 86400000);
+            const next = new Date(date.getTime() + 86400000);
+            const key = day(date);
+            const activity = activities.filter(item => day(item.date) === key);
+            const workouts = exercises.filter(item => day(item.performedAt) === key);
+            const blocks = timeBlocks.filter(item => item.startAt < next && item.endAt > date);
+            return {
+                day: date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }),
+                steps: activity.reduce((sum, item) => sum + item.steps, 0),
+                activeMinutes: activity.reduce((sum, item) => sum + item.activeMinutes, 0),
+                calories: activity.reduce((sum, item) => sum + item.calories, 0),
+                workouts: workouts.length,
+                plannedMinutes: blocks.reduce((sum, item) => sum + Math.max(0, (Math.min(item.endAt.getTime(), next.getTime()) - Math.max(item.startAt.getTime(), date.getTime())) / 60000), 0),
+            };
+        });
+        return {
+            recentWorkouts,
+            connectedDevices: profiles,
+            totalSteps: points.reduce((sum, point) => sum + point.steps, 0),
+            activeMinutes: points.reduce((sum, point) => sum + point.activeMinutes, 0),
+            workouts: exercises.length,
+            plannedMinutes: Math.round(points.reduce((sum, point) => sum + point.plannedMinutes, 0)),
+            points,
+        };
+    }
+
     async getAllUsers() {
         return this.prisma.user.findMany({
             select: {

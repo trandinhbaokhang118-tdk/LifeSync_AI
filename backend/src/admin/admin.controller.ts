@@ -23,6 +23,13 @@ export class AdminController {
         return this.adminService.getSystemStats();
     }
 
+    @Get('operations-stats')
+    @Roles('ADMIN', 'MODERATOR')
+    @ApiOperation({ summary: 'Get time and health operations statistics' })
+    async getOperationsStats() {
+        return this.adminService.getOperationsStats();
+    }
+
     @Get('users')
     @Roles('ADMIN', 'MODERATOR')
     @ApiOperation({ summary: 'Get all users' })

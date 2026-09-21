@@ -40,6 +40,7 @@ const ActivityLogs = lazy(() => import('../pages/admin/ActivityLogs').then((m) =
 const DatabaseManagement = lazy(() => import('../pages/admin/DatabaseManagement').then((m) => ({ default: m.DatabaseManagement })));
 const SystemSettings = lazy(() => import('../pages/admin/SystemSettings').then((m) => ({ default: m.SystemSettings })));
 const FontTest = lazy(() => import('../pages/FontTest').then((m) => ({ default: m.default })));
+const OperationsAnalytics = lazy(() => import('../pages/admin/OperationsAnalytics').then((m) => ({ default: m.OperationsAnalytics })));
 
 function LandingEntry() {
     const { isAuthenticated, user } = useAuthStore();
@@ -114,6 +115,7 @@ export const router = createBrowserRouter(
             errorElement: <RouteError />,
             children: [
                 { path: 'landing', element: <LandingEditor /> },
+                { path: 'operations', element: <OperationsAnalytics /> },
                 {
                     index: true,
                     element: <AdminDashboard />,
