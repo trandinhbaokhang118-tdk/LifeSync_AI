@@ -1,0 +1,411 @@
+{
+  "meta": {
+    "name": "LifeSync AI Auth Suite",
+    "description": "A focused technical-cinematic authentication system derived from the existing LifeSync landing page and auth tokens.",
+    "source_references": [
+      "frontend/src/pages/landing.css",
+      "frontend/tokens.css",
+      "frontend/src/components/login/login-enterprise.css"
+    ],
+    "created_at": "2026-09-20",
+    "updated_at": "2026-09-21",
+    "login_asset": {
+      "path": "frontend/public/login/time-sport-studio.png",
+      "method": "Built-in ImageGen",
+      "prompt": "Use case: stylized-concept. Asset type: LifeSync productivity app login hero, vertical 2:3 image. Create an exquisite 3D studio still life: a large sculptural brushed titanium circular analog clock, tilted slightly in perspective, floating above an elliptical running track, accompanied by a small ivory calendar tile and a sculptural metallic dumbbell. Schedule, time, sport. Deep midnight navy background, cyan edge lights, pearlescent silver materials, sophisticated physically based rendering, soft cinematic shadows. Objects grouped in center with plenty of dark negative space around edges, no text, no letters, no logos, no watermarks. Clear readable silhouettes, not a busy sci-fi scene. Save image for use as website asset."
+    }
+  },
+  "design_system": {
+    "color": {
+      "palette_type": "analogous",
+      "primary": {
+        "hex": "#101b27",
+        "role": "deep navy application canvas"
+      },
+      "secondary": {
+        "hex": "#1c2b39",
+        "role": "raised form and scene surfaces"
+      },
+      "accent": {
+        "hex": "#53d9e7",
+        "role": "focus, progress and primary action"
+      },
+      "neutral": {
+        "scale": [
+          "#f0f5f6",
+          "#d9e1e3",
+          "#aab7bb",
+          "#66757b",
+          "#314149",
+          "#101b27"
+        ],
+        "usage": "Light values carry text; dark values create layered navy surfaces."
+      },
+      "semantic": {
+        "success": "#62c99a",
+        "warning": "#e9b65e",
+        "error": "#eb826f",
+        "info": "#53d9e7"
+      },
+      "surface": {
+        "background": "#101b27",
+        "card": "#162431",
+        "elevated": "#1c2b39"
+      },
+      "contrast_strategy": "High-contrast light text on layered navy surfaces with cyan reserved for interaction."
+    },
+    "typography": {
+      "type_scale": {
+        "display": {
+          "size": "clamp(2.75rem, 4.6vw, 5.2rem)",
+          "weight": "600",
+          "line_height": "0.96",
+          "tracking": "-0.055em"
+        },
+        "heading_1": {
+          "size": "clamp(1.75rem, 3vw, 2.25rem)",
+          "weight": "600",
+          "line_height": "1.04",
+          "tracking": "-0.045em"
+        },
+        "heading_2": {
+          "size": "1.5625rem",
+          "weight": "600",
+          "line_height": "1.15",
+          "tracking": "-0.03em"
+        },
+        "heading_3": {
+          "size": "1.25rem",
+          "weight": "600",
+          "line_height": "1.25",
+          "tracking": "-0.02em"
+        },
+        "body": {
+          "size": "1rem",
+          "weight": "400",
+          "line_height": "1.7",
+          "tracking": "0"
+        },
+        "body_small": {
+          "size": "0.875rem",
+          "weight": "400",
+          "line_height": "1.55",
+          "tracking": "0"
+        },
+        "caption": {
+          "size": "0.75rem",
+          "weight": "500",
+          "line_height": "1.4",
+          "tracking": "0.02em"
+        },
+        "overline": {
+          "size": "0.75rem",
+          "weight": "700",
+          "line_height": "1.2",
+          "tracking": "0.14em"
+        }
+      },
+      "font_families": {
+        "heading": "Bricolage Grotesque, Noto Sans, sans-serif",
+        "body": "Manrope, Noto Sans, sans-serif",
+        "mono": "Cascadia Code, ui-monospace, monospace"
+      },
+      "font_style_notes": "Roman geometric display paired with a compact humanist body; no italic headings."
+    },
+    "spacing": {
+      "base_unit": "4px",
+      "scale": [
+        "2px",
+        "4px",
+        "8px",
+        "12px",
+        "16px",
+        "24px",
+        "40px",
+        "64px",
+        "96px"
+      ],
+      "content_density": "comfortable",
+      "section_rhythm": "Compact form rhythm within a spacious split canvas."
+    },
+    "layout": {
+      "grid_system": "asymmetric split studio",
+      "max_content_width": "100vw auth shell",
+      "columns": "minmax(0, 1.18fr) minmax(28rem, 0.82fr)",
+      "gutter": "clamp(1.5rem, 4vw, 4.5rem)",
+      "breakpoints": [
+        "320px",
+        "375px",
+        "414px",
+        "768px",
+        "1024px"
+      ],
+      "alignment_tendency": "asymmetric"
+    },
+    "shape": {
+      "border_radius": {
+        "small": "0.5rem",
+        "medium": "0.875rem",
+        "large": "1.5rem",
+        "pill": "999px"
+      },
+      "border_usage": "subtle 1px on controls and scene markers",
+      "divider_style": "low-contrast solid hairline"
+    },
+    "elevation": {
+      "shadow_style": "minimal",
+      "levels": {
+        "low": "0 8px 24px rgb(0 0 0 / 0.08)",
+        "medium": "0 18px 48px rgb(0 0 0 / 0.14)",
+        "high": "0 28px 80px rgb(0 0 0 / 0.18)"
+      },
+      "depth_cues": "surface lightness, WebGL depth and restrained additive particles"
+    },
+    "iconography": {
+      "style": "rounded outline",
+      "stroke_weight": "2px",
+      "size_scale": [
+        "16px",
+        "18px",
+        "20px",
+        "24px"
+      ],
+      "preferred_set": "Lucide React"
+    },
+    "motion": {
+      "easing": "cubic-bezier(0.16, 1, 0.3, 1)",
+      "duration_scale": {
+        "micro": "120ms",
+        "normal": "220ms",
+        "macro": "420ms"
+      },
+      "entrance_pattern": "single opacity and short vertical reveal",
+      "exit_pattern": "short opacity fade",
+      "philosophy": "minimal functional with one ambient cinematic layer"
+    },
+    "components": {
+      "button_style": "cyan filled primary with compact radius and quiet pressed transform",
+      "input_style": "navy raised surface, constant one-pixel border and instant cyan focus outline",
+      "card_style": "transparent form composition rather than a floating glass card",
+      "navigation_pattern": "compact two-option auth mode switch",
+      "modal_style": "native centered dialog if needed",
+      "list_style": "single-column status and validation rows",
+      "component_notes": "All controls retain 44px minimum targets and stable error slots."
+    }
+  },
+  "design_style": {
+    "aesthetic": {
+      "mood": [
+        "focused",
+        "technical",
+        "cinematic",
+        "calm"
+      ],
+      "visual_metaphor": "a synchronized night-time control room",
+      "era_influence": "contemporary performance software",
+      "genre": "atmospheric productivity SaaS",
+      "personality_traits": [
+        "precise",
+        "supportive",
+        "quietly confident"
+      ],
+      "adjectives": [
+        "dark",
+        "layered",
+        "responsive",
+        "restrained"
+      ]
+    },
+    "visual_language": {
+      "complexity": "moderate",
+      "ornamentation": "subtle accents",
+      "whitespace_usage": "generous around the form, denser within fields",
+      "visual_weight_distribution": "visual story left, task surface right",
+      "focal_strategy": "single form action",
+      "contrast_level": "high",
+      "texture_usage": "low-density points and wire geometry"
+    },
+    "composition": {
+      "hierarchy_method": "typographic hierarchy and spatial isolation",
+      "balance_type": "asymmetric",
+      "flow_direction": "left narrative to right action",
+      "grouping_strategy": "progressive field groups",
+      "negative_space_role": "separates atmosphere from task"
+    },
+    "imagery": {
+      "photo_treatment": "none",
+      "illustration_style": "Login: generated titanium clock, calendar and dumbbell still life. Recovery and registration: existing mascot.",
+      "graphic_elements": "sparse particles and wireframe geometry",
+      "pattern_usage": "ambient only",
+      "image_shape": "full-bleed visual field"
+    },
+    "interaction_feel": {
+      "feedback_style": "immediate and quiet",
+      "hover_behavior": "small transform or surface lift",
+      "transition_personality": "smooth glide",
+      "loading_style": "inline button or clock state",
+      "microinteraction_density": "low"
+    },
+    "brand_voice_in_ui": {
+      "tone": "direct supportive Vietnamese",
+      "formality": "friendly professional",
+      "cta_style": "direct imperative",
+      "empty_state_approach": "explain the next action",
+      "error_tone": "specific, calm and recoverable"
+    }
+  },
+  "visual_effects": {
+    "overview": {
+      "effect_intensity": "subtle-accent",
+      "performance_tier": "heavy with lightweight scene limits",
+      "fallback_strategy": "disable WebGL and retain a static CSS atmosphere on reduced motion or low-end devices",
+      "primary_technology": "WebGL/Three.js plus GSAP"
+    },
+    "background_effects": {
+      "type": "generative-art",
+      "description": "Sparse dimensional field behind the existing mascot.",
+      "technology": "Three.js",
+      "params": {
+        "color_palette": [
+          "#53d9e7",
+          "#f0f5f6"
+        ],
+        "speed": "very slow",
+        "density": "low",
+        "opacity": "0.35",
+        "blend_mode": "additive"
+      }
+    },
+    "particle_systems": {
+      "enabled": true,
+      "type": "floating-dots",
+      "description": "Deterministic low-count points suggesting synchronized signals.",
+      "technology": "Three.js Points",
+      "params": {
+        "count": 56,
+        "shape": "circles",
+        "size_range": "1px–3px",
+        "movement_pattern": "slow orbital rotation",
+        "color_behavior": "single cyan-white family",
+        "interaction": "mouse-attract",
+        "spawn_area": "visual panel only"
+      }
+    },
+    "3d_elements": {
+      "enabled": true,
+      "type": "abstract-geometry",
+      "description": "Three.js torus orbit and sparse points over the login still life; damped pointer rotation and camera zoom.",
+      "technology": "Three.js",
+      "params": {
+        "renderer": "WebGLRenderer alpha low-power",
+        "lighting": "unlit additive material",
+        "camera": "perspective 42 degrees",
+        "materials": "transparent points and wireframe",
+        "geometry": "torus",
+        "post_processing": [],
+        "interaction_model": "small damped pointer rotation"
+      }
+    },
+    "shader_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "No custom shader is needed.",
+      "technology": "none",
+      "params": {
+        "uniforms": [],
+        "vertex_manipulation": "none",
+        "fragment_output": "none",
+        "noise_type": "none",
+        "distortion": "none"
+      }
+    },
+    "scroll_effects": {
+      "parallax": {
+        "enabled": false,
+        "layers": 0,
+        "depth_range": "none",
+        "speed_curve": "none"
+      },
+      "scroll_triggered_animations": {
+        "enabled": false,
+        "trigger_points": [],
+        "animation_type": "none",
+        "scrub_behavior": "none"
+      },
+      "scroll_morphing": {
+        "enabled": false,
+        "description": "Auth routes do not use scroll choreography."
+      }
+    },
+    "text_effects": {
+      "type": "none",
+      "description": "Typography remains stable and readable.",
+      "technology": "none",
+      "params": {
+        "split_strategy": "none",
+        "animation_per_unit": "none",
+        "stagger": "none",
+        "effect_style": "none"
+      }
+    },
+    "cursor_effects": {
+      "enabled": false,
+      "type": "none",
+      "description": "The native cursor is preserved.",
+      "params": {
+        "shape": "native",
+        "size": "native",
+        "blend_mode": "normal",
+        "trail": "none",
+        "interaction_zone": "none"
+      }
+    },
+    "image_effects": {
+      "type": "parallax-tilt",
+      "description": "Generated raster hero tilts up to 6 degrees and zooms 5.5% with GSAP on fine pointers; static on reduced motion.",
+      "technology": "GSAP and CSS transforms",
+      "params": {
+        "filter_pipeline": "none",
+        "hover_transform": "subtle rotate and translate",
+        "reveal_animation": "opacity only",
+        "distortion_type": "none"
+      }
+    },
+    "glassmorphism_neumorphism": {
+      "enabled": false,
+      "style": "none",
+      "params": {
+        "blur_radius": "0",
+        "transparency": "0",
+        "border_treatment": "solid token border",
+        "shadow_type": "none",
+        "light_source_angle": "none"
+      }
+    },
+    "canvas_drawings": {
+      "enabled": true,
+      "type": "pattern-fill",
+      "description": "The Three.js canvas draws the ambient points and wire geometry.",
+      "technology": "WebGL canvas",
+      "params": {
+        "draw_method": "buffer geometry",
+        "animation_loop": "requestAnimationFrame",
+        "color_scheme": "cyan-white on navy",
+        "responsiveness": "ResizeObserver",
+        "interaction": "damped pointer rotation"
+      }
+    },
+    "svg_animations": {
+      "enabled": false,
+      "type": "none",
+      "description": "Existing mascot raster animation remains CSS-driven.",
+      "params": {
+        "animation_method": "none",
+        "path_morphing": "none",
+        "stroke_animation": "none",
+        "filter_effects": "none"
+      }
+    },
+    "composite_notes": "LiveTimeRing reads the local device clock and resynchronizes on visibility changes. ClockLoader shows real elapsed API wait time, not simulated completion. After successful credentials, a GSAP circle covers the login and persists outside router Suspense. AppLayout reveals the workspace when mounted. Reduced motion uses opacity only. Dispose WebGL resources and pause while hidden."
+  }
+}

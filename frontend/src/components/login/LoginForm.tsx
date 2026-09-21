@@ -31,7 +31,7 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [shouldShake, setShouldShake] = useState(false);
-  const [oauthStatus, setOAuthStatus] = useState<OAuthStatus>({ google: false, facebook: false });
+  const [oauthStatus, setOAuthStatus] = useState<OAuthStatus | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -41,9 +41,7 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
         if (!active) return;
         setOAuthStatus('data' in response.data ? response.data.data : response.data);
       })
-      .catch(() => {
-        if (active) setOAuthStatus({ google: false, facebook: false });
-      });
+      .catch(() => undefined);
 
     return () => {
       active = false;
@@ -58,35 +56,29 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
     return newErrors;
   }, [email, password]);
 
+  const shakeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerShake = useCallback(() => {
     setShouldShake(true);
-    setTimeout(() => setShouldShake(false), 600);
+    if (shakeTimer.current) clearTimeout(shakeTimer.current);
+    shakeTimer.current = setTimeout(() => setShouldShake(false), 600);
   }, []);
 
-  // Holds the authenticated session returned by the API until the clock
-  // animation finishes, so we redirect with real tokens (not a demo stub).
-  const authRef = useRef<AuthResponse | null>(null);
-  const clockCompleteRef = useRef(false);
-  const redirectingRef = useRef(false);
-
-  const finishLoginIfReady = useCallback(() => {
-    if (!authRef.current || !clockCompleteRef.current || redirectingRef.current) {
-      return;
-    }
-
-    const auth = authRef.current;
-    redirectingRef.current = true;
-    onLoginStateChange('celebrating');
-
-    // Let celebration play for 1.5s, then redirect with the real session.
-    setTimeout(() => {
-      onLoginSuccess(auth, rememberMe);
-    }, 1500);
-  }, [onLoginStateChange, onLoginSuccess, rememberMe]);
+  const redirectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeRef = useRef(true);
+  const submittingRef = useRef(false);
+  useEffect(() => {
+    activeRef.current = true;
+    return () => {
+      activeRef.current = false;
+      if (shakeTimer.current) clearTimeout(shakeTimer.current);
+      if (redirectTimer.current) clearTimeout(redirectTimer.current);
+    };
+  }, []);
 
   const handleSubmit = useCallback(
     async (e: FormEvent) => {
       e.preventDefault();
+      if (submittingRef.current) return;
       setErrors({});
 
       // Validate
@@ -98,9 +90,7 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
       }
 
       // Start loading
-      authRef.current = null;
-      clockCompleteRef.current = false;
-      redirectingRef.current = false;
+      submittingRef.current = true;
       onLoginStateChange('loading');
 
       try {
@@ -111,14 +101,15 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
           rememberMe,
         });
 
-        // Keep the session for handleClockComplete to consume after the
-        // success animation finishes.
-        authRef.current = 'data' in res.data ? res.data.data : res.data;
-        finishLoginIfReady();
+        if (!activeRef.current) return;
+        const auth = 'data' in res.data ? res.data.data : res.data;
+        onLoginStateChange('celebrating');
+        redirectTimer.current = setTimeout(() => {
+          if (activeRef.current) onLoginSuccess(auth, rememberMe);
+        }, reduceMotion ? 150 : 850);
       } catch (err: unknown) {
-        authRef.current = null;
-        clockCompleteRef.current = false;
-        redirectingRef.current = false;
+        if (!activeRef.current) return;
+        submittingRef.current = false;
         const error = err as { response?: { data?: { error?: { code?: string; message?: string } }; status?: number } };
         const status = error.response?.status;
         const code = error.response?.data?.error?.code;
@@ -141,25 +132,31 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
         onLoginStateChange('error');
         setErrors({ general: message });
         triggerShake();
-        setTimeout(() => onLoginStateChange('idle'), 100);
+
       }
     },
-    [email, password, rememberMe, validate, onLoginStateChange, triggerShake, finishLoginIfReady, navigate],
+    [email, password, rememberMe, validate, onLoginStateChange, triggerShake, onLoginSuccess, reduceMotion, navigate],
   );
 
-  const handleClockComplete = useCallback(() => {
-    clockCompleteRef.current = true;
-    finishLoginIfReady();
-  }, [finishLoginIfReady]);
-
   const handleGoogleLogin = useCallback(() => {
-    // Use the existing social login flow
-    window.location.href = `${API_URL}/auth/google`;
-  }, []);
+    if (oauthStatus?.google === false) {
+      setErrors({ general: 'Google chưa được cấu hình trên máy chủ. Xem hướng dẫn OAuth để thêm Client ID và Client Secret.' });
+      triggerShake();
+      return;
+    }
+
+    window.location.assign(`${API_URL}/auth/google`);
+  }, [oauthStatus, triggerShake]);
 
   const handleFacebookLogin = useCallback(() => {
-    window.location.href = `${API_URL}/auth/facebook`;
-  }, []);
+    if (oauthStatus?.facebook === false) {
+      setErrors({ general: 'Facebook chưa được cấu hình trên máy chủ. Cần thêm App ID và App Secret trước khi đăng nhập.' });
+      triggerShake();
+      return;
+    }
+
+    window.location.assign(`${API_URL}/auth/facebook`);
+  }, [oauthStatus, triggerShake]);
 
   const isLoading = loginState === 'loading';
   const isCelebrating = loginState === 'celebrating';
@@ -173,6 +170,11 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
         : { opacity: 1, x: 0 }}
       transition={{ duration: reduceMotion ? 0.01 : shouldShake ? 0.5 : 0.54, ease: [0.16, 1, 0.3, 1] }}
     >
+      <nav className="auth-mode-switch" aria-label="Chọn chế độ xác thực">
+        <span aria-current="page">Đăng nhập</span>
+        <Link to="/register">Tạo tài khoản</Link>
+      </nav>
+
       {/* Header */}
       <motion.div
         className="auth-form-heading mb-6 lg:mb-8"
@@ -228,7 +230,9 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
               value={email}
               onChange={(e) => { setEmail(e.target.value); setErrors((prev) => ({ ...prev, email: undefined })); }}
               placeholder="ban@example.com"
+              autoComplete="email"
               disabled={isLoading || isCelebrating}
+              aria-required="true"
               aria-invalid={Boolean(errors.email)}
               aria-describedby={errors.email ? 'login-email-error' : undefined}
               className="auth-field-input w-full h-12 pl-11 pr-4 text-sm disabled:opacity-50"
@@ -269,7 +273,9 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
               value={password}
               onChange={(e) => { setPassword(e.target.value); setErrors((prev) => ({ ...prev, password: undefined })); }}
               placeholder="Nhập mật khẩu"
+              autoComplete="current-password"
               disabled={isLoading || isCelebrating}
+              aria-required="true"
               aria-invalid={Boolean(errors.password)}
               aria-describedby={errors.password ? 'login-password-error' : undefined}
               className="auth-field-input w-full h-12 pl-11 pr-12 text-sm disabled:opacity-50"
@@ -277,6 +283,7 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
+              disabled={isLoading || isCelebrating}
               aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               aria-pressed={showPassword}
               className="auth-password-toggle absolute right-3.5 top-1/2 -translate-y-1/2"
@@ -312,6 +319,7 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
           <label className="flex items-center gap-2 cursor-pointer group">
             <input
               type="checkbox"
+              disabled={isLoading || isCelebrating}
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
               className="login-checkbox"
@@ -344,7 +352,7 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
                 exit={{ opacity: 0, y: reduceMotion ? 0 : -5 }}
                 className="flex items-center justify-center h-12"
               >
-                <ClockLoader size={48} onComplete={handleClockComplete} />
+                <ClockLoader size={36} />
               </motion.div>
             ) : (
               <motion.button
@@ -391,8 +399,8 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55 }}
-            disabled={isLoading || isCelebrating || !oauthStatus.google}
-            title={oauthStatus.google ? 'Dang nhap bang Google' : 'Google chua duoc cau hinh'}
+            disabled={isLoading || isCelebrating}
+            title={oauthStatus?.google === false ? 'Google chưa được cấu hình' : 'Đăng nhập bằng Google'}
             className="login-social-btn w-full h-12 font-medium text-sm
                        flex items-center justify-center gap-2.5 disabled:opacity-50"
           >
@@ -411,8 +419,8 @@ export function LoginForm({ onLoginStateChange, loginState, onLoginSuccess }: Lo
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
-            disabled={isLoading || isCelebrating || !oauthStatus.facebook}
-            title={oauthStatus.facebook ? 'Dang nhap bang Facebook' : 'Facebook chua duoc cau hinh'}
+            disabled={isLoading || isCelebrating}
+            title={oauthStatus?.facebook === false ? 'Facebook chưa được cấu hình' : 'Đăng nhập bằng Facebook'}
             className="login-social-btn w-full h-12 font-medium text-sm
                        flex items-center justify-center gap-2.5 disabled:opacity-50"
           >

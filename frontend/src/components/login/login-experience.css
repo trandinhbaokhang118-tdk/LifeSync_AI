@@ -1,0 +1,164 @@
+/* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4 · Split Studio · LifeSync DNA */
+@import url('../../../tokens.css');
+
+/* Local-time anchor: the ring completes exactly once per minute. */
+.auth-page--login.auth-page--studio .auth-time-ring {
+  position: absolute;
+  top: clamp(4.9rem, 9vh, 7rem);
+  right: clamp(1.5rem, 3.5vw, 3.5rem);
+  z-index: 4;
+  display: grid;
+  width: clamp(6.25rem, 9vw, 7.5rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid color-mix(in oklch, var(--color-accent), transparent 72%);
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--color-paper-2), transparent 24%);
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.16), inset 0 0 1.5rem color-mix(in oklch, var(--color-accent), transparent 90%);
+  backdrop-filter: blur(14px);
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__svg {
+  position: absolute;
+  inset: 0.35rem;
+  width: calc(100% - 0.7rem);
+  height: calc(100% - 0.7rem);
+  overflow: visible;
+  transform: rotate(-90deg);
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__track,
+.auth-page--login.auth-page--studio .auth-time-ring__progress {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__track {
+  stroke: color-mix(in oklch, var(--color-neutral), transparent 82%);
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__progress {
+  stroke: var(--color-accent);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 0.34rem color-mix(in oklch, var(--color-accent), transparent 32%));
+  transition: stroke-dashoffset 0.55s linear;
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__content {
+  display: grid;
+  gap: 0.08rem;
+  justify-items: center;
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__time {
+  font-family: var(--font-display);
+  font-size: clamp(1rem, 1.65vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__date {
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.auth-page--login.auth-page--studio .auth-time-ring__pulse {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 1.15rem;
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+  box-shadow: 0 0 0 0 color-mix(in oklch, var(--color-accent), transparent 55%);
+  animation: auth-time-pulse 2.2s ease-out infinite;
+}
+
+@keyframes auth-time-pulse {
+  70%, 100% { box-shadow: 0 0 0 0.5rem transparent; }
+}
+
+.auth-page--login[data-celebrating='true'] .auth-time-ring {
+  pointer-events: none;
+}
+
+
+
+.auth-page--login.auth-page--studio .auth-layout { grid-template-columns: minmax(0, 1.14fr) minmax(28rem, .86fr); }
+.login-studio { position: relative; min-height: 100svh; overflow: clip; isolation: isolate; background: var(--color-paper-2); border-right: 1px solid var(--color-rule); }
+.login-studio__back { position: absolute; top: 2rem; left: 2.5rem; z-index: 5; display: flex; gap: .65rem; align-items: center; min-height: 44px; color: var(--color-ink-2); font-size: .75rem; }
+.login-studio__back:hover { color: var(--color-accent); }
+.login-studio__back:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 5px; }
+.login-studio__edition { position: absolute; top: 3rem; right: 2.5rem; z-index: 3; color: var(--color-muted); font-size: .58rem; letter-spacing: .16em; }
+.login-studio__stage { position: absolute; inset: 2rem 0 13rem; perspective: 1000px; }
+.login-studio__art { width: 100%; height: 100%; object-fit: contain; mask-image: radial-gradient(ellipse 47% 50% at 50% 48%, var(--color-ink) 55%, transparent 100%); transform-origin: 50% 50%; }
+.auth-page--login.auth-page--studio .auth-motion-backdrop { z-index: 2; opacity: .7; }
+.login-studio__copy { position: absolute; bottom: 3rem; left: 3rem; right: 3rem; z-index: 3; }
+.login-studio__eyebrow { display: flex; align-items: center; gap: .5rem; color: var(--color-muted); font-size: .58rem; font-weight: 700; letter-spacing: .15em; }
+.login-studio__eyebrow > span { height: 5px; width: 5px; border-radius: 50%; background: var(--color-accent); }
+.login-studio h2 { margin: 1rem 0; font-family: var(--font-display); font-size: clamp(1.9rem, 3.2vw, 3.3rem); font-weight: 600; line-height: 1.1; letter-spacing: -.045em; overflow-wrap: anywhere; }
+.login-studio h2 span { color: var(--color-muted); }
+.login-studio__copy p { color: var(--color-muted); font-size: .8rem; line-height: 1.8; }
+.login-studio__topics { display: flex; gap: 1.2rem; align-items: center; margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--color-rule); color: var(--color-ink-2); font-size: .65rem; }
+.login-studio__topics span { display: flex; gap: .4rem; align-items: center; white-space: nowrap; }
+.login-studio__topics svg { width: 14px; height: 14px; color: var(--color-accent); }
+.login-studio__topics > svg { margin-left: auto; }
+.auth-page--login.auth-page--studio .auth-time-ring { top: 7rem; right: 2.5rem; width: 6.25rem; }
+.auth-page--login.auth-page--studio .auth-form-side { background: var(--color-paper); }
+.auth-page--login.auth-page--studio .auth-login-title { font-size: clamp(1.75rem, 2.5vw, 2.4rem); letter-spacing: -.04em; }
+.auth-page--login.auth-page--studio .auth-primary-button { box-shadow: 0 6px 24px color-mix(in oklch, var(--color-accent), transparent 90%); }
+.login-request { width: 100%; display: flex; align-items: center; justify-content: center; gap: .75rem; color: var(--color-accent); font-size: .8rem; }
+.login-request__elapsed { font-variant-numeric: tabular-nums; color: var(--color-muted); }
+.login-request__track, .login-request__arc, .login-request__hand { fill: none; stroke-width: 2; stroke-linecap: round; }
+.login-request__track { stroke: var(--color-rule); }
+.login-request__arc { stroke: var(--color-accent); stroke-dasharray: 70 37; transform-origin: center; animation: login-request-spin 1.6s linear infinite; }
+.login-request__hand { stroke: var(--color-ink); }
+@keyframes login-request-spin { to { transform: rotate(360deg); } }
+.login-portal { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: var(--color-paper); color: var(--color-ink); overflow: clip; pointer-events: none; }
+.login-portal__ring { position: absolute; width: min(72vw, 34rem); aspect-ratio: 1; border: 1px solid var(--color-accent); border-radius: 50%; box-shadow: 0 0 80px color-mix(in oklch, var(--color-accent), transparent 90%), inset 0 0 80px color-mix(in oklch, var(--color-accent), transparent 90%); }
+.login-portal__ring::after { content: ''; position: absolute; inset: -1rem; border: 1px solid var(--color-rule); border-radius: 50%; }
+.login-portal__message { position: relative; display: grid; justify-items: center; text-align: center; padding: 2rem; }
+.login-portal__message svg { color: var(--color-accent); margin-bottom: 1.5rem; }
+.login-portal__message span { font-family: var(--font-body); font-size: .65rem; letter-spacing: .2em; color: var(--color-accent); }
+.login-portal__message strong { margin-top: 1rem; font-family: var(--font-display); font-size: clamp(2rem, 5vw, 4rem); font-weight: 600; line-height: 1.1; letter-spacing: -.04em; }
+.login-portal__message p { margin-top: 1.5rem; font-family: var(--font-body); font-size: .8rem; color: var(--color-muted); }
+@media (min-width: 1024px) and (max-height: 780px) {
+  .login-studio__stage { inset: 1rem 0 10rem; }
+  .login-studio__copy { bottom: 2rem; }
+  .login-studio h2 { font-size: 2.25rem; }
+  .login-studio__copy p { display: none; }
+}
+@media (max-width: 1023px) {
+  .auth-page--login.auth-page--studio .auth-layout { grid-template-columns: minmax(0, 1fr); }
+  .login-studio { min-height: 470px; border-right: 0; border-bottom: 1px solid var(--color-rule); }
+  .login-studio__stage { inset: -4rem -8rem -3rem 28%; }
+  .login-studio__copy { left: 2rem; bottom: 2rem; right: 2rem; }
+  .login-studio h2 { font-size: 2.4rem; }
+  .login-studio__copy p { max-width: 21rem; }
+  .login-studio__topics { max-width: 28rem; }
+  .auth-page--login.auth-page--studio .auth-time-ring { top: 6rem; left: 2rem; right: auto; }
+  .auth-page--login.auth-page--studio .auth-form-side { min-height: auto; padding-block: 3rem 1.5rem; }
+}
+@media (max-width: 600px) {
+  .login-studio { min-height: 325px; }
+  .login-studio__back { top: .75rem; left: 1.25rem; }
+  .login-studio__edition { display: none; }
+  .login-studio__stage { inset: -1.5rem -4rem 1rem 17%; }
+  .auth-page--login.auth-page--studio .auth-time-ring { top: 4.5rem; left: 1.25rem; width: 5rem; }
+  .login-studio__copy { left: 1.25rem; right: 1.25rem; bottom: 1.25rem; }
+  .login-studio__eyebrow { font-size: .48rem; letter-spacing: .08em; }
+  .login-studio h2 { font-size: 1.8rem; margin: .75rem 0 0; text-shadow: 0 2px 15px var(--color-paper); }
+  .login-studio__copy p, .login-studio__topics { display: none; }
+  .auth-page--login.auth-page--studio .auth-form-side { padding: 2rem 1.25rem 1.5rem; }
+  .auth-page--login.auth-page--studio .auth-mode-switch { margin-bottom: 1.5rem; }
+  .auth-page--login.auth-page--studio .auth-login-subtitle { font-size: .8rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-request__arc { animation: none; }
+  .login-studio__art { transform: none !important; }
+}

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { AuthVisual } from '../components/login/AuthVisual';
+import { LoginExperience } from '../components/login/LoginExperience';
+import { useLoginTransition } from '../store/login-transition.store';
 import { LoginForm, type LoginState } from '../components/login/LoginForm';
 import { getDefaultRouteForUser } from '../lib/auth';
 import { useAuthStore } from '../store/auth.store';
 import type { AuthResponse } from '../types';
 import '../components/login/login.css';
 import '../components/login/login-enterprise.css';
+import '../components/login/login-experience.css';
 
 export function Login() {
   const [loginState, setLoginState] = useState<LoginState>('idle');
@@ -46,22 +47,20 @@ export function Login() {
 
   const isCelebrating = loginState === 'celebrating';
 
-  return (
-    <main className="auth-page auth-page--login">
-      <AnimatePresence>
-        {isCelebrating && (
-          <motion.div
-            className="auth-success-wash"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.42, ease: [0.16, 1, 0.3, 1] }}
-          />
-        )}
-      </AnimatePresence>
+  useEffect(() => {
+    if (isCelebrating) useLoginTransition.getState().setPhase('cover');
+  }, [isCelebrating]);
 
+  useEffect(() => () => {
+    if (!useAuthStore.getState().isAuthenticated) {
+      useLoginTransition.getState().setPhase('idle');
+    }
+  }, []);
+
+  return (
+    <main className="auth-page auth-page--login auth-page--studio">
       <div className="auth-layout">
-        <AuthVisual mode="login" celebrating={isCelebrating} />
+        <LoginExperience />
         <section className="auth-form-side" aria-label="Đăng nhập LifeSync AI">
           <LoginForm
             loginState={loginState}

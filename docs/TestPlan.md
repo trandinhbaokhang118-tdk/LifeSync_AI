@@ -235,3 +235,12 @@ npm run test:cov    # Coverage report
 - [ ] Overdue tasks is correct
 - [ ] Completed this week is correct
 - [ ] Focus time is calculated correctly
+# Login studio verification — 2026-09-21
+
+- Frontend production build and targeted ESLint pass.
+- Tabbit browser checks at 320, 375, 414, 768 and 1440 px: no horizontal overflow. Desktop and mobile screenshots inspected.
+- Empty submission shows associated email/password errors.
+- Mocked delayed 401 response: elapsed loading indicator remains visible, fields disabled while pending, readable error and retry enabled afterward.
+- Mocked successful login with a complete synthetic User fixture: circle overlay appears, route changes to `/app`, overlay clears within five seconds; no browser page errors. Test session removed afterward. This verifies UI orchestration, not live backend authentication or OAuth.
+- Reduced-motion emulation: no WebGL canvas; hero transform is `none`.
+- Asset and exact generation prompt: `docs/design-dna-auth.json` (`meta.login_asset`).
