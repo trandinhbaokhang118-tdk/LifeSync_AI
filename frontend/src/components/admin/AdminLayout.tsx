@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/auth.store';
 import '../../admin-theme.css';
 import '../../pages/admin/admin-dashboard.css';
-const groups=[{label:'Tổng quan',icon:Activity,links:[{to:'/admin',label:'Bảng điều khiển',end:true},{to:'/admin/activity',label:'Nhật ký hoạt động'}]},{label:'Người dùng',icon:Users,links:[{to:'/admin/users',label:'Danh sách tài khoản'}]},{label:'Hệ thống',icon:Database,links:[{to:'/admin/database',label:'Quản lý dữ liệu'},{to:'/admin/settings',label:'Cấu hình hệ thống'}]}];
+const groups=[{label:'Tổng quan',icon:Activity,links:[{to:'/admin',label:'Bảng điều khiển',end:true},{to:'/admin/activity',label:'Nhật ký hoạt động'}]},{label:'Người dùng',icon:Users,links:[{to:'/admin/users',label:'Danh sách tài khoản'}]},{label:'Nội dung & giao diện',icon:Layers,links:[{to:'/admin/landing',label:'Biên tập landing page'}]},{label:'Hệ thống',icon:Database,links:[{to:'/admin/database',label:'Quản lý dữ liệu'},{to:'/admin/settings',label:'Cấu hình hệ thống'}]}];
 export function AdminLayout(){
  const {user,logout}=useAuthStore();const navigate=useNavigate();
- const [mobile,setMobile]=useState(false);const [collapsed,setCollapsed]=useState(false);const [search,setSearch]=useState('');const [open,setOpen]=useState<Record<string,boolean>>({'Tổng quan':true,'Người dùng':true,'Hệ thống':true});
+ const [mobile,setMobile]=useState(false);const [collapsed,setCollapsed]=useState(false);const [search,setSearch]=useState('');const [open,setOpen]=useState<Record<string,boolean>>({'Tổng quan':true,'Người dùng':true,'Hệ thống':true,'Nội dung & giao diện':true});
  useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setMobile(false);setSearch('');}};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[]);
  const results=groups.flatMap(g=>g.links).filter(l=>l.label.toLowerCase().includes(search.toLowerCase()));
  return <div className={`admin-theme px-shell ${collapsed?'px-collapsed':''}`}>

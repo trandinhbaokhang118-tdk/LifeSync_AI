@@ -39,7 +39,7 @@ export async function registerServiceWorker(
             immediate: true,
             onNeedRefresh() {
                 options.onNeedRefresh?.();
-                if (window.location.pathname.startsWith('/admin')) {
+                if (window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/landing') {
                     void updateSW(true);
                 }
             },

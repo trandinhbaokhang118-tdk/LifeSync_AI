@@ -232,3 +232,25 @@ UPDATE users SET role = 'ADMIN' WHERE email = 'user@example.com';
 - [ ] System health monitoring
 - [ ] Rate limiting configuration
 - [ ] Scheduled tasks management
+
+## Biên tập landing page bằng giao diện
+
+Vào **Admin → Nội dung & giao diện → Biên tập landing page** (`/admin/landing`), bằng tài khoản ADMIN đăng nhập qua cổng admin.
+
+1. Rê chuột trên trang xem trước để chọn tiêu đề, đoạn văn, nút, ảnh hoặc khối. Có thể chọn bằng danh sách bên phải (hữu ích với ảnh banner bị lớp phủ che).
+2. Sửa chữ, màu chữ/nền, liên kết, URL ảnh hoặc tải PNG/JPEG/WebP từ máy (tối đa 3 MB). Ảnh tải lên là tài nguyên công khai; không dùng tài liệu hoặc ảnh riêng tư.
+3. Dùng **Banner** hoặc **Bài viết** để thêm nội dung chiến dịch. Chọn vị trí sau banner chính/trước chân trang; đổi thứ tự bằng Lên/Xuống.
+4. **Ẩn khỏi trang công khai** giữ thành phần mờ trong chế độ biên tập để khôi phục. Với nội dung mặc định dùng **Khôi phục mặc định**; với khối thêm mới dùng **Xóa khối này**. Hoàn tác/Làm lại giữ tối đa 40 bước trong phiên.
+5. **Lưu nháp** lưu vào máy chủ, chưa thay đổi trang công khai. **Xem trước** ẩn công cụ chọn và hiển thị như khách truy cập. Chuyển Máy tính/Điện thoại để kiểm tra.
+6. **Xuất bản** chỉ khả dụng khi bản nháp đã lưu. Xác nhận trong hộp thoại để cập nhật nội dung công khai tại `/landing` và trang chủ dành cho khách.
+
+Nếu gặp thông báo xung đột phiên bản, giữ/sao chép thay đổi cần thiết rồi tải lại bản nháp mới. Không tự ghi đè nội dung của phiên khác. Khi rời trang chưa lưu, ứng dụng sẽ cảnh báo.
+
+### Vận hành tính năng CMS
+
+- Cần migration `20260921010000_landing_content` và Prisma Client mới trước khi khởi động backend. Migration chỉ thêm `landing_content` và `landing_assets`.
+- Nội dung và ảnh lưu trong MySQL, không nằm trên filesystem tạm của Render. Ảnh đã tải được giữ lại để các bản nháp và URL đang dùng không bị hỏng.
+- `GET /content/landing` chỉ trả bản đã xuất bản, không cache. Landing mặc định vẫn hiển thị nếu chưa xuất bản hoặc CMS không sẵn sàng.
+- `GET/PUT /admin/landing`, `POST /admin/landing/publish`, `POST /admin/landing/assets`: JWT + phiên admin + role ADMIN. Save/publish kiểm tra revision để chống ghi đè.
+- Không nhập HTML, JavaScript hoặc CSS tùy ý: nội dung là text thuần, màu HEX, URL HTTPS hoặc đường dẫn nội bộ. Các phần tử có `data-cms` là hợp đồng định danh nội dung; không đổi các mã này khi sửa layout nếu muốn giữ nội dung đã biên tập.
+- Thêm bài viết hiện là khối nội dung trên landing page, chưa phải hệ thống blog có URL riêng, bình luận hoặc lịch xuất bản tự động.

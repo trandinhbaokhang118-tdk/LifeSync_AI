@@ -1,0 +1,81 @@
+.cms-selection-outline {
+  position: fixed;
+  z-index: 99998;
+  pointer-events: none;
+  border: 2px solid #3874ff;
+  background: #3874ff0a;
+  border-radius: 3px;
+}
+.cms-hover-toolbar {
+  position: fixed;
+  z-index: 99999;
+  display: flex;
+  gap: 1px;
+  box-shadow: 0 3px 15px #0004;
+  border-radius: 5px;
+  background: #fff;
+  color: #15213b;
+  padding: 3px;
+  font: 12px system-ui;
+}
+.cms-hover-toolbar[hidden],
+.cms-selection-outline[hidden] {
+  display: none;
+}
+.cms-hover-toolbar button {
+  border: 0;
+  border-radius: 3px;
+  padding: 6px 8px;
+  background: #fff;
+  color: #15213b;
+  cursor: pointer;
+}
+.cms-hover-toolbar button:hover {
+  background: #e7eeff;
+  color: #2457ce;
+}
+.cms-block {
+  padding: clamp(28px, 6vw, 90px) var(--page-gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  background: var(--color-paper-2);
+  color: var(--color-ink);
+}
+.cms-block:has(> img) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cms-block img {
+  width: 100%;
+  max-height: 500px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+.cms-block h2 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 52px);
+  line-height: 1.15;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+  color: inherit;
+}
+.cms-block-body {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 17px;
+  margin-bottom: 24px;
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+.cms-block > div {
+  align-self: center;
+  min-width: 0;
+}
+.cms-block--banner {
+  border-block: 1px solid var(--color-rule);
+}
+@media (max-width: 650px) {
+  .cms-block:has(> img) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

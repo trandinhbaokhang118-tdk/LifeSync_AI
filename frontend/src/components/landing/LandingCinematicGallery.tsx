@@ -13,7 +13,7 @@ const scenes = [
 
 const FRAME_DURATION = 5600;
 
-export function LandingCinematicGallery() {
+export function LandingCinematicGallery({customImage, 'data-cms': cmsId}:{customImage?:string; 'data-cms'?:string}) {
     const reduceMotion = useReducedMotion();
     const [activeScene, setActiveScene] = useState(0);
     const [manuallyPaused, setManuallyPaused] = useState(false);
@@ -35,8 +35,11 @@ export function LandingCinematicGallery() {
         setManuallyPaused(true);
     };
 
+    if(customImage) return <div data-cms={cmsId} className="cinematic-gallery"><img className="cinematic-gallery__image" src={customImage} alt="Banner LifeSync"/></div>;
+
     return (
         <div
+            data-cms={cmsId}
             className={`cinematic-gallery ${playing ? 'is-playing' : ''}`}
             aria-label="Vòng phim về nhịp làm việc và vận động của LifeSync"
             onMouseEnter={() => setInteractionPaused(true)}

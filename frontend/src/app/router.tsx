@@ -34,6 +34,7 @@ const WorkoutHistory = lazy(() => import('../pages/WorkoutHistory').then((m) => 
 const WorkoutDetail = lazy(() => import('../pages/WorkoutDetail').then((m) => ({ default: m.WorkoutDetail })));
 const GpsTracking = lazy(() => import('../pages/GpsTracking').then((m) => ({ default: m.GpsTracking })));
 const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard })));
+const LandingEditor = lazy(() => import('../pages/admin/LandingEditor').then((m) => ({ default: m.LandingEditor })));
 const UserManagement = lazy(() => import('../pages/admin/UserManagement').then((m) => ({ default: m.UserManagement })));
 const ActivityLogs = lazy(() => import('../pages/admin/ActivityLogs').then((m) => ({ default: m.ActivityLogs })));
 const DatabaseManagement = lazy(() => import('../pages/admin/DatabaseManagement').then((m) => ({ default: m.DatabaseManagement })));
@@ -67,6 +68,7 @@ export const router = createBrowserRouter(
             element: <LandingEntry />,
             errorElement: <RouteError />,
         },
+        { path: '/landing', element: <Landing />, errorElement: <RouteError /> },
         {
             path: '/login',
             element: <Login />,
@@ -111,6 +113,7 @@ export const router = createBrowserRouter(
             ),
             errorElement: <RouteError />,
             children: [
+                { path: 'landing', element: <LandingEditor /> },
                 {
                     index: true,
                     element: <AdminDashboard />,

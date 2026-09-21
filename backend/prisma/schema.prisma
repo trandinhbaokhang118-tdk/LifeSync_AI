@@ -437,3 +437,23 @@ model DailyActivity {
   @@index([date])
   @@map("daily_activities")
 }
+
+// Landing content is versioned independently from account and task data.
+model LandingContent {
+  id          String   @id @default("landing")
+  draft       Json
+  published   Json?
+  revision    Int      @default(0)
+  publishedAt DateTime?
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  @@map("landing_content")
+}
+
+model LandingAsset {
+  id        String   @id @default(uuid())
+  mime      String
+  bytes     Bytes    @db.LongBlob
+  createdAt DateTime @default(now())
+  @@map("landing_assets")
+}
