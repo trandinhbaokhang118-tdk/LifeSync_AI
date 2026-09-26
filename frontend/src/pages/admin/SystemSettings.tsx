@@ -1,101 +1,17 @@
-import { CreditCard, Database, Globe, Shield } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Clipboard, CreditCard, Database, Globe, Info, Shield, SlidersHorizontal } from 'lucide-react';
 import '../../admin-theme.css';
 import { API_URL } from '../../lib/api-config';
 
 const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';
+function CopyValue({ value }: { value: string }) { const [copied, setCopied] = useState(false); const copy = async () => { await navigator.clipboard.writeText(value); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }; return <button className="admin-inline-copy" type="button" onClick={() => void copy()} aria-label="Sao chép giá trị">{copied ? <Check size={14} /> : <Clipboard size={14} />}</button>; }
 
 export function SystemSettings() {
-    const frontendOrigin = window.location.origin;
-    const apiBaseUrl = API_URL;
-
-    const runtimeCards = [
-        {
-            title: 'Frontend origin',
-            value: frontendOrigin,
-            description: 'Current host serving the admin panel.',
-            icon: Globe,
-            iconClassName: 'from-cyan-500 to-blue-500',
-        },
-        {
-            title: 'API base URL',
-            value: apiBaseUrl,
-            description: 'Resolved from web/native environment settings for the current platform.',
-            icon: Database,
-            iconClassName: 'from-violet-500 to-fuchsia-600',
-        },
-        {
-            title: 'Billing',
-            value: paymentsEnabled ? 'Enabled' : 'Disabled',
-            description: paymentsEnabled
-                ? 'Checkout is exposed to the UI.'
-                : 'Safe default for handoff until a real gateway is integrated.',
-            icon: CreditCard,
-            iconClassName: 'from-amber-500 to-orange-600',
-        },
-        {
-            title: 'Admin mode',
-            value: 'Read-only runbook',
-            description: 'Production changes belong in .env files and hosting configuration.',
-            icon: Shield,
-            iconClassName: 'from-emerald-500 to-green-600',
-        },
-    ];
-
-    return (
-        <div className="admin-theme admin-container p-6 md:p-8">
-            <div className="mb-8">
-                <h1 className="admin-title mb-2">Deployment Settings</h1>
-                <p className="admin-title-sub">Operational reference for the current build.</p>
-            </div>
-
-            <div className="mb-6 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">Read-only</p>
-                <h2 className="mt-2 text-2xl font-bold">Configuration changes are applied outside this page.</h2>
-                <p className="mt-3 max-w-3xl text-sm opacity-80">
-                    Update backend `.env`, frontend `.env`, or your Render environment variables, then redeploy. The
-                    admin UI intentionally avoids fake save actions for production settings.
-                </p>
-            </div>
-
-            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {runtimeCards.map((card) => (
-                    <div key={card.title} className="admin-glass-card p-6">
-                        <div
-                            className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${card.iconClassName} shadow-lg`}
-                        >
-                            <card.icon className="h-5 w-5 text-white" />
-                        </div>
-                        <p className="text-sm opacity-70">{card.title}</p>
-                        <p className="mt-2 break-all text-lg font-semibold">{card.value}</p>
-                        <p className="mt-2 text-sm opacity-75">{card.description}</p>
-                    </div>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <div className="admin-glass-card p-6">
-                    <h2 className="mb-4 text-lg font-bold">Backend environment checklist</h2>
-                    <ul className="space-y-3 text-sm opacity-85">
-                        <li>`DATABASE_URL` points to production MySQL.</li>
-                        <li>`JWT_SECRET` is rotated from the local example value.</li>
-                        <li>`FRONTEND_URL` matches the public web domain.</li>
-                        <li>`PAYMENTS_ENABLED` stays `false` until gateway integration is complete.</li>
-                        <li>OAuth callback URLs match the deployed backend domain.</li>
-                    </ul>
-                </div>
-
-                <div className="admin-glass-card p-6">
-                    <h2 className="mb-4 text-lg font-bold">Frontend release checklist</h2>
-                    <ul className="space-y-3 text-sm opacity-85">
-                        <li>`VITE_WEB_API_URL` or `VITE_API_URL` points to the web backend URL.</li>
-                        <li>`VITE_ANDROID_API_URL` or `VITE_NATIVE_API_URL` is set for Android devices/emulators.</li>
-                        <li>`VITE_PAYMENTS_ENABLED` matches the backend billing state.</li>
-                        <li>Run `npm run build` before shipping the web app.</li>
-                        <li>Run `npx cap sync android` before creating an Android release.</li>
-                        <li>Provide signing files only on trusted release machines.</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    );
+    const [showAdvanced, setShowAdvanced] = useState(false); const frontendOrigin = window.location.origin;
+    const runtime = [{ title: 'Frontend origin', value: frontendOrigin, description: 'Tên miền hiện đang phục vụ bảng quản trị.', icon: Globe, tone: 'blue' }, { title: 'API backend', value: API_URL, description: 'Endpoint mà web app đang sử dụng.', icon: Database, tone: 'violet' }, { title: 'Thanh toán', value: paymentsEnabled ? 'Đang bật' : 'Đang tắt', description: paymentsEnabled ? 'Checkout đã được phép trong bản build.' : 'Đang tắt an toàn cho đến khi gateway sẵn sàng.', icon: CreditCard, tone: 'amber' }, { title: 'Quyền quản trị', value: 'Đã bảo vệ', description: 'Các route hệ thống yêu cầu phiên ADMIN hợp lệ.', icon: Shield, tone: 'green' }];
+    return <div className="admin-theme admin-container p-6 md:p-8"><div className="admin-page-head"><div><p className="admin-kicker">HỆ THỐNG / CẤU HÌNH</p><h1 className="admin-title">Cấu hình hệ thống</h1><p className="admin-title-sub">Một nơi để kiểm tra runtime, release và các biến vận hành của LifeSync.</p></div><span className="admin-status-pill"><span /> Đang vận hành</span></div>
+        <div className="admin-ops-banner"><div className="admin-ops-icon"><SlidersHorizontal size={21} /></div><div><strong>Cấu hình được quản lý theo môi trường</strong><p>Giá trị dưới đây được đọc từ bản build và backend. Thay đổi production nằm trong biến môi trường của hosting, sau đó redeploy để tránh chỉnh nhầm trực tiếp trên dữ liệu thật.</p></div></div>
+        <section className="admin-settings-grid">{runtime.map(({ title, value, description, icon: Icon, tone }) => <article className="admin-glass-card admin-runtime-card" key={title}><div className={`admin-soft-icon ${tone}`}><Icon size={18} /></div><div className="admin-runtime-copy"><p>{title}</p><strong>{value}</strong><span>{description}</span></div><CopyValue value={value} /></article>)}</section>
+        <section className="admin-settings-columns"><article className="admin-glass-card admin-settings-panel"><div className="admin-card-heading"><span className="admin-soft-icon blue"><Info size={18} /></span><div><h2>Checklist phát hành</h2><p>Kiểm tra nhanh trước khi đưa thay đổi lên production.</p></div></div><div className="admin-checklist"><div><span>1</span><p>API URL trỏ đúng backend production và phản hồi health check.</p></div><div><span>2</span><p>JWT secret, database URL và OAuth secret đã được đặt trong hosting.</p></div><div><span>3</span><p>PAYMENTS_ENABLED khớp với trạng thái gateway thực tế.</p></div><div><span>4</span><p>Chạy migration trước khi mở tính năng dùng bảng mới.</p></div></div></article><article className="admin-glass-card admin-settings-panel"><div className="admin-card-heading"><span className="admin-soft-icon green"><Shield size={18} /></span><div><h2>Phạm vi chỉnh sửa</h2><p>Phân biệt thiết lập giao diện cá nhân và vận hành hệ thống.</p></div></div><div className="admin-scope-list"><div><b>Ngay trong ứng dụng</b><span>Profile, ngôn ngữ, theme và thông báo của tài khoản.</span></div><div><b>Trong bảng quản trị</b><span>Nội dung landing page, tài khoản, log và runbook backup.</span></div><div><b>Trong hosting</b><span>Database, JWT, OAuth, payment gateway và URL triển khai.</span></div></div><button type="button" className="admin-settings-toggle" onClick={() => setShowAdvanced(v => !v)}>{showAdvanced ? 'Ẩn chi tiết kỹ thuật' : 'Hiện chi tiết kỹ thuật'}</button>{showAdvanced && <pre className="admin-env-hint"><code>VITE_WEB_API_URL{`\n`}VITE_PAYMENTS_ENABLED{`\n`}DATABASE_URL{`\n`}JWT_SECRET{`\n`}FRONTEND_URL</code></pre>}</article></section>
+    </div>;
 }

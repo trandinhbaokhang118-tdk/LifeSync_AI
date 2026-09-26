@@ -451,9 +451,14 @@ export class AdminService {
     async createBackup() {
         return {
             status: 'manual_required',
-            message: 'Automated SQL export is not exposed from the API. Use the mysqldump and mysql commands from docs/Deployment.md.',
-            backupCommand: 'docker exec lifesync_ai_mysql mysqldump -u tm_user -ptm_password lifesync_ai > backup.sql',
-            restoreCommand: 'docker exec -i lifesync_ai_mysql mysql -u tm_user -ptm_password lifesync_ai < backup.sql',
+            message: 'API chỉ kiểm tra runbook. Hãy chạy lệnh trên máy triển khai với biến môi trường bảo mật và kiểm tra file trước khi phục hồi.',
+            backupCommand: 'mysqldump --defaults-extra-file="$MYSQL_CNF" "$MYSQL_DATABASE" > "backup-$(date +%Y%m%d-%H%M%S).sql"',
+            restoreCommand: 'mysql --defaults-extra-file="$MYSQL_CNF" "$MYSQL_DATABASE" < "./backup.sql"',
+            safety: [
+                'Lưu file backup ngoài thư mục public và phân quyền chỉ operator được đọc.',
+                'Kiểm tra kích thước, checksum và thử phục hồi trên staging trước production.',
+                'Không ghi mật khẩu trực tiếp vào lệnh, log hoặc ticket.',
+            ],
             timestamp: new Date(),
         };
     }
