@@ -5,7 +5,7 @@ The AI chat uses Gemini through the Google `generateContent` API. Set these prod
 ```text
 AI_PROVIDER=gemini
 GEMINI_CHAT_API_KEY=<dedicated Google AI Studio chat key>
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.8-flash
 ```
 
 `GEMINI_CHAT_API_KEY` is a deployment secret and must not be committed to the repository. Add it in the Render API service's Environment settings, then save and redeploy. Keep the existing `GEMINI_API_KEY` for image generation. Chat prefers the dedicated key; if it is absent or blank, it uses `GEMINI_API_KEY` for backward compatibility. `GET /ai-chat/status` returns `configured: true` when a provider key is present; a successful chat request verifies the key's validity and quota.

@@ -144,7 +144,7 @@ export class AIChatService {
             case 'openrouter':
                 return 'openai/gpt-3.5-turbo';
             case 'gemini':
-                return 'gemini-2.5-flash';
+return 'gemini-3.8-flash';
             default:
                 return 'gpt-3.5-turbo';
         }
@@ -379,8 +379,13 @@ export class AIChatService {
         }
 
         this.logger.error(`All AI providers failed. Last error: ${(lastError as Error)?.message}`);
+        const status = (lastError as AxiosError)?.response?.status;
+        const code = status === 404 ? 'AI_MODEL_UNAVAILABLE'
+            : status === 429 ? 'AI_QUOTA_EXCEEDED'
+            : status === 401 || status === 403 ? 'AI_PROVIDER_ACCESS_DENIED'
+            : 'AI_PROVIDERS_UNAVAILABLE';
         throw new ServiceUnavailableException({
-            code: 'AI_PROVIDERS_UNAVAILABLE',
+            code,
             message: 'All configured AI providers are unavailable',
         });
     }

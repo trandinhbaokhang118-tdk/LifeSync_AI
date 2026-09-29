@@ -13,6 +13,22 @@ function setup(tier = 'FREE') {
 }
 describe('AI task conversations', () => {
     it.each([
+        [404, 'AI_MODEL_UNAVAILABLE'],
+        [429, 'AI_QUOTA_EXCEEDED'],
+        [403, 'AI_PROVIDER_ACCESS_DENIED'],
+        [500, 'AI_PROVIDERS_UNAVAILABLE'],
+    ])('reports provider HTTP %s without exposing its response', async (status, code) => {
+        const config = { get: (key: string) => ({ AI_PROVIDER: 'gemini', GEMINI_CHAT_API_KEY: 'test-key' }[key]) };
+        const service = new AIChatService({} as never, config as never, {} as never);
+        const post = jest.spyOn(axios, 'post').mockRejectedValue({ response: { status, data: 'private provider detail' } });
+        try {
+            const call = (service as unknown as { callOpenAI: (system: string, message: string) => Promise<string> });
+            await expect(call.callOpenAI('System', 'Hi')).rejects.toMatchObject({ response: { code } });
+        } finally {
+            post.mockRestore();
+        }
+    });
+    it.each([
         { chatKey: 'dedicated-chat-key', expectedKey: 'dedicated-chat-key' },
         { chatKey: undefined, expectedKey: 'test-gemini-key' },
         { chatKey: '   ', expectedKey: 'test-gemini-key' },

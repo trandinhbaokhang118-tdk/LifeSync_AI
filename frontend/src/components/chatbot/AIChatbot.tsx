@@ -136,11 +136,18 @@ export default function AIChatbot() {
             if (chatData.actions && chatData.actions.length > 0) {
                 handleActions(chatData.actions);
             }
-        } catch {
+        } catch (error) {
+            const code = (error as { response?: { data?: { error?: { code?: string } } } }).response?.data?.error?.code;
+            const errors: Record<string, string> = {
+                AI_MODEL_UNAVAILABLE: 'Model AI đang cấu hình không khả dụng. Quản trị viên cần cập nhật model cho chat.',
+                AI_QUOTA_EXCEEDED: 'Dịch vụ AI đã chạm giới hạn yêu cầu hoặc hạn mức sử dụng. Vui lòng thử lại sau.',
+                AI_PROVIDER_ACCESS_DENIED: 'Dịch vụ AI không chấp nhận quyền truy cập hiện tại. Quản trị viên cần kiểm tra cấu hình kết nối.',
+                AI_PROVIDER_NOT_CONFIGURED: 'Chat AI chưa được cấu hình. Vui lòng liên hệ quản trị viên.',
+            };
             const errorMessage: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: 'Xin lỗi, tôi gặp sự cố. Vui lòng thử lại sau.',
+                content: (code && errors[code]) || 'Xin lỗi, tôi gặp sự cố. Vui lòng thử lại sau.',
                 timestamp: new Date(),
             };
             setMessages((prev) => [...prev, errorMessage]);
