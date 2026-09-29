@@ -5,7 +5,6 @@ import {
     CalendarRange,
     Timer,
     BarChart3,
-    Bell,
     Settings,
     Users,
     Activity,
@@ -36,7 +35,6 @@ export const userNavItems: NavItem[] = [
     { path: '/app/fitness', icon: Activity, label: 'Fitness', labelKey: 'nav.fitness' },
     { path: '/app/gps-tracking', icon: Footprints, label: 'Track Lab', labelKey: 'nav.trackLab' },
     { path: '/app/pricing', icon: Zap, label: 'Nâng cấp Pro', labelKey: 'nav.pricing' },
-    { path: '/app/notifications', icon: Bell, label: 'Thông báo', labelKey: 'nav.notifications' },
     { path: '/app/settings', icon: Settings, label: 'Cài đặt', labelKey: 'nav.settings' },
 ];
 

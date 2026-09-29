@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, Check, CheckCheck, Clock } from 'lucide-react';
 import { Button, Badge, SkeletonList, EmptyNotifications, ErrorState } from '../components/ui';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
@@ -8,13 +8,22 @@ import { showToast } from '../components/ui/toast';
 import { cn, formatDateTime } from '../lib/utils';
 import type { Notification } from '../types';
 
-export function Notifications() {
+export function Notifications({ embedded = false }: { embedded?: boolean }) {
     const queryClient = useQueryClient();
-    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+    const { markAsRead, markAllAsRead } = useNotificationStore();
 
-    const { isLoading, isError, refetch } = useQuery({
-        queryKey: ['notifications'],
-        queryFn: () => notificationsService.getAll(1, 50),
+    const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isFetchNextPageError } = useInfiniteQuery({
+        queryKey: ['notifications', 'history'],
+        initialPageParam: 1,
+        queryFn: ({ pageParam }) => notificationsService.getAll(pageParam, 50),
+        getNextPageParam: (lastPage) => lastPage.meta.page < lastPage.meta.totalPages ? lastPage.meta.page + 1 : undefined,
+        refetchInterval: 30000,
+    });
+    const notifications = data?.pages.flatMap(page => page.data) ?? [];
+    const { data: unreadCount = 0 } = useQuery({
+        queryKey: ['notifications', 'unread-count'],
+        queryFn: notificationsService.getUnreadCount,
+        refetchInterval: 30000,
     });
 
     const markAsReadMutation = useMutation({
@@ -38,17 +47,17 @@ export function Notifications() {
 
     const unreadNotifications = notifications.filter(n => !n.readAt);
 
-    if (isError) {
+    if (isError && !data) {
         return <ErrorState onRetry={refetch} />;
     }
 
     return (
-        <div className="space-y-6 pb-20 md:pb-0">
+        <div className={embedded ? "space-y-4" : "space-y-6 pb-20 md:pb-0"}>
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-[var(--text)]">Thông báo</h1>
-                    <div className="mt-1 flex items-center gap-2">
+                    {!embedded && <h1 className="text-2xl font-bold text-[var(--text)]">Thông báo</h1>}
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
                         <p className="text-[var(--text-2)]">
                             {unreadCount > 0 ? 'Bạn có thông báo mới cần xem' : 'Bạn đã xem hết thông báo'}
                         </p>
@@ -79,7 +88,7 @@ export function Notifications() {
                         Tất cả
                         {notifications.length > 0 && (
                             <Badge variant="default" className="ml-2 px-2 py-0.5">
-                                {notifications.length}
+                                {data?.pages[0]?.meta.total ?? notifications.length}
                             </Badge>
                         )}
                     </TabsTrigger>
@@ -105,6 +114,7 @@ export function Notifications() {
                                     key={notification.id}
                                     notification={notification}
                                     onMarkAsRead={() => markAsReadMutation.mutate(notification.id)}
+                                    pending={markAsReadMutation.isPending}
                                 />
                             ))}
                         </div>
@@ -115,7 +125,9 @@ export function Notifications() {
                     {isLoading ? (
                         <SkeletonList count={5} />
                     ) : unreadNotifications.length === 0 ? (
-                        <EmptyNotifications />
+                        unreadCount > 0 && hasNextPage
+                            ? <p className="py-6 text-sm text-[var(--text-2)]">Còn thông báo chưa đọc trong lịch sử. Chọn “Tải thêm thông báo” để xem.</p>
+                            : <EmptyNotifications />
                     ) : (
                         <div className="space-y-2">
                             {unreadNotifications.map((notification) => (
@@ -123,12 +135,17 @@ export function Notifications() {
                                     key={notification.id}
                                     notification={notification}
                                     onMarkAsRead={() => markAsReadMutation.mutate(notification.id)}
+                                    pending={markAsReadMutation.isPending}
                                 />
                             ))}
                         </div>
                     )}
                 </TabsContent>
             </Tabs>
+            {hasNextPage && <div className="space-y-2 text-center">
+                {isFetchNextPageError && <p role="alert" className="text-sm text-[var(--text-2)]">Chưa tải được thông báo cũ. Vui lòng thử lại.</p>}
+                <Button variant="outline" size="sm" loading={isFetchingNextPage} onClick={() => void fetchNextPage()}>Tải thêm thông báo</Button>
+            </div>}
         </div>
     );
 }
@@ -137,9 +154,10 @@ export function Notifications() {
 interface NotificationCardProps {
     notification: Notification;
     onMarkAsRead: () => void;
+    pending: boolean;
 }
 
-function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps) {
+function NotificationCard({ notification, onMarkAsRead, pending }: NotificationCardProps) {
     const isUnread = !notification.readAt;
 
     return (
@@ -169,10 +187,10 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <div className="mb-1 flex items-start justify-between gap-3">
+                    <div className="mb-1 flex flex-wrap items-start justify-between gap-2">
                         <h3
                             className={cn(
-                                'leading-6',
+                                '!text-base break-words leading-6',
                                 isUnread
                                     ? 'font-semibold text-[var(--text)]'
                                     : 'text-[var(--text-2)]'
@@ -188,7 +206,7 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
                         </Badge>
                     </div>
 
-                    <p className={cn('mb-3 text-sm leading-6', isUnread ? 'text-[var(--text-2)]' : 'text-[var(--text-3)]')}>
+                    <p className={cn('mb-3 whitespace-pre-wrap break-words text-sm leading-6', isUnread ? 'text-[var(--text-2)]' : 'text-[var(--text-3)]')}>
                         {notification.message}
                     </p>
 
@@ -203,6 +221,7 @@ function NotificationCard({ notification, onMarkAsRead }: NotificationCardProps)
                                 variant="ghost"
                                 size="sm"
                                 onClick={onMarkAsRead}
+                                disabled={pending}
                                 className="h-8 border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] px-3 text-xs font-semibold text-[var(--primary)] hover:border-[var(--primary)]"
                             >
                                 <Check className="w-3 h-3 mr-1" />

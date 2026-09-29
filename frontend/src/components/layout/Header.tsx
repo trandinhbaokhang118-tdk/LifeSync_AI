@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
     Plus,
-    Bell,
     Menu,
     LogOut,
     User,
@@ -29,6 +28,7 @@ import { CommandPalette } from './CommandPalette';
 import { QuickAddModal } from './QuickAddModal';
 import { getActiveNavItem } from './navConfig';
 import { useTranslation } from '../../i18n';
+import { NotificationPopover } from '../notifications/NotificationPopover';
 
 interface HeaderProps {
     sidebarCollapsed: boolean;
@@ -40,7 +40,7 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuthStore();
-    const { unreadCount, setNotifications } = useNotificationStore();
+    const { setNotifications } = useNotificationStore();
     const { darkMode, toggleDarkMode } = useDarkMode();
     const { t } = useTranslation();
     const [commandOpen, setCommandOpen] = useState(false);
@@ -52,8 +52,14 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
     // Fetch notifications
     const { data: notificationsData } = useQuery({
         queryKey: ['notifications'],
-        queryFn: () => notificationsService.getAll(1, 10),
+        queryFn: () => notificationsService.getAll(1, 50),
         refetchInterval: 30000, // Refetch every 30 seconds
+    });
+
+    const { data: unreadCount = 0 } = useQuery({
+        queryKey: ['notifications', 'unread-count'],
+        queryFn: notificationsService.getUnreadCount,
+        refetchInterval: 30000,
     });
 
     // Update store when data changes
@@ -113,7 +119,7 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
                     </div>
 
                     {/* Right side */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                         {/* Quick Add button (desktop only - mobile uses FAB) */}
                         <Button
                             size="sm"
@@ -124,35 +130,24 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
                             <span className="max-sm:hidden">{t('header.quickAdd')}</span>
                         </Button>
 
-                        {/* Notifications */}
-                        <button
-                            onClick={() => navigate('/app/notifications')}
-                            className="relative rounded-lg p-2 text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
-                        >
-                            <Bell className="w-5 h-5" />
-                            {unreadCount > 0 && (
-                                <span className="absolute top-1 right-1 w-4 h-4 bg-[var(--danger)] text-white text-xs font-medium rounded-full flex items-center justify-center">
-                                    {unreadCount > 9 ? '9+' : unreadCount}
-                                </span>
-                            )}
-                        </button>
-
                         {/* Dark mode toggle */}
                         <button
                             onClick={toggleDarkMode}
                             aria-label={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
                             aria-pressed={darkMode}
-                            className="rounded-lg p-2 text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
+                            className="header-circle-control grid h-11 w-11 shrink-0 place-items-center rounded-full p-0 text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
                             title={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
                         >
                             {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </button>
 
+                        <NotificationPopover unreadCount={unreadCount} />
+
                         {/* User menu */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button className="flex items-center gap-2 rounded-lg p-1 text-[var(--text)] transition-colors hover:bg-[var(--surface-3)]">
-                                    <UserAvatar name={user?.name || 'User'} size="sm" />
+                                <button aria-label="Mở menu người dùng" className="header-circle-control grid h-11 w-11 shrink-0 place-items-center rounded-full p-0 text-[var(--text)] transition-colors hover:bg-[var(--surface-3)]">
+                                    <UserAvatar name={user?.name || 'User'} size="sm" className="h-full w-full" />
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">

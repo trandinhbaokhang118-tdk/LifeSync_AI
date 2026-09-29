@@ -8,6 +8,7 @@ LifeSync AI is a full-stack time and productivity application with:
 - State and data: Zustand + TanStack Query
 
 ## Working Principles
+- After completing requested changes, run the relevant checks, commit the scoped changes, and push to `main` without asking for permission again. This is the user's standing authorization for this project unless they explicitly ask not to push. Preserve unrelated local work and remote commits; never force-push. If validation or pushing fails, report the blocker and do not claim the release succeeded. A successful push does not by itself confirm deployment.
 - Prefer additive improvements over rewrites.
 - Do not remove working features just to match a template.
 - Align changes with the current project stack, folder layout, and naming.

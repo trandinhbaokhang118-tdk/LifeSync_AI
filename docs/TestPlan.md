@@ -315,3 +315,8 @@ npm run test:cov    # Coverage report
 
 - Custom toast title and description use matching semantic foreground tokens; native success/error/loading toasts use the same surface and foreground. Removed conflicting success background. Close button has an accessible name.
 - Release verification: all custom toast variants and native loading inspected in both themes; info foreground/background measured as #132c38/#fafdfe (light) and #edf7f8/#10232e (dark). At 375px the toast stayed between x=16 and x=344 and the close control worked.
+
+## Header notification popup (2026-09-29)
+- Frontend build and targeted ESLint: passed.
+- Browser checks with synthetic API fixtures: bell opens popup without leaving the current route; All/Unread tabs; mark one/all read updates the badge; pagination loads older messages; failed mutation keeps unread state and displays an error; Escape closes popup.
+- Visual checks: desktop dark theme and mobile light theme (375 px), popup stays inside viewport; theme toggle and user avatar both measure 44 x 44 px; notification sidebar link is absent.

@@ -69,5 +69,5 @@
 .workspace-studio :is(header,aside) { box-shadow: var(--studio-shadow); }
 .workspace-studio nav a[aria-current='page'] { background: var(--studio-soft); color: var(--studio-accent); border-color: var(--studio-border); }
 .workspace-studio h1,.workspace-studio h2 { font-family: var(--font-display); font-style: normal; }
-.workspace-studio header button[aria-label*='chế độ'] { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--studio-border); background: var(--studio-soft); border-radius: 50%; color: var(--studio-accent); }
-.workspace-studio header button[aria-label*='chế độ']:focus-visible { outline: 2px solid var(--studio-accent); outline-offset: 3px; }
+.workspace-studio header .header-circle-control { width: 44px; height: 44px; flex-shrink: 0; display: grid; place-items: center; padding: 0; border: 1px solid var(--studio-border); background: var(--studio-soft); border-radius: 50%; color: var(--studio-accent); }
+.workspace-studio header .header-circle-control:focus-visible { outline: 2px solid var(--studio-accent); outline-offset: 3px; }
