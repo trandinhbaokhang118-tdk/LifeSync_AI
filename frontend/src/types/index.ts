@@ -80,7 +80,7 @@ export interface CreateTaskRequest {
     tagIds?: string[];
 }
 
-export type UpdateTaskRequest = Partial<CreateTaskRequest>;
+export type UpdateTaskRequest = Partial<CreateTaskRequest> & { allowTaskOverlap?: boolean };
 
 // Tag types
 export interface Tag {

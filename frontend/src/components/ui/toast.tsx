@@ -19,7 +19,7 @@ function CustomToast({ t, type, title, description }: ToastProps) {
     };
 
     const bgColors = {
-        success: 'border-green-200 dark:border-green-800 bg-blue-400',
+        success: 'border-green-600',
         error: 'border-red-200 dark:border-red-800',
         warning: 'border-amber-200 dark:border-amber-800',
         info: 'border-blue-200 dark:border-blue-800',
@@ -33,15 +33,17 @@ function CustomToast({ t, type, title, description }: ToastProps) {
                 bgColors[type],
                 t.visible ? 'animate-slide-up' : 'animate-fade-out'
             )}
+            role={type === 'error' ? 'alert' : 'status'}
         >
             <div className="flex-shrink-0">{icons[type]}</div>
             <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white select-none">{title}</p>
+                <p className="text-sm font-semibold text-[var(--text)] select-none break-words">{title}</p>
                 {description && (
-                    <p className="mt-1 text-sm font-medium text-[var(--text-2)] select-none">{description}</p>
+                    <p className="mt-1 text-sm font-medium text-[var(--text-2)] select-none break-words">{description}</p>
                 )}
             </div>
             <button
+                aria-label="Đóng thông báo"
                 onClick={() => toast.dismiss(t.id)}
                 className="flex-shrink-0 text-[var(--text-3)] hover:text-[var(--text)]"
             >
@@ -74,10 +76,11 @@ export function Toaster() {
             position="top-right"
             toastOptions={{
                 duration: 4000,
+                style: { background: 'var(--surface-1)', color: 'var(--text)', border: '1px solid var(--border)' },
             }}
             containerStyle={{
                 top: '80px', // Dịch xuống để không bị che bởi header
-                
+
             }}
         />
     );

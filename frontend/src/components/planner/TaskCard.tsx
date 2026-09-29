@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Clock, Flag } from 'lucide-react';
+import { Clock, Flag } from 'lucide-react';
+import './planner-task-card.css';
 import { cn } from '../../lib/utils';
 import type { Task } from '../../types';
 
@@ -9,12 +10,6 @@ interface TaskCardProps {
     /** When true, renders the static visual used inside the DragOverlay. */
     isDragging?: boolean;
 }
-
-const priorityColors = {
-    LOW: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-    MEDIUM: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400',
-    HIGH: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
-};
 
 const statusColors = {
     TODO: 'border-l-gray-400',
@@ -37,7 +32,6 @@ function TaskCardContent({ task, isDragging }: TaskCardProps) {
             )}
         >
             <div className="flex items-start gap-2">
-                <GripVertical className="w-4 h-4 text-[var(--text-3)] flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium text-[var(--text)] break-words">{task.title}</h4>
                     {task.description && (
@@ -45,23 +39,15 @@ function TaskCardContent({ task, isDragging }: TaskCardProps) {
                     )}
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <span
-                            className={cn(
-                                'inline-flex max-w-full min-w-0 items-center px-2 py-0.5 rounded-full text-xs font-medium',
-                                priorityColors[task.priority]
-                            )}
+                            className="planner-priority" data-priority={task.priority}
                         >
                             <Flag className="w-3 h-3 mr-1 shrink-0" />
-                            <span className="min-w-0 break-words">{{ LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' }[task.priority]}</span>
+                            <span className="whitespace-nowrap">{{ LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' }[task.priority]}</span>
                         </span>
-                        {task.startAt && (
-                            <span className="inline-flex flex-wrap items-center text-xs text-[var(--text-3)]">
-                                <Clock className="w-3 h-3 mr-1" />
-                                {new Date(task.startAt).toLocaleTimeString('vi-VN', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                })}
-                            </span>
-                        )}
+                        {task.startAt && <div className="planner-task-times">
+                            <span><Clock size={12} aria-hidden="true" />Bắt đầu <time dateTime={task.startAt}>{new Date(task.startAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</time></span>
+                            <span>Kết thúc <time dateTime={task.dueAt}>{new Date(task.dueAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}{new Date(task.startAt).toDateString() !== new Date(task.dueAt).toDateString() ? ` · ${new Date(task.dueAt).toLocaleDateString('vi-VN')}` : ''}</time></span>
+                        </div>}
                     </div>
                 </div>
             </div>

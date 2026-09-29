@@ -39,7 +39,7 @@ export function CalendarBoard({
   onDelete: (block: TimeBlock) => void;
 }) {
   const [date, setDate] = useState(new Date());
-  const [view, setView] = useState<View>("agenda");
+  const [view, setView] = useState<View>("week");
   const [editing, setEditing] = useState<ScheduleSelection | null>(null);
   const [dateMode, setDateMode] = useState('both');
   const [showHolidays, setShowHolidays] = useState(true);

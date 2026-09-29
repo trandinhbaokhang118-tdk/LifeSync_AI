@@ -135,7 +135,7 @@ export function Calendar() {
         <div>
             <PageHeader
                 title="Lịch công việc"
-                description="Thời khóa biểu thống nhất cho task, project và các khối thời gian của bạn."
+                description="Xem tổng quan công việc và khung giờ cố định theo ngày, tuần, tháng. Dùng Lập kế hoạch để sắp xếp và điều chỉnh công việc."
                 actions={
                     <Button onClick={() => openCreateModal()}>
                         <Plus className="w-4 h-4 mr-2" />

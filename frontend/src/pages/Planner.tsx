@@ -1,17 +1,19 @@
 import { useState } from 'react';
-
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import type { CollisionDetection, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
     DndContext,
     DragOverlay,
-    closestCenter,
+    pointerWithin,
+    rectIntersection,
     PointerSensor,
     TouchSensor,
     useSensor,
     useSensors,
 } from '@dnd-kit/core';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, List, Grid3x3 } from 'lucide-react';
-import { Button } from '../components/ui';
+import { Button, Modal } from '../components/ui';
+import { PlannerMonthOverview } from '../components/planner/PlannerMonthOverview';
+import { localDayKey, moveTaskToDay } from '../lib/planner-scheduling';
 import { TaskCard } from '../components/planner/TaskCard';
 import { DroppableDay } from '../components/planner/DroppableDay';
 import { TaskList } from '../components/planner/TaskList';
@@ -22,6 +24,13 @@ import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ScheduleEditor, type ScheduleSelection } from '../components/planner/ScheduleEditor';
 
+const calendarCollision: CollisionDetection = (args) => {
+    const days = args.droppableContainers.filter(container => container.data.current?.kind === 'planner-day');
+    const scoped = { ...args, droppableContainers: days };
+    // The pointer decides the date, regardless of where the wide drag overlay is centred.
+    return args.pointerCoordinates ? pointerWithin(scoped) : rectIntersection(scoped);
+};
+
 type ViewMode = 'week' | 'month' | 'year';
 
 export function Planner() {
@@ -30,6 +39,7 @@ export function Planner() {
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const [showUnscheduled, setShowUnscheduled] = useState(true);
     const [scheduleError, setScheduleError] = useState<string | null>(null);
+    const [invalidDate, setInvalidDate] = useState<string | null>(null);
     const [editing, setEditing] = useState<ScheduleSelection | null>(null);
 
     const { data: tasksData } = useTasksQuery();
@@ -129,26 +139,18 @@ export function Planner() {
         const task = tasks.find((t: Task) => t.id === taskId);
         if (!task) return;
 
-        // A populated day may report its sortable task as the drop target.
-        const overTask = tasks.find(t => t.id === over.id);
-        const targetIndex = overTask ? dates.findIndex(d => viewMode === 'year'
-            ? d.getFullYear() === new Date(overTask.startAt).getFullYear() && d.getMonth() === new Date(overTask.startAt).getMonth()
-            : d.toDateString() === new Date(overTask.startAt).toDateString()) : -1;
-        if (over.id.toString().startsWith('date-') || targetIndex >= 0) {
-            const dateIndex = targetIndex >= 0 ? targetIndex : parseInt(over.id.toString().replace('date-', ''));
-            const targetDate = dates[dateIndex];
-
-            if (targetDate) {
-                const newStartAt = new Date(targetDate);
-                const previousStart = new Date(task.startAt);
-                newStartAt.setHours(Number.isFinite(+previousStart) ? previousStart.getHours() : 9, Number.isFinite(+previousStart) ? previousStart.getMinutes() : 0, 0, 0);
-
-                const duration = Math.max(15 * 60000, (Date.parse(task.dueAt) - +previousStart) || 3600000);
-                const newDueAt = new Date(+newStartAt + duration);
+        if (over.data.current?.kind !== 'planner-day') return;
+        const targetDate = new Date(over.data.current.date as string);
+        if (Number.isFinite(+targetDate)) {
+            const schedule = moveTaskToDay(task, targetDate, new Date());
+            if ('error' in schedule) {
+                setInvalidDate(schedule.error);
+                return;
+            }
+            {
+                const { start: newStartAt, end: newDueAt } = schedule;
                 const collision = calendar.occupied.find(b => !(b.source === 'TASK' && b.id === taskId) && +newStartAt < Date.parse(b.endAt) && Date.parse(b.startAt) < +newDueAt);
-                const nextDay = new Date(targetDate); nextDay.setDate(nextDay.getDate() + 1);
-                const busyDay = calendar.occupied.some(b => !(b.source === 'TASK' && b.id === taskId) && Date.parse(b.startAt) < +nextDay && Date.parse(b.endAt) > +targetDate);
-                if (collision || busyDay) {
+                if (collision) {
                     setEditing({ task, startAt: newStartAt.toISOString(), endAt: newDueAt.toISOString() });
                     return;
                 }
@@ -199,9 +201,10 @@ export function Planner() {
     };
 
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={calendarCollision} onDragCancel={() => setActiveTask(null)} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="space-y-6 pb-20 md:pb-0">
-                <p className="text-sm text-[var(--text-2)]">Kéo sang ngày khác giữ nguyên giờ và thời lượng. Khung giờ cố định được hiển thị bên dưới và không thể ghi đè. <Link className="underline text-primary-600" to="/app/calendar">Mở Lịch</Link></p>
+                <p className="text-sm text-[var(--text-2)]">Lập kế hoạch để chia việc, kéo thả và điều chỉnh lịch làm việc. Kéo sang ngày khác giữ nguyên giờ và thời lượng. <Link className="underline text-primary-600" to="/app/calendar">Xem tổng quan và thời khóa biểu trong Lịch</Link></p>
+                {updateTask.isPending && <p role="status">Đang lưu lịch…</p>}
                 {calendar.isLoading && <p role="status">Đang kiểm tra lịch bận…</p>}
                 {calendar.isError && <p role="alert">Không tải được Lịch. <button className="underline" onClick={() => calendar.refetch()}>Thử lại</button></p>}
                 {scheduleError && <p role="alert" className="rounded-lg border border-red-500 p-3 text-red-600">{scheduleError}</p>}
@@ -261,7 +264,8 @@ export function Planner() {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     {/* Unscheduled Tasks Sidebar */}
                     {showUnscheduled && (
-                        <div className="lg:col-span-1">
+                        <div className="lg:col-span-1 space-y-4">
+                            <PlannerMonthOverview date={currentDate} tasks={tasks} onSelect={date => { setCurrentDate(date); setViewMode('week'); }} />
                             <TaskList tasks={unscheduledTasks} />
                         </div>
                     )}
@@ -276,10 +280,10 @@ export function Planner() {
                                     : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
                                 }`}
                         >
-                            {dates.map((date, index) => (
+                            {dates.map((date) => (
                                 <DroppableDay
-                                    key={index}
-                                    id={`date-${index}`}
+                                    key={localDayKey(date)}
+                                    id={`date-${localDayKey(date)}`}
                                     date={date}
                                     tasks={getTasksForDate(date)}
                                     blocks={calendar.blocks.filter(b => {
@@ -305,8 +309,11 @@ export function Planner() {
             </div>
 
             {/* Drag Overlay */}
-            <DragOverlay>{activeTask ? <TaskCard task={activeTask} isDragging /> : null}</DragOverlay>
-            {editing && <ScheduleEditor selection={editing} onClose={() => setEditing(null)} />}
+            <DragOverlay dropAnimation={null}>{activeTask ? <TaskCard task={activeTask} isDragging /> : null}</DragOverlay>
+            {invalidDate && <Modal isOpen title="Ngày không phù hợp" onClose={() => setInvalidDate(null)}>
+                <div className="space-y-4"><p role="alert">{invalidDate}</p><p className="text-sm text-[var(--text-2)]">Công việc vẫn giữ lịch cũ. Hãy chọn ngày và giờ bắt đầu trong tương lai.</p><Button onClick={() => setInvalidDate(null)}>Đã hiểu</Button></div>
+            </Modal>}
+            {editing && <ScheduleEditor futureOnly selection={editing} onClose={() => setEditing(null)} />}
         </DndContext>
     );
 }

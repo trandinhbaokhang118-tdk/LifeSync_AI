@@ -81,5 +81,19 @@ describe('Fixed calendar and task scheduling', () => {
         db.task.update.mockResolvedValue({ ...(await db.task.findUnique()), status: 'DONE' });
         await tasks.update('t1', 'u1', { status: 'DONE' });
         expect(db.reminder.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1', taskId: 't1' } });
+    });    it('requires explicit confirmation for overlapping tasks and never stores the request flag', async () => {
+        const { db, tasks } = setup();
+        db.timeBlock.findMany.mockResolvedValue([]);
+        db.task.findFirst.mockResolvedValue({ id: 'other', title: 'Other task', startAt, dueAt: endAt });
+        await expect(tasks.update('t1', 'u1', { startAt: startAt.toISOString(), allowTaskOverlap: false })).rejects.toMatchObject({ response: { code: 'TASK_CALENDAR_CONFLICT' } });
+        await tasks.update('t1', 'u1', { startAt: startAt.toISOString(), allowTaskOverlap: true });
+        expect(db.task.update).toHaveBeenCalledTimes(1);
+        expect(db.task.update.mock.calls[0][0].data).not.toHaveProperty('allowTaskOverlap');
     });
+    it('still rejects fixed blocks even with simultaneous-work confirmation', async () => {
+        const { db, tasks } = setup();
+        await expect(tasks.update('t1', 'u1', { startAt: startAt.toISOString(), allowTaskOverlap: true })).rejects.toMatchObject({ response: { code: 'TASK_FIXED_CALENDAR_CONFLICT' } });
+        expect(db.task.update).not.toHaveBeenCalled();
+    });
+
 });

@@ -13,7 +13,7 @@ interface DroppableDayProps {
 }
 
 export function DroppableDay({ id, date, tasks, blocks = [], viewMode }: DroppableDayProps) {
-    const { setNodeRef, isOver } = useDroppable({ id });
+    const { setNodeRef, isOver } = useDroppable({ id, data: { kind: 'planner-day', date: date.toISOString() } });
 
     const isToday = date.toDateString() === new Date().toDateString();
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));

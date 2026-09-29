@@ -289,3 +289,29 @@ npm run test:cov    # Coverage report
 - Frontend/backend builds and targeted ESLint passed. Prisma schema diff was checked against the previous schema; generated changes match the additive migration. Migration has not been applied to a real database in this task.
 - Tabbit local browser harness with mocked APIs: city selection/hourly forecast, Google busy conflict blocks save, disconnect clears busy entries, upstream failure blocks schedule save, OAuth callback executes once and removes code/state from URL. No runtime JS errors; no horizontal document overflow at 320/375/414/768/1440px.
 - Live Google consent/token refresh and paid Open-Meteo calls remain unverified until deployment credentials exist. Physical Android/iOS background notifications remain unverified.
+
+## Manual planner date targeting — 2026-09-29
+
+- Date-only pointer collision detection replaces nearest-centre targeting; each drop zone carries its own local date, independent of task IDs and column indexes.
+- Moves preserve local start hour and duration. Past calendar dates and elapsed start times today show a modal without issuing a mutation. Manual planner schedule editor also blocks past start times at submit.
+- Added month overview with the actual 28–31 day count, one priority-colored dot per task, month navigation and click-through to the selected week. Planner card grip decoration removed; surface remains draggable.
+- `node frontend/scripts/test-planner-scheduling.cjs` passed under Asia/Ho_Chi_Minh and America/Los_Angeles; validates Sep 29 targeting, hour/duration, month boundary, yesterday and elapsed same-day rejection.
+- Tabbit mocked API and clock: drag from Sep 30 to the right edge of Sep 29 saved Sep 29 15:00 local; subsequent drop on Sep 28 showed the invalid-date dialog with no second mutation. Occupied-day editor rejected a past start and disabled Save.
+- Month Sep showed 30 days and exactly three priority dots on Sep 30 after moving the fourth task away; October showed 31 days. Light/dark at 320, 375, 414, 768px had no document horizontal overflow. Desktop overview and invalid-date modal visually inspected.
+- Targeted ESLint passed. No production task writes or deployment in this verification.
+
+## Planner feedback and simultaneous tasks — 2026-09-29
+
+- Drag saves optimistically update cached task lists immediately and show a saving indicator. Failed requests restore the moved task; successful saves refresh calendar/dashboard data in the background. The drop-overlay return animation is disabled.
+- A populated day alone no longer requires a form; actual overlaps do. Task overlaps require an explicit checkbox; changing dates or conflicting tasks clears confirmation. Fixed-block conflicts remain blocked. Update DTO validates optional boolean `allowTaskOverlap`; service strips it before Prisma and only bypasses task conflicts after ownership/fixed-block checks. No database migration needed for this request flag.
+- Planner card priority uses neutral text/surface and a muted colored icon. Both start and end times are labeled, including the end date when spanning days.
+- Calendar defaults to week timetable for overall time review. Planner explains its role in task breakdown and schedule arrangement and links to Calendar.
+- Frontend/backend builds, targeted lint and 19 backend tests passed. Explicit true/false overlap and fixed-block protection tested.
+- Tabbit synthetic delayed API: card reached target day before response; 500 response restored original day. Same-time drop disabled Save until checkbox confirmation; changing end time cleared consent; confirmed PATCH carried `allowTaskOverlap: true`. UI fixtures only, no production changes.
+- Responsive task cards checked at 320/375/414/768px without document overflow; light/dark visuals inspected. Each of four cards had two time elements.
+- Follow-up Calendar fixture check: default week timetable rendered all seven date headers and hourly slots; sample task displayed 09:00–10:00 in Sep 30 column. Initial navigation assertion was retried with a fresh mock API fixture after test-session cleanup; no production data used.
+
+## Shared notification contrast
+
+- Custom toast title and description use matching semantic foreground tokens; native success/error/loading toasts use the same surface and foreground. Removed conflicting success background. Close button has an accessible name.
+- Release verification: all custom toast variants and native loading inspected in both themes; info foreground/background measured as #132c38/#fafdfe (light) and #edf7f8/#10232e (dark). At 375px the toast stayed between x=16 and x=344 and the close control worked.

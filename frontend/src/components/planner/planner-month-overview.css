@@ -1,0 +1,21 @@
+/* Hallmark · component scope · Workbench · P4 H4 E4 S4 R5 V4 */
+.planner-month { --priority-high: #dc5263; --priority-medium: #c58a22; --priority-low: #299b69; padding: .85rem; border: 1px solid var(--border); border-radius: 1rem; background: var(--surface-1); color: var(--text); min-width: 0; }
+[data-theme='dark'] .planner-month { --priority-high: #fb8a99; --priority-medium: #edbc62; --priority-low: #66d6a3; }
+.planner-month__heading { display:flex; align-items:center; justify-content:space-between; gap:.25rem; }
+.planner-month__heading h2 { font-size:.95rem; font-weight:600; }
+.planner-month__heading button { min-height:44px; width:32px; display:grid; place-items:center; cursor:pointer; }
+.planner-month__grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:2px; }
+.planner-month__weekday { text-align:center; font-size:.65rem; color:var(--text-2); padding:.4rem 0; }
+.planner-month__day { min-width:0; min-height:44px; border:1px solid transparent; border-radius:.4rem; display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 1px; font-size:.75rem; cursor:pointer; }
+.planner-month__day[aria-current='date'] { border-color:var(--primary); font-weight:700; }
+.planner-month button:hover { background:var(--surface-3); }
+.planner-month button:active { background:var(--surface-highlight); }
+.planner-month button:focus-visible { outline:2px solid var(--primary); outline-offset:1px; }
+.planner-month__dots { display:flex; flex-wrap:wrap; justify-content:center; gap:2px; }
+.planner-month i { display:inline-block; width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.planner-month [data-priority='HIGH'] { background:var(--priority-high); }
+.planner-month [data-priority='MEDIUM'] { background:var(--priority-medium); }
+.planner-month [data-priority='LOW'] { background:var(--priority-low); }
+.planner-month__legend { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.75rem; font-size:.65rem; color:var(--text-2); }
+.planner-month__legend span { display:flex; align-items:center; gap:4px; }
+.planner-month__hint { margin-top:.5rem; font-size:.7rem; color:var(--text-2); }

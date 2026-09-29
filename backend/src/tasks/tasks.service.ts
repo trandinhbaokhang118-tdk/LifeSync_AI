@@ -143,7 +143,7 @@ export class TasksService {
     async update(id: string, userId: string, updateTaskDto: UpdateTaskDto) {
         const existing = await this.findOne(id, userId); // Validates ownership
 
-        const { tagIds, ...taskData } = updateTaskDto;
+        const { tagIds, allowTaskOverlap, ...taskData } = updateTaskDto;
 
         if (taskData.startAt !== undefined || taskData.dueAt !== undefined ||
             (existing.status === 'DONE' && taskData.status && taskData.status !== 'DONE')) {
@@ -152,7 +152,7 @@ export class TasksService {
             if (dueAt <= startAt) {
                 throw new BadRequestException({ code: 'INVALID_TIME_RANGE', message: 'Giờ kết thúc phải sau giờ bắt đầu.' });
             }
-            await this.checkCalendar(userId, startAt, dueAt, id);
+            await this.checkCalendar(userId, startAt, dueAt, id, allowTaskOverlap === true);
         }
 
         // If tagIds provided, update tags
@@ -222,7 +222,7 @@ export class TasksService {
         return this.findOne(taskId, userId);
     }
 
-    private async checkCalendar(userId: string, startAt: Date, endAt: Date, excludeId?: string) {
+    private async checkCalendar(userId: string, startAt: Date, endAt: Date, excludeId?: string, allowTaskOverlap = false) {
         await this.google.assertAvailable(userId, startAt, endAt);
         const blocks = await this.prisma.timeBlock.findMany({
             where: { userId, startAt: { lt: endAt }, endAt: { gt: startAt } },
@@ -236,6 +236,7 @@ export class TasksService {
                 details: { conflictingBlocks: blocks },
             });
         }
+        if (allowTaskOverlap) return;
         const task = await this.prisma.task.findFirst({
             where: {
                 userId,

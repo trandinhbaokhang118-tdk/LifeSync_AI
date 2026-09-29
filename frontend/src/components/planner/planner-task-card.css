@@ -1,0 +1,11 @@
+/* Hallmark · Workbench components · P4 H4 E4 S4 R5 V4 */
+.planner-priority { --priority-dot: #b48a42; display:inline-flex; align-items:center; gap:4px; max-width:100%; white-space:nowrap; padding:3px 7px; border-radius:6px; background:var(--surface-3); border:1px solid var(--border); color:var(--text-2); font-size:.7rem; font-weight:500; }
+.planner-priority[data-priority='HIGH'] { --priority-dot:#bc6a76; }
+.planner-priority[data-priority='LOW'] { --priority-dot:#529578; }
+.planner-priority svg { color:var(--priority-dot); }
+[data-theme='dark'] .planner-priority { --priority-dot:#d6b577; }
+[data-theme='dark'] .planner-priority[data-priority='HIGH'] { --priority-dot:#dba0a9; }
+[data-theme='dark'] .planner-priority[data-priority='LOW'] { --priority-dot:#87b9a2; }
+.planner-task-times { display:grid; gap:4px; width:100%; color:var(--text-2); font-size:.7rem; }
+.planner-task-times span { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
+.planner-task-times time { font-variant-numeric:tabular-nums; color:var(--text); }
