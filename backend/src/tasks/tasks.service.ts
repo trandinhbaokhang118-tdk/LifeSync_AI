@@ -4,10 +4,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { QueryTaskDto } from './dto/query-task.dto';
+import { GoogleCalendarService } from '../calendar-integrations/google-calendar.service';
 
 @Injectable()
 export class TasksService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private google: GoogleCalendarService) { }
 
     async create(userId: string, createTaskDto: CreateTaskDto) {
         const { tagIds, startAt, dueAt, reminderMinutes, ...taskData } = createTaskDto;
@@ -49,10 +50,11 @@ export class TasksService {
         const reminderTime = new Date(startDate.getTime() - (reminderMinutes || 15) * 60000);
 
         // Only create reminder if it's in the future
-        if (reminderTime > new Date()) {
+        if (task.status !== 'DONE' && reminderTime > new Date()) {
             await this.prisma.reminder.create({
                 data: {
                     userId,
+                    taskId: task.id,
                     message: `Sắp đến giờ: ${task.title}`,
                     triggerAt: reminderTime,
                 },
@@ -177,11 +179,22 @@ export class TasksService {
             },
         });
 
+        // Keep the server reminder aligned with edits and completion, including old tasks.
+        const triggerAt = new Date(task.startAt.getTime() - task.reminderMinutes * 60000);
+        await this.prisma.reminder.deleteMany({ where: { userId, taskId: null, triggered: false, message: `Sắp đến giờ: ${existing.title}`, triggerAt: new Date(existing.startAt.getTime() - existing.reminderMinutes * 60000) } });
+        if (task.status === 'DONE' || triggerAt <= new Date()) {
+            await this.prisma.reminder.deleteMany({ where: { userId, taskId: id } });
+        } else {
+            const data = { userId, message: `Sắp đến giờ: ${task.title}`, triggerAt, triggered: false };
+            await this.prisma.reminder.upsert({ where: { taskId: id }, create: { ...data, taskId: id }, update: data });
+        }
         return this.formatTask(task);
     }
 
     async remove(id: string, userId: string) {
-        await this.findOne(id, userId); // Validates ownership
+        const existing = await this.findOne(id, userId); // Validates ownership
+
+        await this.prisma.reminder.deleteMany({ where: { userId, taskId: null, triggered: false, message: `Sắp đến giờ: ${existing.title}`, triggerAt: new Date(existing.startAt.getTime() - existing.reminderMinutes * 60000) } });
 
         await this.prisma.task.delete({ where: { id } });
 
@@ -210,6 +223,7 @@ export class TasksService {
     }
 
     private async checkCalendar(userId: string, startAt: Date, endAt: Date, excludeId?: string) {
+        await this.google.assertAvailable(userId, startAt, endAt);
         const blocks = await this.prisma.timeBlock.findMany({
             where: { userId, startAt: { lt: endAt }, endAt: { gt: startAt } },
             select: { id: true, title: true, startAt: true, endAt: true },

@@ -7,6 +7,9 @@ import { z } from 'zod';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { CalendarBoard } from '../components/planner/CalendarBoard';
+import { GoogleCalendarConnection } from '../components/planner/GoogleCalendarConnection';
+import { CalendarWeather } from '../components/planner/CalendarWeather';
+import { TaskReminderSettings } from '../components/planner/TaskReminderSettings';
 import { PageHeader } from '../components/layout';
 import { Button, Input, Modal } from '../components/ui';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -37,6 +40,7 @@ function formatDateInputValue(date: Date): string {
 export function Calendar() {
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
+    const [integrationsOpen, setIntegrationsOpen] = useState(() => searchParams.has('state'));
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [deleteBlock, setDeleteBlock] = useState<TimeBlock | null>(null);
     const [createError, setCreateError] = useState<string | null>(null);
@@ -140,6 +144,10 @@ export function Calendar() {
                 }
             />
 
+            <details open={integrationsOpen} onToggle={e => setIntegrationsOpen(e.currentTarget.open)} className="mb-5 rounded-xl border border-[var(--border)] p-4">
+                <summary className="cursor-pointer font-semibold">Kết nối lịch, nhắc việc và thời tiết</summary>
+                <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4"><GoogleCalendarConnection /><TaskReminderSettings /><div className="lg:col-span-2 min-w-0"><CalendarWeather /></div></div>
+            </details>
             <CalendarBoard onCreate={openCreateModal} onDelete={setDeleteBlock} />
 
             {/* Create Modal */}

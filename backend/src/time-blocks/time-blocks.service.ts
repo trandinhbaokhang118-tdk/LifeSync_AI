@@ -3,10 +3,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTimeBlockDto } from './dto/create-time-block.dto';
 import { UpdateTimeBlockDto } from './dto/update-time-block.dto';
 import { QueryTimeBlockDto } from './dto/query-time-block.dto';
+import { GoogleCalendarService } from '../calendar-integrations/google-calendar.service';
 
 @Injectable()
 export class TimeBlocksService {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private google: GoogleCalendarService) { }
 
     async create(userId: string, createDto: CreateTimeBlockDto) {
         const startAt = new Date(createDto.startAt);
@@ -110,6 +111,7 @@ export class TimeBlocksService {
     }
 
     private async checkOverlap(userId: string, startAt: Date, endAt: Date, excludeId?: string) {
+        await this.google.assertAvailable(userId, startAt, endAt);
         // Overlap condition: startA < endB AND startB < endA
         const overlapping = await this.prisma.timeBlock.findFirst({
             where: {

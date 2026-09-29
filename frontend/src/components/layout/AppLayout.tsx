@@ -15,6 +15,7 @@ import { Header } from './Header';
 import AIChatbot from '../chatbot/AIChatbot';
 import { UpgradePromptModal } from '../subscription/UpgradePromptModal';
 import { NotificationListener } from '../notifications/NotificationToast';
+import { TaskReminderScheduler } from '../notifications/TaskReminderScheduler';
 import { DevicePermissionCenter } from '../permissions/DevicePermissionCenter';
 import { LifeSyncFlowBackground } from '../ui';
 import { cn } from '../../lib/utils';
@@ -158,6 +159,7 @@ export function AppLayout() {
 
             {/* Only listen for user notifications inside authenticated routes. */}
             <NotificationListener />
+            <TaskReminderScheduler />
 
             <DevicePermissionCenter />
         </div>

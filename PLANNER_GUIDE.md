@@ -249,3 +249,44 @@ Set `GOOGLE_CALENDAR_API_KEY` and `GOOGLE_PUBLIC_CALENDAR_ID` on the **backend**
 `GET /calendar-sources/google-public?startDate=<ISO>&endDate=<ISO>` requires the app's JWT. It returns `{ configured, events }` in the normal API envelope. The server fetches only Google's fixed API hostname and its configured calendar, expands recurring events, follows pagination, and keeps all-day end dates exclusive. Invalid/reversed ranges and ranges over 370 days are rejected. Missing configuration is explicitly reported; provider failures do not hide the user's tasks.
 
 Google entries are read-only annotations, not busy blocks. Personal/private Google calendars and two-way sync are not connected by this feature; they require a separate OAuth consent/token lifecycle. Reference: [Google events.list](https://developers.google.com/workspace/calendar/api/v3/reference/events/list).
+
+## Personal calendar, device reminders and weather — 2026-09-29
+
+Implementation is in the release worktree `tmp/calendar-release`, based on the published calendar commit. It adds the Calendar disclosure **Kết nối lịch, nhắc việc và thời tiết**.
+
+### Deployment order
+
+1. Back up the database using the normal release procedure.
+2. Install backend dependencies and run `npx prisma generate`.
+3. Run `npx prisma migrate deploy` before starting the new backend. Migration `20260929020000_google_calendar_connection` adds encrypted Google connection/state tables and nullable unique `reminders.taskId` with a cascading task relation. It does not drop existing records.
+4. Build and deploy backend and frontend. Rebuild/sync the Capacitor Android/iOS app to use device reminders.
+
+### Google Calendar personal connection
+
+Configure these **server-side** variables:
+
+- `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET`: a Google OAuth Web application client, preferably dedicated to calendar access.
+- `GOOGLE_CALENDAR_REDIRECT_URI`: exact frontend URL ending in `/app/calendar`, with no query or fragment. Register that exact URI with the Google OAuth client. HTTPS is required except localhost/127.0.0.1 development.
+- `CALENDAR_TOKEN_ENCRYPTION_KEY`: 32 random bytes encoded as 64 hexadecimal characters. Generate once, store as a deployment secret, retain it across restarts, and never commit it. Changing it requires reconnecting existing accounts.
+
+Enable Google Calendar API and configure the OAuth consent screen/test users. The user clicks **Kết nối Google Calendar** from their signed-in web account and grants the `calendar.events.freebusy` scope. The return route requires the same LifeSync login; if the session expires, log in and restart the connection. Native users connect on the web using the same LifeSync account.
+
+This version checks only the primary Google calendar, uses read-only free/busy data, and does not read meeting titles, import events as tasks, or perform two-way sync. Stored refresh tokens and PKCE verifiers use AES-256-GCM bound to the LifeSync user ID. Random OAuth state is stored hashed, user-bound, expires in 10 minutes and is consumed transactionally. The browser receives no Google tokens. Disconnect removes local credentials and pending OAuth states, then attempts Google revocation; failures instruct the user to revoke via Google account permissions.
+
+Busy intervals are shown in calendar day headers and checked in Planner/ScheduleEditor. The backend checks Google before task schedule changes and fixed-block creation/updates. A connected provider failure blocks those writes with a retriable error; it is never treated as free time. External changes between the free/busy check and the write cannot be made atomic with Google. The unpublished project-planning assistant is not part of this release.
+
+Sources: https://developers.google.com/identity/protocols/oauth2/web-server and https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query
+
+### Device reminders
+
+Use **Bật nhắc việc** in the native app; permission is requested by a user action. Preferences are per account on this device. The app schedules the nearest 60 notifications within 30 days, respecting other pending notifications and leaving room under iOS limits. Task `reminderMinutes` controls the lead time. Editing, completion or deletion refreshes the pending schedule while the app is active; edits on another device require reopening/syncing this app. Logout cancels its task reminders, and account switching does not reuse another user's tasks.
+
+Web notification polling remains available while the app is open; this does not implement web push for a closed browser. Native delivery and exact timing require device validation and OS permissions; battery/Doze behavior can delay notifications. Server reminders now carry task IDs and are rescheduled/cancelled on task edits. Old unlinked task reminders are removed when the matching old task reminder time/title is edited; no broad deletion or backfill is performed.
+
+### Weather
+
+Configure `OPEN_METEO_API_KEY` for commercial deployments (LifeSync subscription/advertising usage counts as commercial). The key stays on the backend. For a strictly non-commercial prototype, set `WEATHER_NON_COMMERCIAL=true` instead. Without either, the UI explicitly reports that weather is not configured. No purchase or provider account was created by this change.
+
+Users search a city or explicitly request current location. Coordinates go through the authenticated backend to fixed Open-Meteo endpoints. No location is requested automatically or stored in the app database. Forecasts cover seven days and display the location's timezone; the weather table is independent of the calendar navigation period. High rain probability prompts consideration of another time, without automatically moving tasks. Forecast queries cache for 15 minutes in the browser; upstream failures do not block normal calendar use.
+
+Sources: https://open-meteo.com/en/docs , https://open-meteo.com/en/docs/geocoding-api , https://open-meteo.com/en/terms

@@ -98,6 +98,8 @@ model User {
   reminders           Reminder[]
   notifications       Notification[]
   paymentOrders       PaymentOrder[]
+  googleCalendarConnection GoogleCalendarConnection?
+  googleCalendarOAuthStates GoogleCalendarOAuthState[]
   socialAccounts      SocialAccount[]
   oauthLoginCodes     OAuthLoginCode[]
   chatConversations   ChatConversation[]
@@ -218,6 +220,7 @@ model Task {
 
   user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tags TaskTag[]
+  reminder Reminder?
 
   @@index([userId])
   @@index([status])
@@ -273,6 +276,8 @@ model TimeBlock {
 model Reminder {
   id        String   @id @default(uuid())
   userId    String
+  taskId    String?   @unique
+  task      Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   message   String
   triggerAt DateTime
   triggered Boolean  @default(false)
@@ -464,4 +469,25 @@ model LandingAsset {
   bytes     Bytes    @db.LongBlob
   createdAt DateTime @default(now())
   @@map("landing_assets")
+}
+
+model GoogleCalendarConnection {
+  userId         String   @id
+  refreshToken   String   @db.Text
+  needsReconnect Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("google_calendar_connections")
+}
+
+model GoogleCalendarOAuthState {
+  stateHash String   @id @db.VarChar(64)
+  userId    String
+  verifier  String   @db.Text
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("google_calendar_oauth_states")
 }

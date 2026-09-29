@@ -9,6 +9,7 @@ import type { Task, TimeBlock } from "../../types";
 import { ScheduleEditor, type ScheduleSelection } from './ScheduleEditor';
 import { calendarDateInfo } from '../../lib/calendar-dates';
 import { calendarSourcesService } from '../../services/calendar-sources.service';
+import { useGoogleBusy } from '../../hooks/useGoogleBusy';
 
 type View = "agenda" | "week" | "month" | "year";
 const names = {
@@ -55,6 +56,7 @@ export function CalendarBoard({
   const end = new Date(start);
   if (view === "year") end.setFullYear(end.getFullYear() + 1);
   else end.setDate(end.getDate() + (view === "month" ? 42 : 7));
+  const personalGoogle = useGoogleBusy(start.toISOString(), end.toISOString());
   const tasks = useQuery({
     queryKey: ["tasks", "calendar"],
     queryFn: tasksService.getCalendarTasks,
@@ -180,6 +182,7 @@ export function CalendarBoard({
       return +from < +next && +to > +day;
     }) : [];
     return <div className="space-y-1 text-xs text-[var(--text-2)]">
+      {(personalGoogle.data?.busy || []).filter(b => Date.parse(b.startAt) < +next && Date.parse(b.endAt) > +day).map(b => <p key={`${b.startAt}-${b.endAt}`} className="rounded border border-[var(--border)] p-2">Google · Bận {new Date(b.startAt).toLocaleString('vi-VN')} – {new Date(b.endAt).toLocaleString('vi-VN')}</p>)}
       {dateMode !== 'solar' && <p>{info.lunar}</p>}
       {showHolidays && info.holidays.map(h => <p key={h} className="font-medium text-primary-600">{h}</p>)}
       {external.map(e => <p key={e.id} className="break-words">Google · {e.title}{e.allDay ? ' · Cả ngày' : ` · ${time(Date.parse(e.startAt))}`}</p>)}
@@ -187,6 +190,8 @@ export function CalendarBoard({
   };
   return (
     <section className="min-w-0 space-y-4 text-[var(--text)]">
+      {personalGoogle.isLoading && <p role="status">Đang tải giờ bận Google…</p>}
+      {personalGoogle.isError && <p role="alert">Không tải được lịch Google cá nhân. Chưa thể kiểm tra đầy đủ giờ bận. <button className="underline" onClick={() => personalGoogle.refetch()}>Thử lại</button></p>}
       <div className="flex flex-wrap justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           {(["agenda", "week", "month", "year"] as View[]).map((v) => (

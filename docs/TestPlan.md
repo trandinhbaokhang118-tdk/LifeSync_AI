@@ -281,3 +281,11 @@ npm run test:cov    # Coverage report
 - Calendar agenda checked at 320, 375, 414, 768 and 1440px: no document horizontal overflow, all seven date headings visible with explicit foreground color. Lunar sanity checks: 2026-02-17 => 1/1; 2026-09-25 => 15/8; 2026-09-29 => 19/8.
 - Google live API was not tested: deployment credentials/calendar ID are required. Browser missing-configuration state and backend mocked provider paths were tested. Concurrent requests from multiple clients are not covered by these unit/UI checks.
 - Release verification: isolated checkout based on LifeSync_AI/main (71a9716), with only the calendar changes and existing manual planner. Generated Prisma Client from the remote schema; frontend/backend builds, targeted ESLint and all 21 task/time-block tests passed. No database migration added.
+
+## Calendar integrations verification — 2026-09-29
+
+- Backend: `node node_modules/jest/bin/jest.js --runInBand calendar-integrations tasks time-blocks` — 31 tests passed. Google OAuth state ownership/replay, encrypted verifier/token storage, provider errors, strict overlap boundaries, disconnect cleanup, weather configuration/DTO validation and task reminder synchronization covered.
+- Native scheduling logic: Node 22 `node --experimental-strip-types --experimental-test-module-mocks --test frontend/tests/task-reminders.test.mjs` — 4 tests passed with Capacitor mocks (reschedule, completion/deletion cancellation, unrelated reminder preservation, capacity, stale account and permissions). These are not real-device delivery tests.
+- Frontend/backend builds and targeted ESLint passed. Prisma schema diff was checked against the previous schema; generated changes match the additive migration. Migration has not been applied to a real database in this task.
+- Tabbit local browser harness with mocked APIs: city selection/hourly forecast, Google busy conflict blocks save, disconnect clears busy entries, upstream failure blocks schedule save, OAuth callback executes once and removes code/state from URL. No runtime JS errors; no horizontal document overflow at 320/375/414/768/1440px.
+- Live Google consent/token refresh and paid Open-Meteo calls remain unverified until deployment credentials exist. Physical Android/iOS background notifications remain unverified.

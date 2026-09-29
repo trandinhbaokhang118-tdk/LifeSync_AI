@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '../types';
 import { API_URL } from '../lib/api-config';
+import { taskRemindersService } from '../services/task-reminders.service';
 import { clearAuthTokens, getAccessToken, getRefreshToken, hasAuthTokens, saveAuthTokens } from '../lib/auth-tokens';
 
 interface AuthState {
@@ -46,6 +47,7 @@ export const useAuthStore = create<AuthState>()(
                     clearAuthTokens();
                     localStorage.removeItem('auth-storage');
                     set({ user: null, isAuthenticated: false });
+                    await taskRemindersService.cancel().catch(() => undefined);
                 }
             },
 
@@ -64,6 +66,7 @@ export const useAuthStore = create<AuthState>()(
                 if (!hasAuthTokens() && currentState.isAuthenticated) {
                     set({ user: null, isAuthenticated: false });
                 }
+                if (!hasAuthTokens()) void taskRemindersService.cancel().catch(() => undefined);
             },
         }),
         {

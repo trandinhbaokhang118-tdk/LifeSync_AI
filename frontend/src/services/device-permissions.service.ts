@@ -115,7 +115,7 @@ export async function showDeviceNotification(title: string, body?: string): Prom
         const { LocalNotifications } = await import('@capacitor/local-notifications');
         await LocalNotifications.schedule({
             notifications: [{
-                id: Date.now() % 2_147_483_647,
+                id: Date.now() % 1_000_000_000,
                 title,
                 body: body ?? '',
                 schedule: { at: new Date(Date.now() + 100) },

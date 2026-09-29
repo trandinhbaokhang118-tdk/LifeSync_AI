@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { tasksService } from '../services/tasks.service';
 import { timeBlocksService } from '../services/time-blocks.service';
+import { useGoogleBusy } from './useGoogleBusy';
 
 export function useCalendarAvailability(startDate?: string, endDate?: string) {
     const enabled = !!startDate && !!endDate;
+    const google = useGoogleBusy(startDate, endDate);
     const tasks = useQuery({
         queryKey: ['tasks', 'calendar'],
         queryFn: tasksService.getCalendarTasks,
@@ -19,6 +21,7 @@ export function useCalendarAvailability(startDate?: string, endDate?: string) {
         refetchOnWindowFocus: 'always',
     });
     const occupied = [
+        ...(google.data?.busy || []).map(b => ({ ...b, id: `google-${b.startAt}-${b.endAt}`, title: 'Bận · Google Calendar', source: 'GOOGLE' as const })),
         ...(tasks.data || []).filter(t => t.status !== 'DONE').map(t => ({
             id: t.id, title: t.title, startAt: t.startAt, endAt: t.dueAt, source: 'TASK' as const,
         })),
@@ -28,8 +31,8 @@ export function useCalendarAvailability(startDate?: string, endDate?: string) {
     return {
         occupied,
         blocks: blocks.data || [],
-        isLoading: enabled && (tasks.isPending || blocks.isPending),
-        isError: enabled && (tasks.isError || blocks.isError),
-        refetch: () => Promise.all([tasks.refetch(), blocks.refetch()]),
+        isLoading: enabled && (tasks.isPending || blocks.isPending || google.isLoading),
+        isError: enabled && (tasks.isError || blocks.isError || google.isError),
+        refetch: () => Promise.all([tasks.refetch(), blocks.refetch(), google.refetch()]),
     };
 }

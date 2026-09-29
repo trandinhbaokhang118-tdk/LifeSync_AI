@@ -7,14 +7,15 @@ describe('Fixed calendar and task scheduling', () => {
     const endAt = new Date('2027-01-04T03:00:00Z');
     const block = { id: 'b1', title: 'Lớp cố định', startAt, endAt };
     function setup() {
-        const existing = { id: 't1', userId: 'u1', title: 'Task', status: 'TODO', startAt, dueAt: endAt, tags: [] };
+        const existing = { id: 't1', userId: 'u1', title: 'Task', status: 'TODO', startAt, dueAt: endAt, reminderMinutes: 15, tags: [] };
         const db = {
             task: { findUnique: jest.fn().mockResolvedValue(existing), findFirst: jest.fn().mockResolvedValue(null), update: jest.fn().mockResolvedValue(existing), create: jest.fn().mockResolvedValue(existing) },
             timeBlock: { findMany: jest.fn().mockResolvedValue([block]), findFirst: jest.fn().mockResolvedValue(null), create: jest.fn() },
             taskTag: { deleteMany: jest.fn(), createMany: jest.fn() },
-            reminder: { create: jest.fn() },
+            reminder: { create: jest.fn(), deleteMany: jest.fn(), upsert: jest.fn() },
         };
-        return { db, tasks: new TasksService(db as never), blocks: new TimeBlocksService(db as never) };
+        const google = { assertAvailable: jest.fn().mockResolvedValue(undefined) };
+        return { db, google, tasks: new TasksService(db as never, google as never), blocks: new TimeBlocksService(db as never, google as never) };
     }
     it('rejects a dragged task before changing its time or tags, with useful conflict details', async () => {
         const { db, tasks } = setup();
@@ -63,5 +64,22 @@ describe('Fixed calendar and task scheduling', () => {
         db.task.findFirst.mockResolvedValue(null);
         await tasks.update('t1', 'u1', { startAt: startAt.toISOString() });
         expect(db.task.update).toHaveBeenCalledTimes(1);
+    });
+    it('fails closed on Google conflicts and outages before writing schedules', async () => {
+        const { db, google, tasks, blocks } = setup();
+        google.assertAvailable.mockRejectedValue(new ConflictException('Google busy'));
+        await expect(tasks.update('t1', 'u1', { startAt: startAt.toISOString() })).rejects.toThrow('Google busy');
+        await expect(blocks.create('u1', { title: 'Block', startAt: startAt.toISOString(), endAt: endAt.toISOString() })).rejects.toThrow('Google busy');
+        expect(db.task.update).not.toHaveBeenCalled();
+        expect(db.timeBlock.create).not.toHaveBeenCalled();
+    });
+    it('reschedules reminders and clears them when a task is completed', async () => {
+        const { db, tasks } = setup();
+        db.timeBlock.findMany.mockResolvedValue([]);
+        await tasks.update('t1', 'u1', { startAt: startAt.toISOString() });
+        expect(db.reminder.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { taskId: 't1' }, update: expect.objectContaining({ triggerAt: new Date(+startAt - 15 * 60000), triggered: false }) }));
+        db.task.update.mockResolvedValue({ ...(await db.task.findUnique()), status: 'DONE' });
+        await tasks.update('t1', 'u1', { status: 'DONE' });
+        expect(db.reminder.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u1', taskId: 't1' } });
     });
 });
