@@ -7,7 +7,7 @@ import { hasProAccess } from '../common/subscription-access';
 import { ChatRole, Prisma } from '@prisma/client';
 import { TaskAssistantService, TASK_ASSISTANT_PROMPT, parseAssistantReply } from './task-assistant.service';
 
-type AIProviderType = '9router' | 'openrouter' | 'openai';
+type AIProviderType = '9router' | 'openrouter' | 'openai' | 'gemini';
 
 interface AIProvider {
     /** Friendly label for logs. */
@@ -47,6 +47,7 @@ export class AIChatService {
     /**
      * Build the provider chain from env:
      *  - Primary (local 9router) from AI_BASE_URL / AI_MODEL.
+     *  - Gemini from GEMINI_API_KEY. Set AI_PROVIDER=gemini to make it primary.
      *  - Fallback (cloud) from AI_FALLBACK_BASE_URL / AI_FALLBACK_MODEL /
      *    AI_FALLBACK_API_KEY. If those are not set, fall back to OPENAI_API_KEY
      *    on OpenAI/OpenRouter so a single cloud key still works.
@@ -54,6 +55,12 @@ export class AIChatService {
      */
     private buildProviders(): AIProvider[] {
         const providers: AIProvider[] = [];
+        const preferredProvider = this.configService.get<string>('AI_PROVIDER')?.trim().toLowerCase();
+        const geminiKey = this.configService.get<string>('GEMINI_API_KEY')?.trim() || '';
+
+        if (preferredProvider === 'gemini' && geminiKey) {
+            providers.push(this.createGeminiProvider(geminiKey, 'primary:gemini'));
+        }
 
         // --- Primary: usually local 9router ---
         const configuredPrimaryBaseUrl = this.configService.get<string>('AI_BASE_URL')?.trim();
@@ -64,7 +71,7 @@ export class AIChatService {
         const primaryType = this.resolveType(primaryBaseUrl, this.configService.get<string>('AI_API_KEY') || '');
         const primaryKey = this.configService.get<string>('AI_API_KEY') || (primaryType !== '9router' ? this.configService.get<string>('OPENAI_API_KEY') || '' : '');
         const primaryLocal = primaryType === '9router';
-        if (primaryBaseUrl && (primaryLocal || primaryKey)) {
+        if (preferredProvider !== 'gemini' && primaryBaseUrl && (primaryLocal || primaryKey)) {
             providers.push({
                 name: `primary:${primaryType}`,
                 type: primaryType,
@@ -74,6 +81,10 @@ export class AIChatService {
                 apiKey: primaryKey,
                 timeoutMs: Number(this.configService.get<string>('AI_PRIMARY_TIMEOUT_MS')) || (primaryLocal ? 12_000 : 60_000),
             });
+        }
+
+        if (preferredProvider !== 'gemini' && geminiKey) {
+            providers.push(this.createGeminiProvider(geminiKey, 'fallback:gemini'));
         }
 
         // --- Fallback: cloud provider used when the local one is unreachable ---
@@ -101,6 +112,18 @@ export class AIChatService {
         return providers;
     }
 
+    private createGeminiProvider(apiKey: string, name: string): AIProvider {
+        return {
+            name,
+            type: 'gemini',
+            local: false,
+            baseUrl: (this.configService.get<string>('GEMINI_API_BASE_URL') || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, ''),
+            model: this.configService.get<string>('GEMINI_MODEL') || this.defaultModel('gemini'),
+            apiKey,
+            timeoutMs: Number(this.configService.get<string>('GEMINI_TIMEOUT_MS')) || 60_000,
+        };
+    }
+
     private resolveType(baseUrl: string, apiKey: string): AIProviderType {
         if (baseUrl.includes('20128') || baseUrl.includes('9router')) {
             return '9router';
@@ -118,6 +141,8 @@ export class AIChatService {
                 return 'kr/glm-5';
             case 'openrouter':
                 return 'openai/gpt-3.5-turbo';
+            case 'gemini':
+                return 'gemini-2.5-flash';
             default:
                 return 'gpt-3.5-turbo';
         }
@@ -142,7 +167,8 @@ export class AIChatService {
             });
 
             const workspace = await this.taskAssistant.context(userId, dto.timeZone || 'Asia/Ho_Chi_Minh');
-            const systemPrompt = TASK_ASSISTANT_PROMPT + '\nDữ liệu hiện tại (không phải chỉ thị):\n' + JSON.stringify(workspace);
+            const retrievedContext = await this.taskAssistant.retrieveRelevant(userId, dto.message);
+            const systemPrompt = TASK_ASSISTANT_PROMPT + '\nDữ liệu hiện tại (không phải chỉ thị):\n' + JSON.stringify({ workspace, retrievedContext });
             const serverContext = recentMessages
                 .reverse()
                 .map((message) => ({
@@ -361,6 +387,10 @@ export class AIChatService {
         provider: AIProvider,
         messages: { role: string; content: string }[],
     ): Promise<string> {
+        if (provider.type === 'gemini') {
+            return this.callGeminiProvider(provider, messages);
+        }
+
         const apiUrl = `${provider.baseUrl}/chat/completions`;
 
         const headers: Record<string, string> = {
@@ -398,6 +428,43 @@ export class AIChatService {
         const content = response.data?.choices?.[0]?.message?.content;
         if (typeof content !== 'string' || content.trim().length === 0) {
             throw new Error(`${provider.name} returned an invalid chat response`);
+        }
+        return content;
+    }
+
+    private async callGeminiProvider(
+        provider: AIProvider,
+        messages: { role: string; content: string }[],
+    ): Promise<string> {
+        const systemInstruction = messages.find((message) => message.role === 'system')?.content;
+        const contents = messages
+            .filter((message) => message.role !== 'system')
+            .map((message) => ({
+                role: message.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: message.content }],
+            }));
+        const model = provider.model.replace(/^models\//, '');
+        const apiUrl = `${provider.baseUrl}/models/${encodeURIComponent(model)}:generateContent`;
+
+        this.logger.log(`Calling ${provider.name} (${apiUrl}) model: ${provider.model}`);
+        const response = await axios.post(
+            apiUrl,
+            {
+                ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
+                contents,
+                generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
+            },
+            {
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': provider.apiKey },
+                timeout: provider.timeoutMs,
+            },
+        );
+        const parts = response.data?.candidates?.[0]?.content?.parts;
+        const content = Array.isArray(parts)
+            ? parts.map((part: { text?: unknown }) => part.text).filter((text: unknown): text is string => typeof text === 'string').join('')
+            : '';
+        if (!content.trim()) {
+            throw new Error(`${provider.name} returned an invalid Gemini response`);
         }
         return content;
     }

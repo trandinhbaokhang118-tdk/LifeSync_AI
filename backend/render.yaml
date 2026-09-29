@@ -23,12 +23,12 @@
         value: 7d
       - key: FRONTEND_URL
         value: https://life-sync-ai-seven.vercel.app
-      - key: OPENAI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: AI_BASE_URL
-        value: https://api.openai.com/v1
-      - key: AI_MODEL
-        value: gpt-4o-mini
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
       - key: RATE_LIMIT_AI_MAX
         value: 30
       - key: PAYMENTS_ENABLED

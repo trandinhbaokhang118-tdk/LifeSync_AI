@@ -32,6 +32,20 @@ describe('task assistant', () => {
         expect(db.task.groupBy).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'owner' } }));
         expect(db.planningProject.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: 'owner' } }));
     });
+    it('retrieves only the current owner\'s task and project context for RAG', async () => {
+        const { db, service } = setup();
+        const result = await service.retrieveRelevant('owner', 'Báo cáo Website quý 4');
+        expect(result.queryTerms).toContain('bao');
+        expect(result.tasks).toHaveLength(1);
+        expect(db.task.findMany).toHaveBeenCalledWith(expect.objectContaining({
+            where: expect.objectContaining({ userId: 'owner' }),
+            take: 20,
+        }));
+        expect(db.planningProject.findMany).toHaveBeenCalledWith(expect.objectContaining({
+            where: expect.objectContaining({ userId: 'owner' }),
+            take: 10,
+        }));
+    });
     it('finds older tasks by project, keyword, status and local day with accurate totals', async () => {
         const { db, service } = setup();
         const result = await service.lookup('owner', { type: 'find_tasks', data: { projectId, search: 'báo cáo', status: 'TODO', from: '2026-10-01T00:00:00+07:00', to: '2026-10-02T00:00:00+07:00', offset: 100 } });

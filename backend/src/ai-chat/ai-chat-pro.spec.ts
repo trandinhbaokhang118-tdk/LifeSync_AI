@@ -1,22 +1,55 @@
 import { AIChatService } from './ai-chat.service';
+import axios from 'axios';
 function setup(tier = 'FREE') {
     const db = {
         subscription: { findUnique: jest.fn().mockResolvedValue({ tier, status: 'ACTIVE', currentPeriodEnd: new Date(Date.now() + 86400000) }) },
         chatConversation: { create: jest.fn().mockResolvedValue({ id: 'c1' }), update: jest.fn() },
         chatMessage: { findMany: jest.fn().mockResolvedValue([]), create: jest.fn().mockResolvedValue({ id: 'm1', createdAt: new Date() }) },
     };
-    const tasks = { context: jest.fn().mockResolvedValue({ recentTasks: [], recentProjects: [] }), lookup: jest.fn().mockResolvedValue({ items: [{ id: 'old-task', title: 'Báo cáo' }], total: 1 }), execute: jest.fn() };
+    const tasks = { context: jest.fn().mockResolvedValue({ recentTasks: [], recentProjects: [] }), retrieveRelevant: jest.fn().mockResolvedValue({ tasks: [], projects: [] }), lookup: jest.fn().mockResolvedValue({ items: [{ id: 'old-task', title: 'Báo cáo' }], total: 1 }), execute: jest.fn() };
     const service = new AIChatService(db as never, { get: jest.fn() } as never, tasks as never);
     const call = jest.spyOn(service as unknown as { callOpenAI: (...args: unknown[]) => Promise<string> }, 'callOpenAI');
     return { db, tasks, service, call };
 }
 describe('AI task conversations', () => {
+    it('uses Gemini generateContent when Gemini is the configured provider', async () => {
+        const db = { subscription: { findUnique: jest.fn() } };
+        const config = {
+            get: jest.fn((key: string) => ({
+                AI_PROVIDER: 'gemini',
+                GEMINI_API_KEY: 'test-gemini-key',
+                GEMINI_MODEL: 'gemini-2.5-flash',
+            }[key])),
+        };
+        const tasks = {};
+        const service = new AIChatService(db as never, config as never, tasks as never);
+        const post = jest.spyOn(axios, 'post').mockResolvedValue({
+            data: { candidates: [{ content: { parts: [{ text: '{"message":"Chào bạn","actions":[]}' }] } }] },
+        } as never);
+
+        const response = await (service as unknown as { callOpenAI: (system: string, message: string) => Promise<string> })
+            .callOpenAI('Hệ thống', 'Xin chào');
+
+        expect(service.getProviderStatus()).toEqual({ configured: true, mode: 'cloud' });
+        expect(response).toContain('Chào bạn');
+        expect(post).toHaveBeenCalledWith(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+            expect.objectContaining({
+                systemInstruction: { parts: [{ text: 'Hệ thống' }] },
+                contents: [{ role: 'user', parts: [{ text: 'Xin chào' }] }],
+            }),
+            expect.objectContaining({ headers: expect.objectContaining({ 'x-goog-api-key': 'test-gemini-key' }) }),
+        );
+        post.mockRestore();
+    });
+
     it.each([{ tier: 'FREE', messages: 12 }, { tier: 'PRO', messages: 40 }, { tier: 'PLUS', messages: 40 }])('preserves $tier conversation allowance', async plan => {
         const { db, tasks, service, call } = setup(plan.tier);
         call.mockResolvedValue('{"message":"Bạn muốn lên lịch công việc nào?", "actions":[]}');
         await service.processMessage('u1', { message: 'Giúp tôi lên lịch', timeZone: 'Asia/Ho_Chi_Minh' });
         expect(db.chatMessage.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: plan.messages }));
         expect(tasks.context).toHaveBeenCalledWith('u1', 'Asia/Ho_Chi_Minh');
+        expect(tasks.retrieveRelevant).toHaveBeenCalledWith('u1', 'Giúp tôi lên lịch');
         expect(tasks.execute).not.toHaveBeenCalled();
     });
     it('looks up older tasks before answering', async () => {

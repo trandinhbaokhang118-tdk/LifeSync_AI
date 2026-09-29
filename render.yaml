@@ -25,6 +25,12 @@
         value: https://life-sync-ai-seven.vercel.app
       - key: OPENAI_API_KEY
         sync: false
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
       - key: PAYMENTS_ENABLED
         value: false
       - key: SEPAY_ENVIRONMENT
