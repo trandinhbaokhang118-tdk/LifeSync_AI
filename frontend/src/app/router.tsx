@@ -21,7 +21,6 @@ const Planner = lazy(() => import('../pages/Planner').then((m) => ({ default: m.
 const Focus = lazy(() => import('../pages/Focus').then((m) => ({ default: m.Focus })));
 const Analytics = lazy(() => import('../pages/Analytics').then((m) => ({ default: m.Analytics })));
 const Reminders = lazy(() => import('../pages/Reminders').then((m) => ({ default: m.Reminders })));
-const Notifications = lazy(() => import('../pages/Notifications').then((m) => ({ default: m.Notifications })));
 const Settings = lazy(() => import('../pages/Settings').then((m) => ({ default: m.Settings })));
 const NotFound = lazy(() => import('../pages/NotFound').then((m) => ({ default: m.NotFound })));
 const RouteError = lazy(() => import('../pages/RouteError').then((m) => ({ default: m.RouteError })));
@@ -179,7 +178,7 @@ export const router = createBrowserRouter(
                 },
                 {
                     path: 'notifications',
-                    element: <Notifications />,
+                    element: <Navigate to="/app?notifications=open" replace />,
                 },
                 {
                     path: 'settings',

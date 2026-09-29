@@ -1,10 +1,25 @@
+import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Bell, X } from 'lucide-react';
 import { Notifications } from '../../pages/Notifications';
 
 export function NotificationPopover({ unreadCount }: { unreadCount: number }) {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [open, setOpen] = useState(false);
+    const fromLegacyLink = searchParams.get('notifications') === 'open';
+    const onOpenChange = (next: boolean) => {
+        setOpen(next);
+        if (fromLegacyLink) {
+            setSearchParams(current => {
+                const updated = new URLSearchParams(current);
+                updated.delete('notifications');
+                return updated;
+            }, { replace: true });
+        }
+    };
     return (
-        <Dialog.Root modal={false}>
+        <Dialog.Root modal={false} open={open || fromLegacyLink} onOpenChange={onOpenChange}>
             <Dialog.Trigger asChild>
                 <button type="button" aria-label={`Thông báo${unreadCount ? `, ${unreadCount} chưa đọc` : ''}`} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]">
                     <Bell className="h-5 w-5" />

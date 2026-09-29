@@ -15,7 +15,6 @@ import {
     Calendar,
     Timer,
     BarChart3,
-    Bell,
     Settings,
     Plus,
     Moon,
@@ -94,10 +93,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             <BarChart3 className="mr-2 h-4 w-4" />
                             <span>Thống kê</span>
                             <CommandShortcut>⌘5</CommandShortcut>
-                        </CommandItem>
-                        <CommandItem onSelect={() => runCommand(() => navigate('/app/notifications'))}>
-                            <Bell className="mr-2 h-4 w-4" />
-                            <span>Thông báo</span>
                         </CommandItem>
                         <CommandItem onSelect={() => runCommand(() => navigate('/app/settings'))}>
                             <Settings className="mr-2 h-4 w-4" />
