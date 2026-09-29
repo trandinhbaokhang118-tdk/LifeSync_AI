@@ -756,11 +756,11 @@ export function GpsTracking() {
     return (
         <div className="page-shell pb-24">
             <div className="mx-auto max-w-7xl space-y-6">
-                <section className="track-lab-hero p-6 md:p-8">
-                    <div className="relative z-10 flex flex-col gap-6">
+                <section className="track-lab-hero p-4 sm:p-6 md:p-8">
+                    <div className="relative z-10 flex flex-col gap-3 sm:gap-6">
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                             <div className="max-w-3xl">
-                                <div className="mb-4 flex flex-wrap items-center gap-3">
+                                <div className="mb-2 hidden flex-wrap items-center gap-3 sm:flex">
                                     <Badge variant="primary" className="px-4 py-1.5 text-[11px] uppercase tracking-[0.22em]">
                                         Track Lab
                                     </Badge>
@@ -773,10 +773,10 @@ export function GpsTracking() {
                                         Recovery x Schedule
                                     </span>
                                 </div>
-                                <h1 className="text-3xl font-bold tracking-tight text-[var(--text)] md:text-4xl">
+                                <h1 className="!text-xl font-bold tracking-tight text-[var(--text)] sm:!text-3xl md:!text-4xl">
                                     Today Readiness & Focus
                                 </h1>
-                                <p className="mt-3 max-w-2xl text-base leading-7 text-[var(--text-2)]">
+                                <p className="mt-2 hidden max-w-2xl text-base leading-7 sm:block text-[var(--text-2)]">
                                     A premium analysis layer that blends calendar load, recovery signals and all-sport
                                     performance into one lab-style view of the day.
                                 </p>
@@ -1540,41 +1540,33 @@ export function GpsTracking() {
     );
 }
 
-function PremiumPreview({
-    locked,
-    title,
-    teaser,
-    compact = false,
-    children,
-}: {
+function PremiumPreview({ locked, title, teaser, compact = false, children }: {
     locked: boolean;
     title: string;
     teaser: string;
     compact?: boolean;
     children: ReactNode;
 }) {
+    if (!locked) return <div>{children}</div>;
+    if (!compact) return null;
     return (
-        <div className="relative">
-            <div className={cn('transition-all duration-300', locked && 'pointer-events-none select-none blur-[8px] saturate-[0.8]')}>
-                {children}
+        <section aria-label={title} className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 sm:p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text)]">
+                <Lock className="h-4 w-4 shrink-0 text-[var(--primary)]" />Phân tích nâng cao với Plus
             </div>
-            {locked && (
-                <div className={cn('track-premium-overlay', compact && 'track-premium-overlay-compact')}>
-                    <div className="max-w-md text-center">
-                        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] text-[var(--primary)]">
-                            <Lock className="h-5 w-5" />
-                        </div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-[var(--primary)]">Premium preview</p>
-                        <h3 className="text-xl font-semibold text-[var(--text)]">{title}</h3>
-                        <p className="mt-3 text-sm leading-6 text-[var(--text-2)]">{teaser}</p>
-                        <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[var(--surface-highlight-border)] bg-[var(--surface-highlight)] px-4 py-2 text-sm font-medium text-[var(--text)]">
-                            <Lock className="h-4 w-4 text-[var(--primary)]" />
-                            Plus required
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+            <p className="mt-2 text-sm text-[var(--text-2)]">Tổng quan phục hồi, dòng thời gian vận động, hiệu suất tập luyện và gợi ý AI trong một nơi.</p>
+            <details className="mt-2 text-sm text-[var(--text-2)]">
+                <summary className="cursor-pointer py-2 text-[var(--primary)]">Xem tính năng trong gói</summary>
+                <p>{teaser}</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li>Mức sẵn sàng và khả năng tập trung</li>
+                    <li>Dòng thời gian công việc, vận động và phục hồi</li>
+                    <li>Giấc ngủ, nhịp tim, stress và năng lượng</li>
+                    <li>Hiệu suất đa môn thể thao</li>
+                    <li>Gợi ý AI cho ngày và tuần</li>
+                </ul>
+            </details>
+        </section>
     );
 }
 

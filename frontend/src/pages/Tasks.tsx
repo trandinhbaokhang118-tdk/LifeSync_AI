@@ -950,7 +950,7 @@ function TaskCard({
                 data-task-id={task.id}
                 className="task-interactive-card"
             >
-                <div className="flex items-start gap-3">
+                <div className="task-card-layout flex items-start gap-3">
                     <motion.button
                         type="button"
                         whileHover={{ scale: 1.1, rotate: 5 }}
@@ -964,14 +964,14 @@ function TaskCard({
                         {isUpdating ? <Loader2 className="animate-spin" size={20} /> :
                             task.status === 'DONE' ? <CheckCircle size={24} /> : <span className="task-completion-ring" />}
                     </motion.button>
-                    <div className="flex-1 min-w-0">
+                    <div className="task-card-content flex-1 min-w-0">
                         <h3 className="task-title font-medium">{task.title}</h3>
                         {task.description && (
                             <p className="text-sm text-[var(--text-2)] line-clamp-2 mt-1">
                                 {task.description}
                             </p>
                         )}
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <div className="task-card-meta flex flex-wrap items-center gap-2 mt-2">
                             <StatusBadge status={task.status} />
                             <PriorityBadge priority={task.priority} />
                             {task.startAt && (
@@ -1024,7 +1024,7 @@ function TaskCard({
                             ))}
                         </div>
                     </div>
-                    <motion.div whileHover={{ scale: 1.1 }}>
+                    <motion.div className="task-card-menu" whileHover={{ scale: 1.1 }}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button

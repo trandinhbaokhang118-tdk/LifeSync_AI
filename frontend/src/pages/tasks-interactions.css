@@ -77,3 +77,17 @@
 @media(max-width:479px) {
  .task-edit-dialog .task-datetime-field > .grid { grid-template-columns: minmax(0,1fr); }
 }
+
+@media (max-width: 639px) {
+  .task-interactive-card { padding: .5rem .625rem; border-radius: .75rem; }
+  .task-card-layout { display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 0 .25rem; }
+  .task-card-content { grid-column: 1 / -1; grid-row: 1; }
+  .task-card-menu { grid-column: 2; grid-row: 1; z-index: 1; }
+  .task-card-menu button { width: 44px; height: 44px; }
+  .task-card-layout > .task-completion-toggle { position: absolute; inset-inline-start: .5rem; top: .5rem; z-index: 1; }
+  .task-interactive-card .task-title { min-height: 44px; padding: .625rem 44px .5rem 44px; font-size: .9375rem; line-height: 1.4; }
+  .task-card-content > p { margin-top: 0; font-size: .8125rem; line-height: 1.4; }
+  .task-card-meta { gap: .25rem .375rem; margin-top: .375rem; }
+  .task-card-meta > div { padding: .125rem .5rem; font-size: .6875rem; }
+  .task-card-meta > span { font-size: .6875rem; line-height: 1.5; }
+}
