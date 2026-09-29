@@ -58,3 +58,25 @@ describe('FitnessService premium access', () => {
     expect(stats.avgHeartRate).toBe(70);
   });
 });
+
+
+describe('workout writes enforce subscription access', () => {
+  const dto = { name: 'Run', category: 'running', duration: 30 };
+  function setup(tier: string, expired = false) {
+    const db = { subscription: { findUnique: jest.fn().mockResolvedValue({ tier, status: 'ACTIVE', currentPeriodEnd: new Date(Date.now() + (expired ? -1 : 1) * 86400000) }) }, exercise: { create: jest.fn().mockResolvedValue({ id: 'e1' }) } };
+    return { db, service: new FitnessService(db as never) };
+  }
+  it('persists a Pro manual workout for its authenticated owner', async () => {
+    const { service, db } = setup('PRO');
+    await expect(service.createExercise('u1', dto)).resolves.toEqual({ id: 'e1' });
+    expect(db.exercise.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ userId: 'u1', duration: 30 }) }));
+  });
+  it.each([['FREE', false], ['PRO', true]])('rejects unavailable access: %s, expired=%s', async (tier, expired) => {
+    const { service, db } = setup(tier as string, expired as boolean);
+    await expect(service.createExercise('u1', dto)).rejects.toThrow();
+    expect(db.exercise.create).not.toHaveBeenCalled();
+  });
+  it('does not let Pro bypass Plus GPS access through exercise creation', async () => {
+    await expect(setup('PRO').service.createExercise('u1', { ...dto, route: { startLat: 1, startLng: 1, endLat: 2, endLng: 2, totalDistance: 1, duration: 60 } })).rejects.toThrow('Plus');
+  });
+});

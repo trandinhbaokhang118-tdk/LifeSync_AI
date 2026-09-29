@@ -1,3 +1,4 @@
+import { WorkoutEntry } from '../components/fitness/WorkoutEntry';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Clock3, Flame, Footprints, MapPin, Play, Settings, Target } from 'lucide-react';
@@ -143,6 +144,8 @@ export function Fitness() {
                         </Link>
                     </div>
                 </div>
+
+                <WorkoutEntry onSaved={loadData} />
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     <SummaryCard

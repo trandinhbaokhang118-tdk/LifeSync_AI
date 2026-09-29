@@ -18,6 +18,7 @@ import {
   SubscriptionStatus,
   SubscriptionTier,
 } from '@prisma/client';
+import { effectiveTier } from '../common/subscription-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { CreateSubscriptionPlanDto } from './dto/create-subscription-plan.dto';
@@ -148,7 +149,7 @@ export class PaymentsService implements OnModuleInit {
       };
     }
 
-    return subscription;
+    return { ...subscription, tier: effectiveTier(subscription) };
   }
 
   async createCheckout(userId: string, dto: CreateCheckoutDto) {
@@ -160,7 +161,7 @@ export class PaymentsService implements OnModuleInit {
     const plan = await this.prisma.subscriptionPlan.findUnique({
       where: { tier: dto.tier },
     });
-    if (!plan) throw new NotFoundException('Plan not found');
+    if (!plan || !plan.isActive || plan.priceVND <= 0) throw new NotFoundException('Paid plan not found');
 
     if (dto.provider === PaymentProvider.SEPAY) {
       return this.createSePayCheckout(user, plan);
@@ -170,6 +171,10 @@ export class PaymentsService implements OnModuleInit {
       throw new NotImplementedException(
         `Provider ${dto.provider} is not configured. Stripe is the supported live checkout provider for this deployment.`,
       );
+    }
+
+    if (plan.tier === SubscriptionTier.PRO) {
+      throw new NotImplementedException('Gói Pro 1.000đ thanh toán qua SePay.');
     }
 
     const priceId = this.getStripePriceId(plan.tier);
@@ -849,9 +854,6 @@ export class PaymentsService implements OnModuleInit {
 
   // Seed default subscription plans
   async seedPlans() {
-    const existingPlans = await this.prisma.subscriptionPlan.count();
-    if (existingPlans > 0) return;
-
     const plans: Prisma.SubscriptionPlanCreateManyInput[] = [
       {
         tier: SubscriptionTier.FREE,
@@ -868,16 +870,15 @@ export class PaymentsService implements OnModuleInit {
         tier: SubscriptionTier.PRO,
         name: 'Pro',
         description: 'Enhanced productivity',
-        priceVND: 99000,
+        priceVND: 1000,
         priceUSD: 499,
         interval: 'month',
         features: [
           'Unlimited Tasks & Calendar',
-          'Advanced AI Assistant',
+          'AI mở rộng: ngữ cảnh 40 tin nhắn, 100 công việc và lịch 7 ngày',
           'Unlimited Time Blocks',
-          'Basic Fitness Tracking',
-          'No Ads',
-          'Priority Support',
+          'Nhật ký tập luyện: lưu thời lượng, quãng đường, calories',
+          'Không quảng cáo',
         ],
         isActive: true,
         sortOrder: 2,
@@ -903,6 +904,12 @@ export class PaymentsService implements OnModuleInit {
       },
     ];
 
-    await this.prisma.subscriptionPlan.createMany({ data: plans });
+    for (const plan of plans) {
+      await this.prisma.subscriptionPlan.upsert({
+        where: { tier: plan.tier },
+        create: plan,
+        update: {},
+      });
+    }
   }
 }

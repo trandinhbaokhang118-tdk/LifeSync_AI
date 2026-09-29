@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
+import { hasProAccess } from '../common/subscription-access';
+import { Prisma, SubscriptionTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTimeBlockDto } from './dto/create-time-block.dto';
 import { UpdateTimeBlockDto } from './dto/update-time-block.dto';
@@ -24,14 +26,17 @@ export class TimeBlocksService {
         // Check for overlap
         await this.checkOverlap(userId, startAt, endAt);
 
-        return this.prisma.timeBlock.create({
-            data: {
-                userId,
-                title: createDto.title,
-                description: createDto.description,
-                startAt,
-                endAt,
-            },
+        return this.prisma.$transaction(async (db) => {
+            await this.assertDailyAllowance(db, userId, startAt);
+            return db.timeBlock.create({
+                data: {
+                    userId,
+                    title: createDto.title,
+                    description: createDto.description,
+                    startAt,
+                    endAt,
+                },
+            });
         });
     }
 
@@ -91,14 +96,19 @@ export class TimeBlocksService {
         // Check for overlap (excluding current block)
         await this.checkOverlap(userId, startAt, endAt, id);
 
-        return this.prisma.timeBlock.update({
-            where: { id },
-            data: {
-                title: updateDto.title,
-                description: updateDto.description,
-                startAt,
-                endAt,
-            },
+        return this.prisma.$transaction(async (db) => {
+            if (this.dayKey(startAt) !== this.dayKey(existing.startAt)) {
+                await this.assertDailyAllowance(db, userId, startAt, id);
+            }
+            return db.timeBlock.update({
+                where: { id },
+                data: {
+                    title: updateDto.title,
+                    description: updateDto.description,
+                    startAt,
+                    endAt,
+                },
+            });
         });
     }
 
@@ -108,6 +118,27 @@ export class TimeBlocksService {
         await this.prisma.timeBlock.delete({ where: { id } });
 
         return { message: 'Time block deleted successfully' };
+    }
+
+    // Quota days follow the application's Vietnam timezone (UTC+7).
+    private dayKey(date: Date) {
+        return new Date(date.getTime() + 7 * 3600000).toISOString().slice(0, 10);
+    }
+
+    private async assertDailyAllowance(db: Prisma.TransactionClient, userId: string, startAt: Date, excludeId?: string) {
+        await db.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
+        const subscription = await db.subscription.findUnique({ where: { userId } });
+        if (hasProAccess(subscription)) return;
+        const start = new Date(this.dayKey(startAt) + 'T00:00:00+07:00');
+        const count = await db.timeBlock.count({ where: {
+            userId, id: excludeId ? { not: excludeId } : undefined,
+            startAt: { gte: start, lt: new Date(start.getTime() + 86400000) },
+        } });
+        if (count >= 5) throw new ForbiddenException({
+            code: 'TIME_BLOCK_FREE_LIMIT',
+            message: 'Gói Free có tối đa 5 khối giờ mỗi ngày. Nâng cấp Pro để dùng không giới hạn.',
+            requiredTier: SubscriptionTier.PRO,
+        });
     }
 
     private async checkOverlap(userId: string, startAt: Date, endAt: Date, excludeId?: string) {

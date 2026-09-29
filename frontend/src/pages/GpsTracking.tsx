@@ -268,7 +268,7 @@ export function GpsTracking() {
         retry: false,
     });
 
-    const hasPremiumAccess = Boolean(premiumAccess?.hasAccess || subscription?.tier === 'PLUS');
+    const hasPremiumAccess = Boolean(premiumAccess?.hasAccess);
 
     const model = buildTrackModel({ todayActivity, weeklyStats, exercises, timeBlocks, routes });
     const rangeSeries = labRange === 7 ? model.series.slice(-7) : model.series;

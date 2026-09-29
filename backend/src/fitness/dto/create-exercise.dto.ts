@@ -1,6 +1,6 @@
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsDateString, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { Min, Max, MaxLength, Matches, IsArray, IsDateString, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 class ExerciseRoutePointDto {
   @ApiProperty()
@@ -35,6 +35,8 @@ class CreateExerciseRouteDto {
 
   @ApiProperty()
   @IsNumber()
+  @Min(0)
+  @Max(86400)
   duration: number;
 
   @ApiProperty({ required: false })
@@ -53,6 +55,8 @@ class CreateExerciseRouteDto {
 export class CreateExerciseDto {
   @ApiProperty()
   @IsString()
+  @MaxLength(120)
+  @Matches(/\S/)
   name: string;
 
   @ApiProperty({ enum: ['cardio', 'strength', 'flexibility', 'balance', 'endurance'] })
@@ -66,11 +70,15 @@ export class CreateExerciseDto {
 
   @ApiProperty()
   @IsNumber()
+  @Min(0)
+  @Max(86400)
   duration: number;
 
   @ApiProperty({ required: false })
   @IsNumber()
   @IsOptional()
+  @Min(0)
+  @Max(1000)
   distance?: number;
 
   @ApiProperty({ required: false })
@@ -81,6 +89,8 @@ export class CreateExerciseDto {
   @ApiProperty({ required: false })
   @IsNumber()
   @IsOptional()
+  @Min(0)
+  @Max(20000)
   caloriesBurned?: number;
 
   @ApiProperty({ required: false })

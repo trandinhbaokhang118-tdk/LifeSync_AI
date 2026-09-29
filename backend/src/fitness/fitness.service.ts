@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, SubscriptionStatus, SubscriptionTier } from '@prisma/client';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Prisma, SubscriptionTier } from '@prisma/client';
+import { effectiveTier } from '../common/subscription-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateFitnessProfileDto } from './dto/update-fitness-profile.dto';
 import { CreateExerciseDto } from './dto/create-exercise.dto';
@@ -48,6 +49,10 @@ export class FitnessService {
   // ============ Exercises ============
 
   async createExercise(userId: string, dto: CreateExerciseDto) {
+    const feature = dto.route ? 'gps-tracking' : 'fitness-basic';
+    if (!(await this.checkPremiumFeature(userId, feature))) {
+      throw new ForbiddenException(dto.route ? 'GPS tracking requires Plus subscription' : 'Nhật ký tập luyện cần gói Pro hoặc Plus còn hạn.');
+    }
     return this.prisma.exercise.create({
       data: {
         userId,
@@ -260,18 +265,6 @@ export class FitnessService {
       where: { userId },
     });
 
-    const eligibleStatuses: SubscriptionStatus[] = [
-      SubscriptionStatus.ACTIVE,
-      SubscriptionStatus.TRIALING,
-    ];
-    const isExpired = subscription?.currentPeriodEnd
-      ? subscription.currentPeriodEnd.getTime() <= Date.now()
-      : true;
-
-    if (!subscription || !eligibleStatuses.includes(subscription.status) || isExpired) {
-      return false;
-    }
-
     // Define feature requirements
     const featureTiers: Record<string, SubscriptionTier[]> = {
       'fitness-basic': [SubscriptionTier.PRO, SubscriptionTier.PLUS],
@@ -282,7 +275,7 @@ export class FitnessService {
     };
 
     const requiredTiers = featureTiers[feature] || [];
-    return requiredTiers.includes(subscription.tier);
+    return requiredTiers.includes(effectiveTier(subscription));
   }
 
   private encodePolyline(points: Array<{ lat: number; lng: number }>): string {

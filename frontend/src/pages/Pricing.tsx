@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
     Check,
@@ -39,11 +39,13 @@ const tierGlows = {
 };
 
 export function Pricing() {
-    const [billingCycle, setBillingCycle] = useState<'month' | 'year'>('month');
+    const queryClient = useQueryClient();
+    const [verificationAttempt, setVerificationAttempt] = useState(0);
+    const [pendingPayment, setPendingPayment] = useState(false);
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const { data: plans, isLoading } = useQuery({
+    const { data: plans, isLoading, isError, refetch: refetchPlans } = useQuery({
         queryKey: ['subscription-plans'],
         queryFn: paymentsService.getPlans,
     });
@@ -57,13 +59,30 @@ export function Pricing() {
         const sessionId = searchParams.get('session_id');
         if (searchParams.get('checkout') !== 'success' || !sessionId) return;
 
-        void paymentsService.verifyPayment(sessionId)
-            .then(() => showToast.success('Thanh toán thành công', 'Gói của bạn đã được kích hoạt.'))
-            .catch(() => showToast.error('Chưa thể xác minh thanh toán', 'Vui lòng thử lại sau ít phút.'))
-            .finally(() => {
-                setSearchParams({}, { replace: true });
-            });
-    }, [searchParams, setSearchParams]);
+        let cancelled = false;
+        const verify = async () => {
+            setPendingPayment(true);
+            for (let attempt = 0; attempt < 8 && !cancelled; attempt++) {
+                try {
+                    const result = await paymentsService.verifyPayment(sessionId);
+                    if (!result.verified) throw new Error('Payment pending');
+                    if (cancelled) return;
+                    await queryClient.invalidateQueries({ queryKey: ['subscription'] });
+                    await queryClient.invalidateQueries({ queryKey: ['premium-access'] });
+                    await queryClient.invalidateQueries({ queryKey: ['track-lab'] });
+                    showToast.success('Thanh toán thành công', 'Quyền sử dụng gói đã được cập nhật.');
+                    setPendingPayment(false);
+                    setSearchParams({}, { replace: true });
+                    return;
+                } catch {
+                    if (attempt < 7) await new Promise(resolve => window.setTimeout(resolve, 1500));
+                }
+            }
+            if (!cancelled) showToast.info('Đang chờ xác nhận', 'Bạn có thể kiểm tra lại sau khi ngân hàng xác nhận giao dịch.');
+        };
+        void verify();
+        return () => { cancelled = true; };
+    }, [searchParams, setSearchParams, queryClient, verificationAttempt]);
 
     const checkoutMutation = useMutation({
         mutationFn: (tier: SubscriptionTier) =>
@@ -71,6 +90,9 @@ export function Pricing() {
         onSuccess: (data) => {
             if (data.checkoutUrl) {
                 redirectToCheckout(data);
+            } else {
+                showToast.error('Không thể tạo phiên thanh toán');
+                setIsProcessing(null);
             }
         },
         onError: () => {
@@ -95,7 +117,7 @@ export function Pricing() {
 
     const formatPrice = (plan: SubscriptionPlan) => {
         if (plan.priceVND === 0) return 'Miễn phí';
-        const price = billingCycle === 'year' ? plan.priceVND * 10 : plan.priceVND;
+        const price = plan.priceVND;
         return `${price.toLocaleString('vi-VN')}₫`;
     };
 
@@ -105,6 +127,13 @@ export function Pricing() {
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--primary)] border-t-transparent" />
             </div>
         );
+    }
+
+    if (isError || !plans?.data.length) {
+        return <div role="alert" className="surface-card space-y-4 p-6">
+            <p>Chưa tải được bảng giá. Vui lòng thử lại.</p>
+            <Button onClick={() => void refetchPlans()}>Tải lại bảng giá</Button>
+        </div>;
     }
 
     return (
@@ -150,39 +179,11 @@ export function Pricing() {
                 <div className="absolute -bottom-20 -left-20 h-60 w-60 rounded-full bg-[var(--primary)]/10 blur-3xl" />
             </motion.div>
 
-            {/* Billing Toggle */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="flex items-center justify-center gap-4"
-            >
-                <span className={cn('text-sm font-medium', billingCycle === 'month' ? 'text-[var(--text)]' : 'text-[var(--text-2)]')}>
-                    Hàng tháng
-                </span>
-                <button
-                    onClick={() => setBillingCycle(billingCycle === 'month' ? 'year' : 'month')}
-                    role="switch"
-                    aria-checked={billingCycle === 'year'}
-                    aria-label="Chuyển đổi chu kỳ thanh toán"
-                    className={cn(
-                        'relative flex h-7 w-12 items-center rounded-full px-1 transition-colors duration-300',
-                        billingCycle === 'year' ? 'bg-[var(--primary)]' : 'bg-[var(--surface-3)]'
-                    )}
-                >
-                    <motion.span
-                        className="h-5 w-5 rounded-full bg-white shadow-md"
-                        animate={{ x: billingCycle === 'year' ? 20 : 0 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-                    />
-                </button>
-                <span className={cn('text-sm font-medium', billingCycle === 'year' ? 'text-[var(--text)]' : 'text-[var(--text-2)]')}>
-                    Hàng năm
-                    <span className="ml-2 inline-flex items-center rounded-full bg-green-500/20 px-2 py-0.5 text-xs text-green-600 dark:text-green-400">
-                        Tiết kiệm 17%
-                    </span>
-                </span>
-            </motion.div>
+            <p className="text-center text-sm text-[var(--text-2)]">Thanh toán theo tháng qua SePay. Gói được kích hoạt sau khi giao dịch được xác nhận.</p>
+            {pendingPayment && <div role="status" className="surface-card p-4 text-center">
+                <p>Đang chờ ngân hàng xác nhận thanh toán.</p>
+                <Button onClick={() => setVerificationAttempt(value => value + 1)}>Kiểm tra lại thanh toán</Button>
+            </div>}
 
             {/* Pricing Cards */}
             <div className="grid gap-8 lg:grid-cols-3">
@@ -236,20 +237,16 @@ export function Pricing() {
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-4xl font-bold text-[var(--text)]">{formatPrice(plan)}</span>
                                         {plan.priceVND > 0 && (
-                                            <span className="text-[var(--text-2)]">/{billingCycle === 'year' ? 'năm' : 'tháng'}</span>
+                                            <span className="text-[var(--text-2)]">/tháng</span>
                                         )}
                                     </div>
-                                    {billingCycle === 'year' && plan.priceVND > 0 && (
-                                        <p className="mt-1 text-sm text-[var(--text-3)]">
-                                            ~{Math.round(plan.priceVND * 10 / 12).toLocaleString('vi-VN')}₫/tháng
-                                        </p>
-                                    )}
+
                                 </div>
 
                                 {/* CTA Button */}
                                 <Button
                                     onClick={() => handleUpgrade(plan.tier as SubscriptionTier)}
-                                    disabled={isCurrentPlan || isProcessing === plan.tier}
+                                    disabled={isCurrentPlan || isProcessing !== null || pendingPayment}
                                     loading={isProcessing === plan.tier}
                                     className={cn(
                                         'mb-6 w-full',
@@ -325,8 +322,8 @@ export function Pricing() {
                         <div className="mx-auto mb-3 inline-flex items-center justify-center rounded-full bg-purple-500/20 p-3">
                             <Heart className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <h4 className="mb-1 font-semibold text-[var(--text)]">Hỗ trợ 24/7</h4>
-                        <p className="text-sm text-[var(--text-2)]">Đội ngũ hỗ trợ tận tâm</p>
+                        <h4 className="mb-1 font-semibold text-[var(--text)]">Dữ liệu đồng bộ</h4>
+                        <p className="text-sm text-[var(--text-2)]">Lưu công việc và nhật ký trong tài khoản</p>
                     </div>
                 </div>
             </motion.div>

@@ -16,12 +16,8 @@ type SubscriptionWithUser = Subscription & {
     user?: { id: string; email: string; name: string };
 };
 
-const providerLabels: Record<PaymentProvider, string> = {
-    STRIPE: 'Stripe',
+const providerLabels: Partial<Record<PaymentProvider, string>> = {
     SEPAY: 'SePay (VietinBank)',
-    VNPAY: 'VNPay',
-    MOMO: 'MoMo',
-    ZALOPAY: 'ZaloPay',
 };
 
 const paymentsEnabled = import.meta.env.VITE_PAYMENTS_ENABLED === 'true';

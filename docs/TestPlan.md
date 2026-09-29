@@ -320,3 +320,15 @@ npm run test:cov    # Coverage report
 - Frontend build and targeted ESLint: passed.
 - Browser checks with synthetic API fixtures: bell opens popup without leaving the current route; All/Unread tabs; mark one/all read updates the badge; pagination loads older messages; failed mutation keeps unread state and displays an error; Escape closes popup.
 - Visual checks: desktop dark theme and mobile light theme (375 px), popup stays inside viewport; theme toggle and user avatar both measure 44 x 44 px; notification sidebar link is absent.
+
+
+## Pro 1,000 VND monthly plan (2026-09-30)
+
+- Run backend unit suites: subscription-access, payments.service, time-blocks-pro, ai-chat-pro, fitness.service and tasks-calendar.
+- Free: five blocks per scheduled Vietnam calendar day; the sixth creation or a move into a full day fails before writing. Existing same-day edits remain possible after downgrade. Per-user SQL row locking serializes quota checks and writes across instances.
+- Current Pro/Plus: unlimited time blocks, 40 recent chat messages and up to 100 tasks plus the next seven days of time blocks in AI context. External AI availability remains dependent on provider configuration.
+- Pro manual Fitness entry saves authenticated-user exercise records; Free/expired plans cannot write workouts and Pro cannot attach a Plus-only GPS route. Existing history remains readable.
+- SePay checkout persists and signs 1,000 VND for a new Pro order. Existing orders retain their recorded amount; webhook authentication and idempotency remain required. Pro Stripe checkout is disabled to avoid charging a previous configured Stripe price.
+- Browser fixture checks: 1,000 VND price, no unsupported yearly toggle, pending verification followed by success refreshes access, Pro workout form saves and refreshes the journal. These checks use mocked API responses, not a real bank transfer.
+- Deployment must apply migration 20260930010000_pro_1k. It updates the existing Pro catalog once, without rewriting payment orders or active subscription periods. Startup seeds missing tiers without overwriting admin catalog edits.
+- Catalog now describes implemented Pro benefits; it does not promise priority support without an operational support integration.

@@ -1,3 +1,4 @@
+import { PaymentProvider as CheckoutProvider, SubscriptionTier as CheckoutTier } from './dto/create-checkout.dto';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PaymentOrderStatus, PaymentProvider, SubscriptionTier } from '@prisma/client';
@@ -14,14 +15,14 @@ describe('PaymentsService SePay IPN', () => {
       id: 'sepay-order-id',
       order_status: 'CAPTURED',
       order_currency: 'VND',
-      order_amount: '99000.00',
+      order_amount: '1000.00',
       order_invoice_number: 'LS-PRO-TEST',
     },
     transaction: {
       id: 'sepay-transaction-id',
       transaction_id: 'transaction-123',
       transaction_status: 'APPROVED',
-      transaction_amount: '99000',
+      transaction_amount: '1000',
       transaction_currency: 'VND',
     },
     customer: {
@@ -37,7 +38,7 @@ describe('PaymentsService SePay IPN', () => {
       provider: PaymentProvider.SEPAY,
       invoiceNumber: 'LS-PRO-TEST',
       tier: SubscriptionTier.PRO,
-      amountVND: 99_000,
+      amountVND: 1_000,
       status: PaymentOrderStatus.PENDING,
       providerOrderId: null,
       transactionId: null,
@@ -113,6 +114,20 @@ describe('PaymentsService SePay IPN', () => {
     );
   });
 
+  it('preserves the amount of orders created before the price change', async () => {
+    const { service, transaction } = createService({ amountVND: 99000 });
+    const oldPayload = { ...payload, order: { ...payload.order, order_amount: '99000' }, transaction: { ...payload.transaction, transaction_amount: '99000' } };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, oldPayload, undefined, secretKey)).resolves.toMatchObject({ processed: true });
+    expect(transaction.subscription.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects an underpaid Pro order without activating access', async () => {
+    const { service, transaction } = createService();
+    const underpaid = { ...payload, transaction: { ...payload.transaction, transaction_amount: '500' } };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, underpaid, undefined, secretKey)).rejects.toThrow();
+    expect(transaction.subscription.upsert).not.toHaveBeenCalled();
+  });
+
   it('acknowledges a retry of the same paid transaction without processing it again', async () => {
     const { service, prisma } = createService({
       status: PaymentOrderStatus.PAID,
@@ -135,7 +150,7 @@ describe('PaymentsService SePay IPN', () => {
       code: 'LS-PRO-TEST',
       content: 'LS-PRO-TEST thanh toan LifeSync AI',
       transferType: 'in',
-      transferAmount: 99_000,
+      transferAmount: 1_000,
       referenceCode: 'FT24012345678',
     };
 
@@ -152,5 +167,37 @@ describe('PaymentsService SePay IPN', () => {
         data: expect.objectContaining({ transactionId: 'sepay-bank-92704' }),
       }),
     );
+  });
+});
+
+
+describe('Pro monthly catalog and checkout', () => {
+  function setup() {
+    const db = {
+      subscriptionPlan: { upsert: jest.fn(), findUnique: jest.fn().mockResolvedValue({ tier: 'PRO', priceVND: 1000, isActive: true }) },
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'u1', email: 'test@example.com' }) },
+      paymentOrder: { create: jest.fn() },
+      subscription: { findUnique: jest.fn().mockResolvedValue({ tier: 'PRO', status: 'ACTIVE', currentPeriodEnd: new Date(0) }) },
+    };
+    const values: Record<string, string> = { PAYMENTS_ENABLED: 'true', SEPAY_MERCHANT_ID: 'test', SEPAY_MERCHANT_SECRET_KEY: 'test-secret', FRONTEND_URL: 'https://example.com', SEPAY_BANK_NAME: 'test', SEPAY_BANK_ACCOUNT_NUMBER: 'test', SEPAY_BANK_ACCOUNT_NAME: 'test' };
+    return { db, service: new PaymentsService(db as never, { get: (key: string) => values[key] } as never) };
+  }
+  it('seeds missing tiers without overwriting existing admin configuration', async () => {
+    const { service, db } = setup();
+    await service.seedPlans();
+    expect(db.subscriptionPlan.upsert).toHaveBeenCalledTimes(3);
+    expect(db.subscriptionPlan.upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { tier: 'PRO' }, create: expect.objectContaining({ priceVND: 1000, interval: 'month' }), update: {} }));
+  });
+  it('charges exactly 1000 VND for a new Pro order', async () => {
+    const { service, db } = setup();
+    const checkout = await service.createCheckout('u1', { tier: CheckoutTier.PRO, provider: CheckoutProvider.SEPAY });
+    expect(checkout).toMatchObject({ checkoutFields: { order_amount: '1000', currency: 'VND' } });
+    expect(db.paymentOrder.create).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'u1', amountVND: 1000, tier: 'PRO' }) });
+  });
+  it('does not charge a stale Stripe price for Pro', async () => {
+    await expect(setup().service.createCheckout('u1', { tier: CheckoutTier.PRO, provider: CheckoutProvider.STRIPE })).rejects.toThrow('SePay');
+  });
+  it('returns effective Free access after Pro expires', async () => {
+    await expect(setup().service.getSubscription('u1')).resolves.toMatchObject({ tier: 'FREE' });
   });
 });
