@@ -353,6 +353,7 @@ model PaymentOrder {
   invoiceNumber   String             @unique
   tier            SubscriptionTier
   amountVND       Int
+  receivedAmountVND Int?
   status          PaymentOrderStatus @default(PENDING)
   providerOrderId String?
   transactionId   String?            @unique

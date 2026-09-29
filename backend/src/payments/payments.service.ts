@@ -511,7 +511,7 @@ export class PaymentsService implements OnModuleInit {
       payload.order?.order_currency !== 'VND' ||
       payload.transaction?.transaction_currency !== 'VND' ||
       orderAmount !== paymentOrder.amountVND ||
-      transactionAmount !== paymentOrder.amountVND
+      transactionAmount < paymentOrder.amountVND
     ) {
       throw new ConflictException('SePay IPN payment details do not match the pending order.');
     }
@@ -524,6 +524,7 @@ export class PaymentsService implements OnModuleInit {
       paymentOrder,
       payload.order?.id ?? invoiceNumber,
       transactionId,
+      transactionAmount,
       payload.customer?.customer_id ?? payload.customer?.id,
     );
 
@@ -560,7 +561,8 @@ export class PaymentsService implements OnModuleInit {
     }
     if (
       !Number.isSafeInteger(payload.transferAmount) ||
-      payload.transferAmount !== paymentOrder.amountVND
+      payload.transferAmount! < paymentOrder.amountVND ||
+      payload.transferAmount! > 2_147_483_647
     ) {
       throw new ConflictException('SePay webhook amount does not match the pending order.');
     }
@@ -572,6 +574,7 @@ export class PaymentsService implements OnModuleInit {
       paymentOrder,
       String(payload.id),
       `sepay-bank-${payload.id}`,
+      payload.transferAmount!,
     );
     return {
       success: true,
@@ -585,6 +588,7 @@ export class PaymentsService implements OnModuleInit {
     paymentOrder: PaymentOrder,
     providerOrderId: string,
     transactionId: string,
+    receivedAmountVND: number,
     customerId?: string,
   ) {
     if (paymentOrder.status === PaymentOrderStatus.PAID) {
@@ -604,6 +608,7 @@ export class PaymentsService implements OnModuleInit {
           status: PaymentOrderStatus.PAID,
           providerOrderId,
           transactionId,
+          receivedAmountVND,
           paidAt: new Date(),
         },
       });
@@ -689,7 +694,7 @@ export class PaymentsService implements OnModuleInit {
 
   private parseSePayAmount(value: string | undefined, fieldName: string) {
     const amount = Number(value);
-    if (!Number.isSafeInteger(amount) || amount <= 0) {
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 2_147_483_647) {
       throw new ConflictException(`Invalid SePay ${fieldName}.`);
     }
     return amount;

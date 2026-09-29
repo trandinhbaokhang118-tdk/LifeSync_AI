@@ -114,6 +114,50 @@ describe('PaymentsService SePay IPN', () => {
     );
   });
 
+  it('activates a 1000 VND order from an authenticated 2000 VND IPN and records the received amount', async () => {
+    const { service, transaction } = createService();
+    const overpaid = { ...payload, transaction: { ...payload.transaction, transaction_amount: '2000' } };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, overpaid, undefined, secretKey)).resolves.toMatchObject({ processed: true });
+    expect(transaction.paymentOrder.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ receivedAmountVND: 2000 }) }));
+    expect(transaction.subscription.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('still rejects an IPN with a mismatched order total even if the transfer is sufficient', async () => {
+    const { service, transaction } = createService();
+    const wrongOrder = { ...payload, order: { ...payload.order, order_amount: '2000' }, transaction: { ...payload.transaction, transaction_amount: '2000' } };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, wrongOrder, undefined, secretKey)).rejects.toThrow();
+    expect(transaction.subscription.upsert).not.toHaveBeenCalled();
+  });
+
+  it.each([1000, 2000])('accepts and records a bank transfer of %i VND for a 1000 VND order', async amount => {
+    const { service, transaction } = createService();
+    const bank = { id: 92704, gateway: 'VietinBank', accountNumber: '105879514995', code: 'LS-PRO-TEST', transferType: 'in', transferAmount: amount };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, bank, undefined, `Apikey ${webhookApiKey}`)).resolves.toMatchObject({ processed: true });
+    expect(transaction.paymentOrder.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ receivedAmountVND: amount }) }));
+    expect(transaction.subscription.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([500, 0, -2000, 2000.5, 2147483648])('rejects an insufficient or invalid bank amount %i', async amount => {
+    const { service, transaction } = createService();
+    const bank = { id: 92704, gateway: 'VietinBank', accountNumber: '105879514995', code: 'LS-PRO-TEST', transferType: 'in', transferAmount: amount };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, bank, undefined, `Apikey ${webhookApiKey}`)).rejects.toThrow();
+    expect(transaction.subscription.upsert).not.toHaveBeenCalled();
+  });
+
+  it('does not activate an overpayment received by the wrong bank account', async () => {
+    const { service, transaction } = createService();
+    const bank = { id: 92704, gateway: 'VietinBank', accountNumber: 'wrong', code: 'LS-PRO-TEST', transferType: 'in', transferAmount: 2000 };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, bank, undefined, `Apikey ${webhookApiKey}`)).resolves.toMatchObject({ processed: false });
+    expect(transaction.subscription.upsert).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges a retried overpayment without granting another month', async () => {
+    const { service, prisma } = createService({ status: PaymentOrderStatus.PAID, transactionId: 'sepay-bank-92704' });
+    const bank = { id: 92704, gateway: 'VietinBank', accountNumber: '105879514995', code: 'LS-PRO-TEST', transferType: 'in', transferAmount: 2000 };
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, bank, undefined, `Apikey ${webhookApiKey}`)).resolves.toMatchObject({ processed: false });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it('preserves the amount of orders created before the price change', async () => {
     const { service, transaction } = createService({ amountVND: 99000 });
     const oldPayload = { ...payload, order: { ...payload.order, order_amount: '99000' }, transaction: { ...payload.transaction, transaction_amount: '99000' } };

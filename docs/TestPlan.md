@@ -332,3 +332,11 @@ npm run test:cov    # Coverage report
 - Browser fixture checks: 1,000 VND price, no unsupported yearly toggle, pending verification followed by success refreshes access, Pro workout form saves and refreshes the journal. These checks use mocked API responses, not a real bank transfer.
 - Deployment must apply migration 20260930010000_pro_1k. It updates the existing Pro catalog once, without rewriting payment orders or active subscription periods. Startup seeds missing tiers without overwriting admin catalog edits.
 - Catalog now describes implemented Pro benefits; it does not promise priority support without an operational support integration.
+
+
+## SePay overpayment regression (2026-09-30)
+
+- An authenticated inbound transfer of 2,000 VND matching a 1,000 VND order activates the purchased plan once. Both bank webhook and payment-gateway IPN accept sufficient payment; the gateway order total must still match the original order.
+- Persist receivedAmountVND alongside the original amountVND for reconciliation. Overpayment does not purchase additional periods automatically and this change does not issue refunds.
+- Underpayments, wrong receiving accounts, unauthenticated callbacks and malformed amounts remain rejected. Replayed paid transactions must not extend the subscription twice.
+- Apply migration 20260930020000_payment_received_amount before starting the updated backend. A previously rejected transaction requires an authenticated callback replay from SePay after deployment; clicking Verify only reads the persisted payment status and does not fetch bank transactions. Do not manually activate access from a screenshot or client-supplied amount.
