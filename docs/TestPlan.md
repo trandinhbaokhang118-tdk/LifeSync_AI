@@ -1,4 +1,4 @@
-﻿# Test Plan
+# Test Plan
 # LifeSync AI Application
 
 ## 1. Test Strategy
@@ -244,3 +244,21 @@ npm run test:cov    # Coverage report
 - Mocked successful login with a complete synthetic User fixture: circle overlay appears, route changes to `/app`, overlay clears within five seconds; no browser page errors. Test session removed afterward. This verifies UI orchestration, not live backend authentication or OAuth.
 - Reduced-motion emulation: no WebGL canvas; hero transform is `none`.
 - Asset and exact generation prompt: `docs/design-dna-auth.json` (`meta.login_asset`).
+
+## Workspace studio — 2026-09-29
+
+- Production frontend build and ESLint on changed TSX files pass.
+- Browser with isolated synthetic user/API fixtures: light/dark toggle updates root theme; pause removes WebGL canvas; movement banner opens `/app/fitness`.
+- Both themes checked at 320, 375, 414 and 768 CSS px: no horizontal overflow. Desktop and mobile screenshots visually inspected.
+- Reduced motion: no canvas and no image transform. Dashboard requests resolve before stagger reveal.
+- Real account authentication and live backend data were not exercised. Mock values were used only in browser QA, never hardcoded in production.
+- Built-in ImageGen asset `frontend/public/dashboard/studio-day.png`; complete prompt and theme profile in `docs/design-dna-workspace.json`.
+
+## Dashboard banner fit — 2026-09-29
+
+- Regenerated matching day/night 2172x724 images; original prompts in design-dna-workspace.json.
+- Production frontend build and targeted DashboardStudio ESLint pass.
+- Synthetic browser fixture: metric row bottom at 794/864, 794/900, 714/768, 666/720, 562/600 and 781/900 viewport pixels for widths 1920, 1440, 1366, 1280, 1024 and 768 respectively. No horizontal overflow.
+- Light 1366x768 and dark 1024x600 screenshots inspected. Both hero action buttons remain within the hero at 1024x600.
+- Mobile 375x812: no horizontal overflow; normal vertical scrolling retained for readable content.
+- UI layout checks only; no live backend authentication or data changes.

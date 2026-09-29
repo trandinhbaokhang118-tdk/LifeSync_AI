@@ -1,0 +1,44 @@
+{
+  "name": "LifeSync workspace studio",
+  "design_system": {
+    "tokens": "frontend/src/components/layout/workspace-theme.css",
+    "light": {
+      "canvas": "#edf4f6",
+      "panel": "#fafdfe",
+      "ink": "#132c38",
+      "accent": "#00798b",
+      "sport": "#a74713"
+    },
+    "dark": {
+      "canvas": "#09151e",
+      "panel": "#10232e",
+      "ink": "#edf7f8",
+      "accent": "#51d9e5",
+      "sport": "#ffb277"
+    },
+    "typography": "Existing Bricolage Grotesque / Manrope",
+    "layout": "Viewport-sized desktop hero with four metrics visible below; stacked hero and 2x2 metrics on mobile."
+  },
+  "design_style": {
+    "mood": [
+      "sculptural",
+      "focused",
+      "athletic"
+    ],
+    "hierarchy": "Greeting, next task, cyan focus action, warm sport banner, real statistics and tasks"
+  },
+  "visual_effects": {
+    "image": "GSAP fine-pointer tilt and 5.5% zoom",
+    "webgl": "Lazy Three.js torus and sparse points, shared existing AuthMotionBackdrop",
+    "entrance": "GSAP stagger after initial dashboard requests settle",
+    "fallback": "Static images on reduced motion; WebGL disabled for low-power devices; pause button unmounts canvas"
+  },
+  "asset": {
+    "path": "frontend/public/dashboard/studio-wide-day.png",
+    "dark_path": "frontend/public/dashboard/studio-wide-night.png",
+    "dimensions": "2172x724 (3:1)",
+    "method": "Built-in ImageGen",
+    "prompt": "Use case: stylized-concept. Generate an ultrawide 3:1 horizontal banner image for a productivity dashboard, panoramic composition designed for a short desktop hero. A luxurious sculptural still life of a brushed titanium clock, an ivory calendar tile and an orange kettlebell on a cyan curved running track. Schedule, time and sport. Arrange every object on the RIGHT HALF, all fully visible, much smaller than full frame, contained within middle 65 percent of image height with generous clear margins top and bottom for cropping. Left half quiet empty midnight navy studio space for real UI text overlay. Deep navy background, silver ceramic objects, cyan rim illumination, restrained warm orange kettlebell, realistic 3D render, subtle shadows. No text, no numbers, no labels, no logos. Wide landscape composition, NOT portrait, no close cropping of objects.",
+    "light_edit_prompt": "Create a light-mode variant of this exact ultrawide 3:1 dashboard banner. Keep identical composition, objects, placement and generous margins. Change midnight navy studio to very pale ice-blue daylight studio with soft shadows. Keep clock titanium, calendar ivory, kettlebell orange and running track cyan. Left half stays empty light blue for dark UI text overlay. No text or labels. Maintain panoramic 3:1 dimensions."
+  }
+}

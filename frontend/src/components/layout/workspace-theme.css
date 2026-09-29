@@ -1,0 +1,73 @@
+/* Hallmark · Workbench · LifeSync dual-mode studio · P4 H4 E4 S5 R4 V4 */
+:root:has(.workspace-studio) {
+  --studio-bg: #edf4f6;
+  --studio-panel: #fafdfe;
+  --studio-soft: #e3eef1;
+  --studio-ink: #132c38;
+  --studio-muted: #506b78;
+  --studio-border: #c7dadd;
+  --studio-accent: #00798b;
+  --studio-accent-ink: #f4fdff;
+  --studio-warm: #a74713;
+  --studio-warm-bg: #fff0e3;
+  --studio-shadow: 0 12px 40px #173e4d0a;
+}
+:root[data-theme='dark']:has(.workspace-studio) {
+  --studio-bg: #09151e;
+  --studio-panel: #10232e;
+  --studio-soft: #172f3b;
+  --studio-ink: #edf7f8;
+  --studio-muted: #a0b7c1;
+  --studio-border: #2b4653;
+  --studio-accent: #51d9e5;
+  --studio-accent-ink: #08212a;
+  --studio-warm: #ffb277;
+  --studio-warm-bg: #34271f;
+  --studio-shadow: 0 12px 40px #020e1733;
+}
+:root:has(.workspace-studio) {
+  --bg-body: var(--studio-bg);
+  --bg-gradient: linear-gradient(var(--studio-bg),var(--studio-bg));
+  --bg-surface: var(--studio-panel);
+  --bg-surface-raised: var(--studio-panel);
+  --bg-surface-hover: var(--studio-soft);
+  --surface-1: var(--studio-panel);
+  --surface-2: var(--studio-panel);
+  --surface-3: var(--studio-soft);
+  --surface-highlight: var(--studio-soft);
+  --surface-highlight-border: var(--studio-border);
+  --text: var(--studio-ink);
+  --text-2: var(--studio-muted);
+  --text-3: var(--studio-muted);
+  --text-primary: var(--studio-ink);
+  --text-secondary: var(--studio-muted);
+  --text-tertiary: var(--studio-muted);
+  --primary: var(--studio-accent);
+  --border: var(--studio-border);
+  --border-default: var(--studio-border);
+  --border-focus: var(--studio-accent);
+  --panel-glass: color-mix(in srgb,var(--studio-panel),transparent 6%);
+  --sidebar-bg: var(--studio-panel);
+  --sidebar-border: var(--studio-border);
+  --sidebar-item-hover: var(--studio-soft);
+  --sidebar-item-active: var(--studio-soft);
+  --card-bg: var(--studio-panel);
+  --card-border: var(--studio-border);
+  --input-bg: var(--studio-panel);
+  --input-text: var(--studio-ink);
+  --input-border: var(--studio-border);
+  --input-placeholder: var(--studio-muted);
+  --btn-primary-bg: linear-gradient(var(--studio-accent),var(--studio-accent));
+  --btn-primary-bg-hover: linear-gradient(color-mix(in srgb,var(--studio-accent),var(--studio-ink) 12%),color-mix(in srgb,var(--studio-accent),var(--studio-ink) 12%));
+  --btn-primary-text: var(--studio-accent-ink);
+  --btn-outline-text: var(--studio-ink);
+  --btn-outline-border: var(--studio-border);
+  --ring-color: var(--studio-accent);
+}
+.workspace-studio { background: var(--studio-bg); color: var(--studio-ink); font-family: var(--font-body); }
+.workspace-studio > .fixed.inset-0 { opacity: .25; }
+.workspace-studio :is(header,aside) { box-shadow: var(--studio-shadow); }
+.workspace-studio nav a[aria-current='page'] { background: var(--studio-soft); color: var(--studio-accent); border-color: var(--studio-border); }
+.workspace-studio h1,.workspace-studio h2 { font-family: var(--font-display); font-style: normal; }
+.workspace-studio header button[aria-label*='chế độ'] { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--studio-border); background: var(--studio-soft); border-radius: 50%; color: var(--studio-accent); }
+.workspace-studio header button[aria-label*='chế độ']:focus-visible { outline: 2px solid var(--studio-accent); outline-offset: 3px; }

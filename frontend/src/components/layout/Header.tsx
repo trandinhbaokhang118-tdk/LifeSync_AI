@@ -93,7 +93,7 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
             >
                 <div className="h-full px-4 flex items-center justify-between gap-4">
                     {/* Left side */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-4">
                         {/* Mobile menu button */}
                         <button
                             type="button"
@@ -107,7 +107,7 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
                         </button>
 
                         {/* Current section title */}
-                        <h1 className="text-lg font-semibold text-[var(--text)] md:text-xl">
+                        <h1 className="truncate !text-lg font-semibold text-[var(--text)] md:!text-xl">
                             {activeLabel}
                         </h1>
                     </div>
@@ -140,6 +140,8 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
                         {/* Dark mode toggle */}
                         <button
                             onClick={toggleDarkMode}
+                            aria-label={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
+                            aria-pressed={darkMode}
                             className="rounded-lg p-2 text-[var(--text-2)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
                             title={darkMode ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
                         >

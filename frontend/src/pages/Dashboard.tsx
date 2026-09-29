@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ElementType, MouseEvent as ReactMouseEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
@@ -24,6 +24,9 @@ import { tasksService } from '../services/tasks.service';
 import { useAuthStore } from '../store/auth.store';
 import type { Task } from '../types';
 import './dashboard-enterprise.css';
+import './dashboard-studio.css';
+import gsap from 'gsap';
+import { DashboardStudio } from '../components/layout/DashboardStudio';
 
 const numberFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
 
@@ -52,6 +55,21 @@ export function Dashboard() {
         queryFn: dashboardService.getFocusTime,
     });
 
+    const studioRef = useRef<HTMLDivElement>(null);
+    const ready = !statsLoading && !tasksLoading && !focusLoading;
+    useLayoutEffect(() => {
+        if (!ready || statsError || !studioRef.current) return;
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const context = gsap.context(() => {
+            gsap.fromTo('.studio-reveal', { opacity: 0, y: reduced ? 0 : 18 }, {
+                opacity: 1, y: 0, duration: reduced ? .12 : .7,
+                stagger: reduced ? 0 : .09, ease: 'power3.out',
+            });
+            if (!reduced) gsap.fromTo('.workspace-art__images', { scale: .92, opacity: 0 }, { scale: 1, opacity: 1, duration: 1, ease: 'power3.out' });
+        }, studioRef);
+        return () => context.revert();
+    }, [ready, statsError]);
+
     const upcomingTasks = tasksData?.data ?? [];
     const nextTask = upcomingTasks[0];
     const firstName = user?.name?.trim().split(/\s+/).at(-1) || 'bạn';
@@ -65,18 +83,9 @@ export function Dashboard() {
     }
 
     return (
-        <div className="dashboard-workbench pb-20 md:pb-0">
-            <section className="dashboard-hero dash-enter" aria-labelledby="dashboard-heading">
-                <figure className="dashboard-hero__media" aria-hidden="true">
-                    <img
-                        src="/dashboard/performance-dawn-v1.webp"
-                        alt=""
-                        width="1600"
-                        height="855"
-                        fetchPriority="high"
-                    />
-                </figure>
-                <div className="dashboard-hero__scrim" aria-hidden="true" />
+        <div ref={studioRef} className="dashboard-workbench dashboard-studio pb-20 md:pb-0" aria-busy={!ready}>
+            <section className="dashboard-hero studio-reveal" aria-labelledby="dashboard-heading">
+                <DashboardStudio />
 
                 <div className="dashboard-hero__content">
                     <div className="dashboard-hero__copy">
@@ -125,12 +134,9 @@ export function Dashboard() {
                     </div>
                 </div>
 
-                <figcaption className="dashboard-hero__caption">
-                    Performance mode <span aria-hidden="true">·</span> LifeSync AI
-                </figcaption>
             </section>
 
-            <section className="dashboard-metrics dash-enter" aria-label="Tổng quan hiệu suất">
+            <section className="dashboard-metrics studio-reveal" aria-label="Tổng quan hiệu suất">
                 {statsLoading || focusLoading ? (
                     Array.from({ length: 4 }, (_, index) => <MetricSkeleton key={index} />)
                 ) : (
@@ -164,7 +170,13 @@ export function Dashboard() {
                 )}
             </section>
 
-            <div className="dashboard-grid dash-enter">
+            <Link to="/app/fitness" className="studio-sport-banner studio-reveal">
+                <span className="studio-sport-banner__icon"><Zap size={24} aria-hidden="true" /></span>
+                <span><strong>Đổi nhịp. Nạp lại năng lượng.</strong><small>Dành một khoảng trong ngày cho vận động.</small></span>
+                <span className="studio-sport-banner__cta">Khám phá vận động <ArrowRight size={18} /></span>
+            </Link>
+
+            <div className="dashboard-grid studio-reveal">
                 <section className="dashboard-taskboard" aria-labelledby="upcoming-heading">
                     <div className="dashboard-section-head">
                         <div>

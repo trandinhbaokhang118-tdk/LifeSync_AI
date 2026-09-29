@@ -18,6 +18,7 @@ import { NotificationListener } from '../notifications/NotificationToast';
 import { DevicePermissionCenter } from '../permissions/DevicePermissionCenter';
 import { LifeSyncFlowBackground } from '../ui';
 import { cn } from '../../lib/utils';
+import './workspace-theme.css';
 
 export function AppLayout() {
     const entranceRef = useRef<HTMLDivElement>(null);
@@ -79,7 +80,7 @@ export function AppLayout() {
     };
 
     return (
-        <div className="min-h-screen page-shell">
+        <div className="workspace-studio min-h-screen page-shell">
             {/* Quiet time-flow backdrop shared by authenticated pages */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <LifeSyncFlowBackground variant="soft" />
