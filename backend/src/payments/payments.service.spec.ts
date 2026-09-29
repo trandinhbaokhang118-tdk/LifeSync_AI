@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { PaymentProvider as CheckoutProvider, SubscriptionTier as CheckoutTier } from './dto/create-checkout.dto';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -68,6 +69,8 @@ describe('PaymentsService SePay IPN', () => {
     };
     const config = {
       get: jest.fn((key: string) => {
+        if (key === 'SEPAY_MERCHANT_ID') return 'merchant-test';
+        if (key === 'SEPAY_MERCHANT_SECRET_KEY') return 'merchant-secret-test';
         if (key === 'PAYMENTS_ENABLED') return 'true';
         if (key === 'SEPAY_IPN_SECRET_KEY') return secretKey;
         if (key === 'SEPAY_WEBHOOK_API_KEY') return webhookApiKey;
@@ -83,6 +86,40 @@ describe('PaymentsService SePay IPN', () => {
 
     return { service, prisma, transaction };
   }
+
+  afterEach(() => jest.restoreAllMocks());
+
+  const gatewayBank = { id: 85661022, gateway: 'VietinBank', accountNumber: '105879514995', code: 'PAY35766ABBF684D465C', content: '149218253050-SEVQR PAY35766ABBF684D465C', transferType: 'in', transferAmount: 2000 };
+  const gatewayOrder = { id: '200168', order_id: 'PAY35766ABBF684D465C', order_invoice_number: 'LS-PRO-TEST', order_currency: 'VND', order_amount: '1000', customer_id: 'user-1', order_status: 'AUTHENTICATION_NOT_NEEDED' };
+
+  it('resolves a hosted checkout reference and activates a verified overpayment', async () => {
+    const lookup = jest.spyOn(axios, 'get').mockResolvedValue({ data: { data: gatewayOrder } });
+    const { service, transaction, prisma } = createService();
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, gatewayBank, undefined, `Apikey ${webhookApiKey}`)).resolves.toMatchObject({ processed: true });
+    expect(lookup).toHaveBeenCalledWith('https://pgapi.sepay.vn/v1/order/detail/PAY35766ABBF684D465C', expect.objectContaining({ auth: { username: 'merchant-test', password: 'merchant-secret-test' }, maxRedirects: 0 }));
+    expect(prisma.paymentOrder.findUnique).toHaveBeenCalledWith({ where: { invoiceNumber: 'LS-PRO-TEST' } });
+    expect(transaction.paymentOrder.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ receivedAmountVND: 2000, transactionId: 'sepay-bank-85661022' }) }));
+  });
+
+  it.each([{ customer_id: 'other-user' }, { order_amount: '99000' }, { order_currency: 'USD' }, { order_id: 'PAY_OTHER' }, { order_status: 'CANCELLED' }])('rejects inconsistent merchant data %j', async invalid => {
+    jest.spyOn(axios, 'get').mockResolvedValue({ data: { data: { ...gatewayOrder, ...invalid } } });
+    const { service, transaction } = createService();
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, gatewayBank, undefined, `Apikey ${webhookApiKey}`)).rejects.toThrow();
+    expect(transaction.subscription.upsert).not.toHaveBeenCalled();
+  });
+
+  it('returns an error on gateway lookup failure so the webhook can be retried', async () => {
+    jest.spyOn(axios, 'get').mockRejectedValue(new Error('offline'));
+    const { service, transaction } = createService();
+    await expect(service.handleWebhook(PaymentProvider.SEPAY, gatewayBank, undefined, `Apikey ${webhookApiKey}`)).rejects.toThrow('Unable to verify');
+    expect(transaction.subscription.upsert).not.toHaveBeenCalled();
+  });
+
+  it('authenticates the bank callback before querying the gateway', async () => {
+    const lookup = jest.spyOn(axios, 'get');
+    await expect(createService().service.handleWebhook(PaymentProvider.SEPAY, gatewayBank, undefined, 'Apikey wrong')).rejects.toThrow();
+    expect(lookup).not.toHaveBeenCalled();
+  });
 
   it('rejects an IPN with the wrong secret', async () => {
     const { service } = createService();

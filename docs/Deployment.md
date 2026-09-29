@@ -281,3 +281,22 @@ It runs:
 - Backend build
 - Frontend lint
 - Frontend build
+
+
+## SePay IPN và chuyển khoản dư
+
+Trong SePay → Cổng thanh toán → Cấu hình → IPN:
+
+- IPN URL: `https://lifesync-ai-6zk7.onrender.com/payments/webhook/sepay`.
+- Auth Type: Secret Key; giá trị phải khớp `SEPAY_IPN_SECRET_KEY` trong Render → Environment. Không đưa secret vào frontend, Git hoặc tài liệu.
+- Content Type: `application/json`; bật Kích hoạt IPN và lưu.
+- Backend cần `PAYMENTS_ENABLED=true`, môi trường `production`, merchant ID/secret đúng tài khoản nhận tiền. Các migration phải chạy trước khi khởi động backend.
+- SePay gửi POST với header `X-Secret-Key`. Xác nhận thành công yêu cầu HTTP 200, body `{"success":true}`; kiểm tra Nhật ký IPN để biết lỗi 401 (secret), 404 (đơn), 409 (đối chiếu), 503 (dịch vụ/cấu hình).
+
+Với chuyển dư qua hosted checkout, cổng thanh toán có thể còn chờ đúng số tiền và chưa phát ORDER_PAID. Cấu hình thêm Tích hợp WebHooks ngân hàng trỏ cùng endpoint, sự kiện tiền vào, JSON, xác thực `Apikey` khớp `SEPAY_WEBHOOK_API_KEY`. Đây là cấu hình riêng, không dùng X-Secret-Key của IPN thay cho API key ngân hàng.
+
+Backend xác thực webhook và tài khoản/ngân hàng nhận, rồi tra mã PAY… bằng API merchant SePay để lấy đúng LS-PRO-… và kiểm tra số tiền đơn, chủ đơn, loại tiền, trạng thái. Chỉ khi tiền thực nhận đủ hoặc dư mới kích hoạt một kỳ; tiền nhận và giá đơn được lưu riêng để đối soát. Không tự tăng số tháng hay tự hoàn khoản dư. Nếu tra API thất bại, trả lỗi để retry, không bỏ qua giao dịch.
+
+Giao dịch cũ: mở Giao dịch → chọn đúng mã giao dịch → Webhook → kiểm tra response và gửi lại sau khi bản sửa đã Live. Không tự tạo payload giả ORDER_PAID. Trạng thái LifeSync phải PAID/Pro ACTIVE; cổng checkout SePay có thể vẫn cần đối soát riêng cho đơn chuyển dư.
+
+Tài liệu chính thức: https://developer.sepay.vn/vi/cong-thanh-toan/IPN và https://developer.sepay.vn/vi/cong-thanh-toan/API/don-hang/chi-tiet-don-hang .

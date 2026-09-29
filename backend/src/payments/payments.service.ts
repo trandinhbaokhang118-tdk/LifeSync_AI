@@ -548,7 +548,8 @@ export class PaymentsService implements OnModuleInit {
       return { success: true, processed: false, eventType: 'BANK_TRANSACTION_IGNORED' };
     }
 
-    const invoiceNumber = this.extractSePayInvoiceNumber(payload);
+    const gatewayOrder = await this.resolveSePayGatewayOrder(payload);
+    const invoiceNumber = gatewayOrder?.order_invoice_number ?? this.extractSePayInvoiceNumber(payload);
     if (!invoiceNumber) {
       return { success: true, processed: false, eventType: 'BANK_TRANSACTION_UNMATCHED' };
     }
@@ -558,6 +559,14 @@ export class PaymentsService implements OnModuleInit {
     });
     if (!paymentOrder || paymentOrder.provider !== PaymentProvider.SEPAY) {
       return { success: true, processed: false, eventType: 'BANK_TRANSACTION_UNMATCHED' };
+    }
+    if (gatewayOrder && (
+      gatewayOrder.order_currency !== 'VND' ||
+      this.parseSePayAmount(gatewayOrder.order_amount, 'order_amount') !== paymentOrder.amountVND ||
+      (gatewayOrder.customer_id && gatewayOrder.customer_id !== paymentOrder.userId) ||
+      !['AUTHENTICATION_NOT_NEEDED', 'CAPTURED'].includes(gatewayOrder.order_status)
+    )) {
+      throw new ConflictException('SePay gateway order does not match the pending payment.');
     }
     if (
       !Number.isSafeInteger(payload.transferAmount) ||
@@ -572,7 +581,7 @@ export class PaymentsService implements OnModuleInit {
 
     const result = await this.activateSePayOrder(
       paymentOrder,
-      String(payload.id),
+      gatewayOrder?.id ?? String(payload.id),
       `sepay-bank-${payload.id}`,
       payload.transferAmount!,
     );
@@ -678,6 +687,39 @@ export class PaymentsService implements OnModuleInit {
     if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) {
       throw new UnauthorizedException('Invalid SePay webhook API key.');
     }
+  }
+
+  // Bank callbacks for hosted checkout contain PAY..., not our LS-... invoice.
+  // Resolve that reference with merchant-authenticated SePay data, never by amount alone.
+  private async resolveSePayGatewayOrder(payload: SePayBankWebhookPayload) {
+    if (this.extractSePayInvoiceNumber(payload)) return undefined;
+    const references = [...new Set(`${payload.code ?? ''} ${payload.content ?? ''}`
+      .match(/PAY[A-Z0-9]{12,64}/gi)?.map(value => value.toUpperCase()) ?? [])];
+    if (!references.length) return undefined;
+    if (references.length !== 1) throw new ConflictException('Ambiguous SePay payment reference.');
+    const orderId = references[0];
+    const environment = this.configService.get<string>('SEPAY_ENVIRONMENT')?.trim().toLowerCase() ?? 'production';
+    if (!['production', 'sandbox'].includes(environment)) {
+      throw new ServiceUnavailableException('Invalid SePay environment.');
+    }
+    const host = environment === 'sandbox' ? 'https://pgapi-sandbox.sepay.vn' : 'https://pgapi.sepay.vn';
+    let order: { id: string; order_id: string; order_invoice_number: string; order_currency: string; order_amount: string; customer_id?: string | null; order_status: string };
+    try {
+      const response = await axios.get<{ data: typeof order }>(`${host}/v1/order/detail/${encodeURIComponent(orderId)}`, {
+        auth: {
+          username: this.getRequiredConfig('SEPAY_MERCHANT_ID'),
+          password: this.getRequiredConfig('SEPAY_MERCHANT_SECRET_KEY'),
+        }, timeout: 15000, maxRedirects: 0,
+      });
+      order = response.data.data;
+    } catch {
+      // Let SePay retry; do not acknowledge an outage as an unmatched payment.
+      throw new ServiceUnavailableException('Unable to verify SePay gateway payment reference.');
+    }
+    if (!order || order.order_id !== orderId || !order.order_invoice_number?.startsWith('LS-')) {
+      throw new ConflictException('SePay gateway payment reference does not match.');
+    }
+    return order;
   }
 
   private extractSePayInvoiceNumber(payload: SePayBankWebhookPayload) {
