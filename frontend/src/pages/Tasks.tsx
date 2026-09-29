@@ -491,18 +491,19 @@ export function Tasks() {
                     className="flex flex-wrap gap-2"
                 >
                     <motion.div
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                     >
                         <Button
+                            type="button"
                             variant="outline"
                             onClick={() => setIsAIModalOpen(true)}
-                            className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-700"
+                            className="group border-[color:var(--studio-border)] bg-[var(--studio-panel)] px-3.5 text-[var(--studio-ink)] shadow-[var(--shadow-sm)] hover:border-[color:var(--studio-accent)] hover:bg-[var(--studio-soft)] hover:text-[var(--studio-ink)] hover:shadow-[var(--shadow-md)] focus-visible:ring-[color:var(--studio-accent)]"
                         >
-                            <Sparkles className="w-4 h-4 mr-2 text-purple-600 dark:text-purple-400" />
-                            <span className="text-purple-700 dark:text-purple-300">
-                                Sắp xếp bằng AI
+                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--studio-soft)] text-[var(--studio-accent)] transition-colors duration-200 group-hover:bg-[var(--studio-accent)] group-hover:text-[var(--studio-accent-ink)]">
+                                <Sparkles aria-hidden="true" />
                             </span>
+                            <span>Sắp xếp bằng AI</span>
                         </Button>
                     </motion.div>
                     <motion.div
