@@ -136,5 +136,17 @@ export class TimeBlocksService {
                 },
             });
         }
+
+        const task = await this.prisma.task.findFirst({
+            where: { userId, status: { not: 'DONE' }, startAt: { lt: endAt }, dueAt: { gt: startAt } },
+            select: { id: true, title: true, startAt: true, dueAt: true },
+        });
+        if (task) {
+            throw new ConflictException({
+                code: 'TIME_BLOCK_TASK_CONFLICT',
+                message: `Khối giờ trùng công việc đã lên lịch: ${task.title}. Hãy đổi giờ công việc hoặc khối giờ.`,
+                details: { conflictingTask: task },
+            });
+        }
     }
 }

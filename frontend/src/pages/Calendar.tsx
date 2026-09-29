@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { clsx } from 'clsx';
+import { CalendarBoard } from '../components/planner/CalendarBoard';
 import { PageHeader } from '../components/layout';
 import { Button, Input, Modal } from '../components/ui';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
@@ -26,19 +26,6 @@ const timeBlockSchema = z.object({
 
 type TimeBlockForm = z.infer<typeof timeBlockSchema>;
 
-function getWeekStart(date: Date): Date {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    d.setHours(0, 0, 0, 0);
-    return d;
-}
-
-function formatDate(date: Date): string {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 function formatDateInputValue(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -50,30 +37,24 @@ function formatDateInputValue(date: Date): string {
 export function Calendar() {
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useSearchParams();
-    const [currentDate, setCurrentDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [deleteBlock, setDeleteBlock] = useState<TimeBlock | null>(null);
-
-    const weekStart = getWeekStart(currentDate);
-    const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const { data: timeBlocks, isLoading } = useQuery({
-        queryKey: ['time-blocks', weekStart.toISOString()],
-        queryFn: () => timeBlocksService.getAll({
-            startDate: weekStart.toISOString(),
-            endDate: weekEnd.toISOString(),
-        }),
-    });
+    const [createError, setCreateError] = useState<string | null>(null);
 
     const createMutation = useMutation({
         mutationFn: timeBlocksService.create,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['time-blocks'] });
+            queryClient.invalidateQueries({ queryKey: ['planning'] });
             toast.success('Time block created');
             closeModal();
         },
         onError: (error: { response?: { data?: ApiError } }) => {
-            const message = error.response?.data?.error?.message || 'Failed to create time block';
+            const apiError = error.response?.data?.error;
+            const message = apiError?.code === 'TIME_BLOCK_OVERLAP'
+                ? 'Khung giờ này trùng với một block đã có. Hãy chọn giờ bắt đầu hoặc kết thúc khác.'
+                : apiError?.message || 'Không thể tạo block. Vui lòng thử lại.';
+            setCreateError(message);
             toast.error(message);
         },
     });
@@ -82,6 +63,7 @@ export function Calendar() {
         mutationFn: timeBlocksService.delete,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['time-blocks'] });
+            queryClient.invalidateQueries({ queryKey: ['planning'] });
             toast.success('Time block deleted');
             setDeleteBlock(null);
         },
@@ -116,21 +98,8 @@ export function Calendar() {
         setSearchParams(nextParams, { replace: true });
     }, [reset, searchParams, setSearchParams]);
 
-    const days = Array.from({ length: 7 }, (_, i) => {
-        const date = new Date(weekStart);
-        date.setDate(date.getDate() + i);
-        return date;
-    });
-
-    const navigateWeek = (direction: 'prev' | 'next') => {
-        const newDate = new Date(currentDate);
-        newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
-        setCurrentDate(newDate);
-    };
-
-    const goToToday = () => setCurrentDate(new Date());
-
     const openCreateModal = (date = new Date()) => {
+        setCreateError(null);
         reset({
             date: formatDateInputValue(date),
             title: '',
@@ -143,10 +112,12 @@ export function Calendar() {
 
     const closeModal = () => {
         setIsModalOpen(false);
+        setCreateError(null);
         reset();
     };
 
     const onSubmit = (data: TimeBlockForm) => {
+        setCreateError(null);
         const payload: CreateTimeBlockRequest = {
             title: data.title,
             description: data.description,
@@ -156,139 +127,25 @@ export function Calendar() {
         createMutation.mutate(payload);
     };
 
-    const getBlocksForDay = (day: Date) => {
-        return timeBlocks?.filter((block) => {
-            const blockDate = new Date(block.startAt);
-            return blockDate.toDateString() === day.toDateString();
-        }) || [];
-    };
-
-    const isToday = (date: Date) => date.toDateString() === new Date().toDateString();
-
     return (
         <div>
             <PageHeader
-                title="Calendar"
-                description="Schedule your time blocks"
+                title="Lịch công việc"
+                description="Thời khóa biểu thống nhất cho task, project và các khối thời gian của bạn."
                 actions={
                     <Button onClick={() => openCreateModal()}>
                         <Plus className="w-4 h-4 mr-2" />
-                        Add Time Block
+                        Thêm khối thời gian
                     </Button>
                 }
             />
 
-            {/* Calendar Header */}
-            <div className="bg-[var(--surface-1)] border border-[var(--border)] shadow-[var(--shadow-md)] rounded-xl backdrop-blur-xl mb-6">
-                <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => navigateWeek('prev')}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                            aria-label="Previous week"
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={() => navigateWeek('next')}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                            aria-label="Next week"
-                        >
-                            <ChevronRight className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-lg font-semibold text-[var(--text)] ml-2">
-                            {formatDate(weekStart)} - {formatDate(new Date(weekEnd.getTime() - 1))}
-                        </h2>
-                    </div>
-                    <Button variant="secondary" size="sm" onClick={goToToday}>
-                        Today
-                    </Button>
-                </div>
-
-                {/* Calendar Grid */}
-                {isLoading ? (
-                    <div className="p-4">
-                        <div className="grid grid-cols-7 gap-2">
-                            {Array.from({ length: 7 }).map((_, i) => (
-                                <div key={i} className="h-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-7 divide-x divide-[var(--border)]">
-                        {days.map((day) => {
-                            const dayBlocks = getBlocksForDay(day);
-                            const today = isToday(day);
-
-                            return (
-                                <div
-                                    key={day.toISOString()}
-                                    className={clsx(
-                                        'min-h-[200px] p-2',
-                                        today && 'bg-primary-50 dark:bg-primary-900/10'
-                                    )}
-                                >
-                                    {/* Day Header */}
-                                    <div className="text-center mb-2">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                                            {day.toLocaleDateString('en-US', { weekday: 'short' })}
-                                        </p>
-                                        <p
-                                            className={clsx(
-                                                'text-lg font-semibold',
-                                                today
-                                                    ? 'text-primary-600 dark:text-primary-400'
-                                                    : 'text-gray-900 dark:text-white'
-                                            )}
-                                        >
-                                            {day.getDate()}
-                                        </p>
-                                    </div>
-
-                                    {/* Time Blocks */}
-                                    <div className="space-y-1">
-                                        {dayBlocks.length === 0 ? (
-                                            <button
-                                                onClick={() => openCreateModal(day)}
-                                                className="w-full p-2 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                                            >
-                                                + Add block
-                                            </button>
-                                        ) : (
-                                            dayBlocks.map((block) => (
-                                                <div
-                                                    key={block.id}
-                                                    className="group relative p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg text-xs"
-                                                >
-                                                    <p className="font-medium text-primary-800 dark:text-primary-300 truncate">
-                                                        {block.title}
-                                                    </p>
-                                                    <p className="text-primary-600 dark:text-primary-400">
-                                                        {new Date(block.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        {' - '}
-                                                        {new Date(block.endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
-                                                    <button
-                                                        onClick={() => setDeleteBlock(block)}
-                                                        className="absolute top-1 right-1 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
-                                                        aria-label="Delete time block"
-                                                    >
-                                                        <Trash2 className="w-3 h-3 text-red-600" />
-                                                    </button>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+            <CalendarBoard onCreate={openCreateModal} onDelete={setDeleteBlock} />
 
             {/* Create Modal */}
-            <Modal isOpen={isModalOpen} onClose={closeModal} title="Add Time Block">
+            <Modal isOpen={isModalOpen} onClose={closeModal} title="Thêm khối thời gian">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    {createError && <p role="alert" className="text-sm text-red-500">{createError}</p>}
                     <div>
                         <label className="label">Title</label>
                         <Input

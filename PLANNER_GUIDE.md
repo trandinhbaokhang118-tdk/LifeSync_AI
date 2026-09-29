@@ -233,3 +233,19 @@ Body: {
 - [ ] Export to calendar (iCal)
 - [ ] Print view
 - [ ] Collaboration (share plans)
+
+## Calendar time management — 2026-09-29
+
+- Manual drag-and-drop updates the existing task's `startAt` and `dueAt`, retaining its duration. Task, calendar, planning and dashboard queries are invalidated after edits; no duplicate calendar entry is created.
+- Dropping on a populated day (including directly on a task card) opens **Chỉnh thời gian**. It lists existing appointments and prevents saving an overlapping interval. Adjacent intervals are allowed. Cancel leaves the original task unchanged.
+- The backend rejects overlaps with fixed blocks and unfinished tasks, excludes the task being edited, and returns `TASK_FIXED_CALENDAR_CONFLICT` or `TASK_CALENDAR_CONFLICT` with conflict details.
+- **Lịch theo ngày** shows seven full-width day cards with full dates and all entries. Week timetable, month and year views remain available. Click an entry title to edit its start/end date and time, including overnight tasks and fixed blocks.
+- The solar/lunar selector adds Vietnamese lunar dates using `@dqcai/vn-lunar` (Vietnam UTC+7, UI range 1800–2199). Fixed holidays and traditional lunar dates are informational; substitute holidays/annual government leave schedules are not inferred.
+
+### Optional public Google Calendar source
+
+Set `GOOGLE_CALENDAR_API_KEY` and `GOOGLE_PUBLIC_CALENDAR_ID` on the **backend**, enable Calendar API in the corresponding Google Cloud project, and select a publicly readable calendar ID. Restrict the key to Calendar API and the backend's infrastructure where supported. Never put the key in a `VITE_*` variable. Restart the backend, then enable **Nguồn Google Calendar** in Calendar.
+
+`GET /calendar-sources/google-public?startDate=<ISO>&endDate=<ISO>` requires the app's JWT. It returns `{ configured, events }` in the normal API envelope. The server fetches only Google's fixed API hostname and its configured calendar, expands recurring events, follows pagination, and keeps all-day end dates exclusive. Invalid/reversed ranges and ranges over 370 days are rejected. Missing configuration is explicitly reported; provider failures do not hide the user's tasks.
+
+Google entries are read-only annotations, not busy blocks. Personal/private Google calendars and two-way sync are not connected by this feature; they require a separate OAuth consent/token lifecycle. Reference: [Google events.list](https://developers.google.com/workspace/calendar/api/v3/reference/events/list).

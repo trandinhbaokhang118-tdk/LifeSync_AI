@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -22,6 +22,8 @@ export class TasksService {
                 message: 'Due time must be after start time',
             });
         }
+
+        await this.checkCalendar(userId, startDate, dueDate);
 
         const task = await this.prisma.task.create({
             data: {
@@ -137,9 +139,19 @@ export class TasksService {
     }
 
     async update(id: string, userId: string, updateTaskDto: UpdateTaskDto) {
-        await this.findOne(id, userId); // Validates ownership
+        const existing = await this.findOne(id, userId); // Validates ownership
 
         const { tagIds, ...taskData } = updateTaskDto;
+
+        if (taskData.startAt !== undefined || taskData.dueAt !== undefined ||
+            (existing.status === 'DONE' && taskData.status && taskData.status !== 'DONE')) {
+            const startAt = new Date(taskData.startAt ?? existing.startAt);
+            const dueAt = new Date(taskData.dueAt ?? existing.dueAt);
+            if (dueAt <= startAt) {
+                throw new BadRequestException({ code: 'INVALID_TIME_RANGE', message: 'Giờ kết thúc phải sau giờ bắt đầu.' });
+            }
+            await this.checkCalendar(userId, startAt, dueAt, id);
+        }
 
         // If tagIds provided, update tags
         if (tagIds !== undefined) {
@@ -155,6 +167,7 @@ export class TasksService {
             where: { id },
             data: {
                 ...taskData,
+                startAt: taskData.startAt ? new Date(taskData.startAt) : undefined,
                 dueAt: taskData.dueAt ? new Date(taskData.dueAt) : undefined,
             },
             include: {
@@ -194,6 +207,38 @@ export class TasksService {
         });
 
         return this.findOne(taskId, userId);
+    }
+
+    private async checkCalendar(userId: string, startAt: Date, endAt: Date, excludeId?: string) {
+        const blocks = await this.prisma.timeBlock.findMany({
+            where: { userId, startAt: { lt: endAt }, endAt: { gt: startAt } },
+            select: { id: true, title: true, startAt: true, endAt: true },
+            orderBy: { startAt: 'asc' },
+        });
+        if (blocks.length) {
+            throw new ConflictException({
+                code: 'TASK_FIXED_CALENDAR_CONFLICT',
+                message: `Công việc trùng lịch cố định: ${blocks.map(b => b.title).join(', ')}. Hãy chọn khung giờ khác trong Lịch.`,
+                details: { conflictingBlocks: blocks },
+            });
+        }
+        const task = await this.prisma.task.findFirst({
+            where: {
+                userId,
+                id: excludeId ? { not: excludeId } : undefined,
+                status: { not: 'DONE' },
+                startAt: { lt: endAt },
+                dueAt: { gt: startAt },
+            },
+            select: { id: true, title: true, startAt: true, dueAt: true },
+        });
+        if (task) {
+            throw new ConflictException({
+                code: 'TASK_CALENDAR_CONFLICT',
+                message: `Trùng thời gian với công việc “${task.title}”. Hãy chỉnh giờ bắt đầu hoặc kết thúc.`,
+                details: { conflictingTask: task },
+            });
+        }
     }
 
     private formatTask(task: Prisma.TaskGetPayload<{

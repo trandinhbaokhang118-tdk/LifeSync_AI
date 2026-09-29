@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import {
     DndContext,
@@ -15,8 +16,11 @@ import { TaskCard } from '../components/planner/TaskCard';
 import { DroppableDay } from '../components/planner/DroppableDay';
 import { TaskList } from '../components/planner/TaskList';
 import { useTasksQuery, useUpdateTaskMutation } from '../hooks/useTasks';
-import { showToast } from '../components/ui/toast';
 import type { Task } from '../types';
+import { useCalendarAvailability } from '../hooks/useCalendarAvailability';
+import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { ScheduleEditor, type ScheduleSelection } from '../components/planner/ScheduleEditor';
 
 type ViewMode = 'week' | 'month' | 'year';
 
@@ -25,6 +29,8 @@ export function Planner() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const [showUnscheduled, setShowUnscheduled] = useState(true);
+    const [scheduleError, setScheduleError] = useState<string | null>(null);
+    const [editing, setEditing] = useState<ScheduleSelection | null>(null);
 
     const { data: tasksData } = useTasksQuery();
     const updateTask = useUpdateTaskMutation();
@@ -88,13 +94,18 @@ export function Planner() {
     };
 
     const dates = getDatesForView();
+    const rangeEnd = new Date(dates[dates.length - 1]);
+    if (viewMode === 'year') rangeEnd.setMonth(rangeEnd.getMonth() + 1);
+    else rangeEnd.setDate(rangeEnd.getDate() + 1);
+    const calendar = useCalendarAvailability(dates[0].toISOString(), rangeEnd.toISOString());
 
     const getTasksForDate = (date: Date) => {
-        const dateStr = date.toISOString().split('T')[0];
         return tasks.filter((task: Task) => {
             if (!task.startAt) return false;
-            const taskDateStr = new Date(task.startAt).toISOString().split('T')[0];
-            return taskDateStr === dateStr;
+            const taskDate = new Date(task.startAt);
+            return viewMode === 'year'
+                ? taskDate.getFullYear() === date.getFullYear() && taskDate.getMonth() === date.getMonth()
+                : taskDate.toDateString() === date.toDateString();
         });
     };
 
@@ -106,24 +117,41 @@ export function Planner() {
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveTask(null);
+        setScheduleError(null);
 
         if (!over) return;
+        if (calendar.isLoading || calendar.isError || updateTask.isPending) {
+            setScheduleError('Chưa thể đổi lịch. Hãy chờ tải Lịch hoặc thử tải lại.');
+            return;
+        }
 
         const taskId = active.id as string;
         const task = tasks.find((t: Task) => t.id === taskId);
         if (!task) return;
 
-        // If dropped on a date
-        if (over.id.toString().startsWith('date-')) {
-            const dateIndex = parseInt(over.id.toString().replace('date-', ''));
+        // A populated day may report its sortable task as the drop target.
+        const overTask = tasks.find(t => t.id === over.id);
+        const targetIndex = overTask ? dates.findIndex(d => viewMode === 'year'
+            ? d.getFullYear() === new Date(overTask.startAt).getFullYear() && d.getMonth() === new Date(overTask.startAt).getMonth()
+            : d.toDateString() === new Date(overTask.startAt).toDateString()) : -1;
+        if (over.id.toString().startsWith('date-') || targetIndex >= 0) {
+            const dateIndex = targetIndex >= 0 ? targetIndex : parseInt(over.id.toString().replace('date-', ''));
             const targetDate = dates[dateIndex];
 
             if (targetDate) {
                 const newStartAt = new Date(targetDate);
-                newStartAt.setHours(9, 0, 0, 0); // Default to 9 AM
+                const previousStart = new Date(task.startAt);
+                newStartAt.setHours(Number.isFinite(+previousStart) ? previousStart.getHours() : 9, Number.isFinite(+previousStart) ? previousStart.getMinutes() : 0, 0, 0);
 
-                const newDueAt = new Date(newStartAt);
-                newDueAt.setHours(newStartAt.getHours() + 1); // 1 hour duration
+                const duration = Math.max(15 * 60000, (Date.parse(task.dueAt) - +previousStart) || 3600000);
+                const newDueAt = new Date(+newStartAt + duration);
+                const collision = calendar.occupied.find(b => !(b.source === 'TASK' && b.id === taskId) && +newStartAt < Date.parse(b.endAt) && Date.parse(b.startAt) < +newDueAt);
+                const nextDay = new Date(targetDate); nextDay.setDate(nextDay.getDate() + 1);
+                const busyDay = calendar.occupied.some(b => !(b.source === 'TASK' && b.id === taskId) && Date.parse(b.startAt) < +nextDay && Date.parse(b.endAt) > +targetDate);
+                if (collision || busyDay) {
+                    setEditing({ task, startAt: newStartAt.toISOString(), endAt: newDueAt.toISOString() });
+                    return;
+                }
 
                 updateTask.mutate({
                     id: taskId,
@@ -131,9 +159,14 @@ export function Planner() {
                         startAt: newStartAt.toISOString(),
                         dueAt: newDueAt.toISOString(),
                     },
+                }, {
+                    onSuccess: () => toast.success('Đã cập nhật công việc vào Lịch'),
+                    onError: error => {
+                        setScheduleError(error.response?.data?.error?.message || 'Không thể đổi lịch. Vui lòng thử lại.');
+                        calendar.refetch();
+                    },
                 });
 
-                showToast.success('Đã cập nhật', 'Công việc đã được lên lịch');
             }
         }
     };
@@ -144,6 +177,7 @@ export function Planner() {
         if (viewMode === 'week') {
             newDate.setDate(newDate.getDate() + (direction === 'next' ? 7 : -7));
         } else if (viewMode === 'month') {
+            newDate.setDate(1);
             newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
         } else {
             newDate.setFullYear(newDate.getFullYear() + (direction === 'next' ? 1 : -1));
@@ -156,7 +190,7 @@ export function Planner() {
         if (viewMode === 'week') {
             const start = dates[0];
             const end = dates[6];
-            return `${start.getDate()} - ${end.getDate()} Tháng ${end.getMonth() + 1}, ${end.getFullYear()}`;
+            return `${start.toLocaleDateString('vi-VN')} – ${end.toLocaleDateString('vi-VN')}`;
         } else if (viewMode === 'month') {
             return `Tháng ${currentDate.getMonth() + 1}, ${currentDate.getFullYear()}`;
         } else {
@@ -167,6 +201,10 @@ export function Planner() {
     return (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div className="space-y-6 pb-20 md:pb-0">
+                <p className="text-sm text-[var(--text-2)]">Kéo sang ngày khác giữ nguyên giờ và thời lượng. Khung giờ cố định được hiển thị bên dưới và không thể ghi đè. <Link className="underline text-primary-600" to="/app/calendar">Mở Lịch</Link></p>
+                {calendar.isLoading && <p role="status">Đang kiểm tra lịch bận…</p>}
+                {calendar.isError && <p role="alert">Không tải được Lịch. <button className="underline" onClick={() => calendar.refetch()}>Thử lại</button></p>}
+                {scheduleError && <p role="alert" className="rounded-lg border border-red-500 p-3 text-red-600">{scheduleError}</p>}
                 {/* Header */}
                 <div className="flex items-center justify-between flex-wrap gap-4">
                     <div>
@@ -229,10 +267,10 @@ export function Planner() {
                     )}
 
                     {/* Calendar Grid */}
-                    <div className={showUnscheduled ? 'lg:col-span-3' : 'lg:col-span-4'}>
+                    <div className={`min-w-0 overflow-x-auto ${showUnscheduled ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
                         <div
                             className={`grid gap-4 ${viewMode === 'week'
-                                ? 'grid-cols-1 md:grid-cols-7'
+                                ? 'grid-cols-1 md:grid-cols-7 md:min-w-[1260px]'
                                 : viewMode === 'month'
                                     ? 'grid-cols-2 md:grid-cols-4 lg:grid-cols-7'
                                     : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
@@ -244,6 +282,12 @@ export function Planner() {
                                     id={`date-${index}`}
                                     date={date}
                                     tasks={getTasksForDate(date)}
+                                    blocks={calendar.blocks.filter(b => {
+                                        const end = new Date(date);
+                                        if (viewMode === 'year') end.setMonth(end.getMonth() + 1);
+                                        else end.setDate(end.getDate() + 1);
+                                        return Date.parse(b.startAt) < +end && Date.parse(b.endAt) > +date;
+                                    })}
                                     viewMode={viewMode}
                                 />
                             ))}
@@ -262,6 +306,7 @@ export function Planner() {
 
             {/* Drag Overlay */}
             <DragOverlay>{activeTask ? <TaskCard task={activeTask} isDragging /> : null}</DragOverlay>
+            {editing && <ScheduleEditor selection={editing} onClose={() => setEditing(null)} />}
         </DndContext>
     );
 }

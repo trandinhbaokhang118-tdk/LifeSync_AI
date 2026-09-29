@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TimeBlocksController } from './time-blocks.controller';
 import { TimeBlocksService } from './time-blocks.service';
+import { PublicCalendarController } from './public-calendar.controller';
+import { PublicCalendarService } from './public-calendar.service';
 
 @Module({
-    controllers: [TimeBlocksController],
-    providers: [TimeBlocksService],
+    controllers: [TimeBlocksController, PublicCalendarController],
+    providers: [TimeBlocksService, PublicCalendarService],
     exports: [TimeBlocksService],
 })
 export class TimeBlocksModule { }
