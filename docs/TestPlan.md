@@ -262,3 +262,14 @@ npm run test:cov    # Coverage report
 - Light 1366x768 and dark 1024x600 screenshots inspected. Both hero action buttons remain within the hero at 1024x600.
 - Mobile 375x812: no horizontal overflow; normal vertical scrolling retained for readable content.
 - UI layout checks only; no live backend authentication or data changes.
+
+## Task cards and editing — 2026-09-29
+
+- Replace strike-through with a readable title, completion check and brief success pulse. Reopen uses the same toggle; failed requests leave the previous status intact. Reduced motion disables decorative transitions.
+- Drag the card surface vertically with a mouse; hold on touch. Space and arrow keys support keyboard reordering. Buttons and menus do not initiate drag. Existing per-user local task-order persistence remains unchanged.
+- Select popovers now render above dialog overlays. Description spans the form width. Small-screen action buttons wrap and date/time controls stack.
+- New optional `cardColor` palette: AUTO, CYAN, VIOLET, AMBER, ROSE, GREEN. AUTO follows priority; explicit colors affect card background/edge, not text. API stores the color on Task.
+- Release prerequisite: apply `backend/prisma/migrations/20260929010000_task_card_color/migration.sql` with the normal Prisma migration deployment before serving the new backend/frontend. No production database migration was run in this task.
+- Workspace validation: frontend/backend builds and targeted frontend lint passed; two backend suites / 16 tests passed. Release checkout separately validates the palette suite against main.
+- Tabbit synthetic API fixture: form selectors and color saved correctly, unchanged dates retain their instants; completion/reopen succeeds; delayed 500 keeps old status, reports error and enables retry; mouse and keyboard reorder verified; color/order survive reload of the fixture.
+- Light/dark list checked at 320, 375, 414, 768px. Found and fixed 320px action overflow. Modal textarea width equals form width at all four sizes; no modal horizontal overflow. Desktop dark cards and light/mobile form visually inspected. No live account or database persistence test.

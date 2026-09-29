@@ -50,6 +50,7 @@ export interface AuthResponse {
 // Task types
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type TaskCardColor = 'AUTO' | 'CYAN' | 'VIOLET' | 'AMBER' | 'ROSE' | 'GREEN';
 
 export interface Task {
     id: string;
@@ -58,6 +59,7 @@ export interface Task {
     description?: string;
     status: TaskStatus;
     priority: TaskPriority;
+    cardColor?: TaskCardColor;
     startAt: string;
     dueAt: string;
     reminderMinutes?: number;
@@ -71,6 +73,7 @@ export interface CreateTaskRequest {
     description?: string;
     status?: TaskStatus;
     priority?: TaskPriority;
+    cardColor?: TaskCardColor;
     startAt: string;
     dueAt: string;
     reminderMinutes?: number;

@@ -3,7 +3,6 @@ import {
     useMemo,
     useState,
     type CSSProperties,
-    type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -13,15 +12,13 @@ import { z } from 'zod';
 import {
     AnimatePresence,
     motion,
-    useDragControls,
-    type PanInfo,
 } from 'framer-motion';
 import type { DragEndEvent } from '@dnd-kit/core';
 import {
     closestCenter,
     DndContext,
     KeyboardSensor,
-    PointerSensor,
+    MouseSensor,
     TouchSensor,
     useSensor,
     useSensors,
@@ -43,7 +40,7 @@ import {
     CheckCircle,
     X,
     Sparkles,
-    GripVertical,
+    Loader2,
 } from 'lucide-react';
 import {
     Button,
@@ -80,10 +77,11 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { AIScheduleModal } from '../components/ai-schedule/AIScheduleModal';
 import { showToast } from '../components/ui/toast';
 import { tasksService } from '../services/tasks.service';
-import { fadeInUp, staggerContainer, staggerItem } from '../lib/animations';
+import { fadeInUp, staggerContainer } from '../lib/animations';
 import { cn, formatDate, isOverdue } from '../lib/utils';
 import { DateTimePicker } from '../components/ui/DateTimePicker';
 import { useAuthStore } from '../store/auth.store';
+import './tasks-interactions.css';
 import type {
     Task,
     TaskStatus,
@@ -97,6 +95,7 @@ const taskSchema = z
         description: z.string().optional(),
         status: z.enum(['TODO', 'IN_PROGRESS', 'DONE']),
         priority: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+        cardColor: z.enum(['AUTO', 'CYAN', 'VIOLET', 'AMBER', 'ROSE', 'GREEN']).optional(),
         startAt: z.string().min(1, 'Vui lòng chọn thời gian bắt đầu'),
         dueAt: z.string().min(1, 'Vui lòng chọn thời gian kết thúc'),
         reminderMinutes: z.number().min(5).max(1440).optional(),
@@ -115,8 +114,14 @@ const taskSchema = z
 type TaskForm = z.infer<typeof taskSchema>;
 type SortableHookResult = ReturnType<typeof useSortable>;
 
-const SWIPE_DELETE_THRESHOLD = -96;
-const SWIPE_DELETE_VELOCITY = -650;
+const cardColors = [
+    { value: 'AUTO', label: 'Theo mức ưu tiên' },
+    { value: 'CYAN', label: 'Xanh biển' },
+    { value: 'VIOLET', label: 'Tím' },
+    { value: 'AMBER', label: 'Hổ phách' },
+    { value: 'ROSE', label: 'Hồng' },
+    { value: 'GREEN', label: 'Xanh lá' },
+] as const;
 
 function getTaskOrderStorageKey(userId?: string) {
     return `tasks-order:${userId ?? 'guest'}`;
@@ -215,7 +220,7 @@ export function Tasks() {
     const taskOrderStorageKey = getTaskOrderStorageKey(user?.id);
 
     const sensors = useSensors(
-        useSensor(PointerSensor, {
+        useSensor(MouseSensor, {
             activationConstraint: { distance: 6 },
         }),
         useSensor(TouchSensor, {
@@ -378,11 +383,12 @@ export function Tasks() {
             description: task.description || '',
             status: task.status,
             priority: task.priority,
+            cardColor: task.cardColor ?? 'AUTO',
             startAt: task.startAt
-                ? new Date(task.startAt).toISOString().slice(0, 16)
+                ? new Date(task.startAt).toISOString()
                 : '',
             dueAt: task.dueAt
-                ? new Date(task.dueAt).toISOString().slice(0, 16)
+                ? new Date(task.dueAt).toISOString()
                 : '',
             reminderMinutes: task.reminderMinutes || 15,
         });
@@ -401,6 +407,7 @@ export function Tasks() {
             startAt: new Date(data.startAt).toISOString(),
             dueAt: new Date(data.dueAt).toISOString(),
             reminderMinutes: data.reminderMinutes || 15,
+            cardColor: data.cardColor ?? 'AUTO',
         };
         if (editingTask) {
             updateMutation.mutate({ id: editingTask.id, data: payload });
@@ -409,9 +416,18 @@ export function Tasks() {
         }
     };
 
-    const markAsDone = (task: Task) => {
-        updateMutation.mutate({ id: task.id, data: { status: 'DONE' } });
-    };
+    const statusMutation = useMutation({
+        mutationFn: (task: Task) => tasksService.update(task.id, {
+            status: task.status === 'DONE' ? 'TODO' : 'DONE',
+        }),
+        onSuccess: (_updated, task) => {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            showToast.success(task.status === 'DONE' ? 'Đã mở lại công việc' : 'Đã hoàn thành công việc');
+        },
+        onError: () => showToast.error('Chưa cập nhật được trạng thái. Hãy thử lại.'),
+    });
+    const markAsDone = (task: Task) => statusMutation.mutate(task);
 
     const handleSortEnd = (event: DragEndEvent) => {
         const { active, over } = event;
@@ -465,14 +481,14 @@ export function Tasks() {
                         Công việc
                     </h1>
                     <p className="text-[var(--text-2)]">
-                        Quản lý và theo dõi công việc của bạn
+                        Tạo task, đặt ưu tiên và theo dõi tiến độ. Công việc có thời gian sẽ tự hiển thị trên Lịch.
                     </p>
                 </div>
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.4, delay: 0.1 }}
-                    className="flex gap-2"
+                    className="flex flex-wrap gap-2"
                 >
                     <motion.div
                         whileHover={{ scale: 1.05 }}
@@ -524,7 +540,7 @@ export function Tasks() {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                         <Select
                             value={statusFilter}
                             onValueChange={setStatusFilter}
@@ -598,11 +614,11 @@ export function Tasks() {
                             className="space-y-3"
                         >
                             <AnimatePresence mode="popLayout">
-                                {orderedTasks.map((task, index) => (
+                                {orderedTasks.map((task) => (
                                     <SortableTaskCard
                                         key={task.id}
                                         task={task}
-                                        index={index}
+                                        isUpdating={statusMutation.isPending && statusMutation.variables?.id === task.id}
                                         onEdit={() => openEditModal(task)}
                                         onDelete={() => setDeleteTask(task)}
                                         onMarkDone={() => markAsDone(task)}
@@ -616,7 +632,7 @@ export function Tasks() {
 
             {/* Create/Edit Modal */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent>
+                <DialogContent className="task-edit-dialog max-h-[90svh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>
                             {editingTask
@@ -650,11 +666,12 @@ export function Tasks() {
                             <label className="label">Mô tả</label>
                             <textarea
                                 {...register('description')}
-                                className="input min-h-[100px] resize-none"
+                                className="task-description-input"
+                                aria-label="Mô tả"
                                 placeholder="Mô tả (tùy chọn)"
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="label">Trạng thái</label>
                                 <Select
@@ -663,7 +680,7 @@ export function Tasks() {
                                         setValue('status', v as TaskStatus)
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger aria-label="Trạng thái">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -687,7 +704,7 @@ export function Tasks() {
                                         setValue('priority', v as TaskPriority)
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger aria-label="Độ ưu tiên">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -704,9 +721,22 @@ export function Tasks() {
                                 </Select>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <fieldset className="task-color-picker">
+                            <legend className="label">Màu thẻ</legend>
+                            <div className="task-color-options">
+                                {cardColors.map(({ value, label }) => (
+                                    <button key={value} type="button" data-color={value}
+                                        aria-pressed={(watch('cardColor') ?? 'AUTO') === value}
+                                        onClick={() => setValue('cardColor', value, { shouldDirty: true })}>
+                                        <span className="task-color-dot" aria-hidden="true" />{label}
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-[var(--text-2)] mt-2">Màu chỉ áp dụng cho nền và viền thẻ; chữ giữ màu theo chế độ sáng/tối.</p>
+                        </fieldset>
+                        <div className="grid grid-cols-1 gap-4">
                             <div>
-                                <DateTimePicker
+                                <DateTimePicker className="task-datetime-field"
                                     label={
                                         <>
                                             Thời gian bắt đầu{' '}
@@ -731,7 +761,7 @@ export function Tasks() {
                                 )}
                             </div>
                             <div>
-                                <DateTimePicker
+                                <DateTimePicker className="task-datetime-field"
                                     label={
                                         <>
                                             Thời gian kết thúc{' '}
@@ -766,7 +796,7 @@ export function Tasks() {
                                     setValue('reminderMinutes', parseInt(v))
                                 }
                             >
-                                <SelectTrigger>
+                                <SelectTrigger aria-label="Nhắc trước">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -832,13 +862,13 @@ export function Tasks() {
 // Task Card Component
 function SortableTaskCard({
     task,
-    index,
+    isUpdating,
     onEdit,
     onDelete,
     onMarkDone,
 }: {
     task: Task;
-    index: number;
+    isUpdating: boolean;
     onEdit: () => void;
     onDelete: () => void;
     onMarkDone: () => void;
@@ -850,7 +880,7 @@ function SortableTaskCard({
         setNodeRef,
         transform,
         transition,
-    } = useSortable({ id: task.id });
+    } = useSortable({ id: task.id, disabled: isUpdating });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -863,8 +893,8 @@ function SortableTaskCard({
             refCallback={setNodeRef}
             style={style}
             task={task}
-            index={index}
             isSorting={isDragging}
+            isUpdating={isUpdating}
             dragAttributes={attributes}
             dragListeners={listeners}
             onEdit={onEdit}
@@ -877,8 +907,8 @@ function SortableTaskCard({
 function TaskCard({
     dragAttributes,
     dragListeners,
-    index,
     isSorting,
+    isUpdating,
     onEdit,
     onDelete,
     onMarkDone,
@@ -888,8 +918,8 @@ function TaskCard({
 }: {
     dragAttributes: SortableHookResult['attributes'];
     dragListeners: SortableHookResult['listeners'];
-    index: number;
     isSorting: boolean;
+    isUpdating: boolean;
     onEdit: () => void;
     onDelete: () => void;
     onMarkDone: () => void;
@@ -898,119 +928,44 @@ function TaskCard({
     task: Task;
 }) {
     const overdue = task.status !== 'DONE' && isOverdue(task.dueAt);
-    const swipeControls = useDragControls();
-    const handleSwipePointerDown = (
-        event: ReactPointerEvent<HTMLDivElement>,
-    ) => {
-        if (!event.isPrimary) {
-            return;
-        }
-
-        const target = event.target as HTMLElement;
-
-        if (
-            target.closest('[data-task-sort-handle="true"]') ||
-            target.closest('button, a, input, textarea, select, [role="button"]')
-        ) {
-            return;
-        }
-
-        swipeControls.start(event);
-    };
-    const handleSwipeEnd = (
-        _event: MouseEvent | TouchEvent | PointerEvent,
-        info: PanInfo,
-    ) => {
-        if (
-            info.offset.x <= SWIPE_DELETE_THRESHOLD ||
-            info.velocity.x <= SWIPE_DELETE_VELOCITY
-        ) {
-            onDelete();
-        }
-    };
+    const ignoreControl = (target: EventTarget | null) => target instanceof Element &&
+        Boolean(target.closest('button, a, input, textarea, select, [role="menuitem"]'));
 
     return (
-        <motion.div
-            ref={refCallback}
-            style={style}
-            variants={staggerItem}
-            initial="hidden"
-            animate="visible"
-            exit={{ opacity: 0, x: -120, transition: { duration: 0.2 } }}
-            layout
-            transition={{ delay: index * 0.05 }}
-            className={cn(
-                'relative overflow-hidden rounded-xl',
-                isSorting && 'shadow-[var(--shadow-lg)]',
-            )}
-        >
-            <div className="absolute inset-y-0 right-0 flex w-28 items-center justify-end rounded-xl bg-red-600 pr-5 text-white">
-                <Trash2 className="h-5 w-5" />
-            </div>
-            <motion.div
-                drag="x"
-                dragControls={swipeControls}
-                dragListener={false}
-                dragConstraints={{ left: -112, right: 0 }}
-                dragDirectionLock
-                dragElastic={0.08}
-                dragMomentum={false}
-                onPointerDown={handleSwipePointerDown}
-                onDragEnd={handleSwipeEnd}
-                whileHover={{ y: -2, scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className={cn(
-                    'card relative select-none p-4 transition-all hover:shadow-md [touch-action:pan-y]',
-                    isSorting && 'cursor-grabbing opacity-80',
-                    overdue && 'border-red-200 dark:border-red-800',
-                )}
+        <div ref={refCallback} style={style} className="task-sort-wrapper">
+            <div
+                {...dragAttributes}
+                {...dragListeners}
+                role="group"
+                aria-roledescription="thẻ công việc có thể sắp xếp"
+                aria-label={`${task.title}. Nhấn phím cách rồi dùng mũi tên để di chuyển.`}
+                aria-busy={isUpdating}
+                onMouseDown={(event) => { if (!ignoreControl(event.target)) dragListeners?.onMouseDown?.(event); }}
+                onTouchStart={(event) => { if (!ignoreControl(event.target)) dragListeners?.onTouchStart?.(event); }}
+                onKeyDown={(event) => { if (!ignoreControl(event.target)) dragListeners?.onKeyDown?.(event); }}
+                data-status={task.status}
+                data-priority={task.priority}
+                data-color={task.cardColor ?? 'AUTO'}
+                data-sorting={isSorting}
+                data-task-id={task.id}
+                className="task-interactive-card"
             >
                 <div className="flex items-start gap-3">
-                    <button
-                        type="button"
-                        className="mt-0.5 flex h-11 w-11 flex-shrink-0 cursor-grab items-center justify-center rounded-lg text-[var(--text-3)] transition-colors hover:bg-[var(--surface-3)] hover:text-[var(--text)] active:cursor-grabbing sm:h-9 sm:w-9 [touch-action:none]"
-                        aria-label="Sắp xếp công việc"
-                        data-task-sort-handle="true"
-                        style={{ touchAction: 'none' }}
-                        {...dragAttributes}
-                        {...dragListeners}
-                    >
-                        <GripVertical className="h-5 w-5" />
-                    </button>
                     <motion.button
                         type="button"
                         whileHover={{ scale: 1.1, rotate: 5 }}
                         whileTap={{ scale: 0.9 }}
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            if (task.status !== 'DONE') {
-                                onMarkDone();
-                            }
-                        }}
-                        className={cn(
-                            'w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 transition-colors',
-                            task.status === 'DONE'
-                                ? 'bg-green-500 border-green-500'
-                                : overdue
-                                  ? 'border-red-500 hover:bg-red-50'
-                                  : 'border-gray-300 hover:border-primary-500',
-                        )}
+                        onClick={(event) => { event.stopPropagation(); onMarkDone(); }}
+                        disabled={isUpdating}
+                        aria-label={task.status === 'DONE' ? `Mở lại ${task.title}` : `Hoàn thành ${task.title}`}
+                        aria-pressed={task.status === 'DONE'}
+                        className="task-completion-toggle"
                     >
-                        {task.status === 'DONE' && (
-                            <CheckCircle className="w-full h-full text-white p-0.5" />
-                        )}
+                        {isUpdating ? <Loader2 className="animate-spin" size={20} /> :
+                            task.status === 'DONE' ? <CheckCircle size={24} /> : <span className="task-completion-ring" />}
                     </motion.button>
                     <div className="flex-1 min-w-0">
-                        <h3
-                            className={cn(
-                                'font-medium',
-                                task.status === 'DONE'
-                                    ? 'text-[var(--text-3)] line-through'
-                                    : 'text-[var(--text)]',
-                            )}
-                        >
-                            {task.title}
-                        </h3>
+                        <h3 className="task-title font-medium">{task.title}</h3>
                         {task.description && (
                             <p className="text-sm text-[var(--text-2)] line-clamp-2 mt-1">
                                 {task.description}
@@ -1075,18 +1030,17 @@ function TaskCard({
                                 <Button
                                     variant="ghost"
                                     size="icon-sm"
+                                    aria-label={`Tùy chọn ${task.title}`}
                                     onClick={(event) => event.stopPropagation()}
                                 >
                                     <MoreVertical className="w-4 h-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                {task.status !== 'DONE' && (
-                                    <DropdownMenuItem onClick={onMarkDone}>
+                                <DropdownMenuItem onClick={onMarkDone} disabled={isUpdating}>
                                         <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                                        Hoàn thành
-                                    </DropdownMenuItem>
-                                )}
+                                        {task.status === 'DONE' ? 'Mở lại công việc' : 'Hoàn thành'}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={onEdit}>
                                     <Edit className="w-4 h-4 mr-2" />
                                     Chỉnh sửa
@@ -1102,7 +1056,7 @@ function TaskCard({
                         </DropdownMenu>
                     </motion.div>
                 </div>
-            </motion.div>
-        </motion.div>
+            </div>
+        </div>
     );
 }
