@@ -12,12 +12,17 @@ function setup(tier = 'FREE') {
     return { db, tasks, service, call };
 }
 describe('AI task conversations', () => {
-    it('uses Gemini generateContent when Gemini is the configured provider', async () => {
+    it.each([
+        { chatKey: 'dedicated-chat-key', expectedKey: 'dedicated-chat-key' },
+        { chatKey: undefined, expectedKey: 'test-gemini-key' },
+        { chatKey: '   ', expectedKey: 'test-gemini-key' },
+    ])('uses the dedicated chat key or legacy fallback: $expectedKey', async ({ chatKey, expectedKey }) => {
         const db = { subscription: { findUnique: jest.fn() } };
         const config = {
             get: jest.fn((key: string) => ({
                 AI_PROVIDER: 'gemini',
                 GEMINI_API_KEY: 'test-gemini-key',
+                GEMINI_CHAT_API_KEY: chatKey,
                 GEMINI_MODEL: 'gemini-2.5-flash',
             }[key])),
         };
@@ -38,7 +43,7 @@ describe('AI task conversations', () => {
                 systemInstruction: { parts: [{ text: 'Hệ thống' }] },
                 contents: [{ role: 'user', parts: [{ text: 'Xin chào' }] }],
             }),
-            expect.objectContaining({ headers: expect.objectContaining({ 'x-goog-api-key': 'test-gemini-key' }) }),
+            expect.objectContaining({ headers: expect.objectContaining({ 'x-goog-api-key': expectedKey }) }),
         );
         post.mockRestore();
     });

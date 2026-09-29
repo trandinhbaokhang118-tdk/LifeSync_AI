@@ -25,6 +25,8 @@
         value: https://life-sync-ai-seven.vercel.app
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_CHAT_API_KEY
+        sync: false
       - key: AI_PROVIDER
         value: gemini
       - key: GEMINI_MODEL

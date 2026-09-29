@@ -47,7 +47,8 @@ export class AIChatService {
     /**
      * Build the provider chain from env:
      *  - Primary (local 9router) from AI_BASE_URL / AI_MODEL.
-     *  - Gemini from GEMINI_API_KEY. Set AI_PROVIDER=gemini to make it primary.
+     *  - Gemini from GEMINI_CHAT_API_KEY (legacy fallback: GEMINI_API_KEY).
+     *    Set AI_PROVIDER=gemini to make it primary.
      *  - Fallback (cloud) from AI_FALLBACK_BASE_URL / AI_FALLBACK_MODEL /
      *    AI_FALLBACK_API_KEY. If those are not set, fall back to OPENAI_API_KEY
      *    on OpenAI/OpenRouter so a single cloud key still works.
@@ -56,7 +57,8 @@ export class AIChatService {
     private buildProviders(): AIProvider[] {
         const providers: AIProvider[] = [];
         const preferredProvider = this.configService.get<string>('AI_PROVIDER')?.trim().toLowerCase();
-        const geminiKey = this.configService.get<string>('GEMINI_API_KEY')?.trim() || '';
+        const geminiKey = this.configService.get<string>('GEMINI_CHAT_API_KEY')?.trim()
+            || this.configService.get<string>('GEMINI_API_KEY')?.trim() || '';
 
         if (preferredProvider === 'gemini' && geminiKey) {
             providers.push(this.createGeminiProvider(geminiKey, 'primary:gemini'));
