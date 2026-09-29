@@ -340,3 +340,22 @@ npm run test:cov    # Coverage report
 - Persist receivedAmountVND alongside the original amountVND for reconciliation. Overpayment does not purchase additional periods automatically and this change does not issue refunds.
 - Underpayments, wrong receiving accounts, unauthenticated callbacks and malformed amounts remain rejected. Replayed paid transactions must not extend the subscription twice.
 - Apply migration 20260930020000_payment_received_amount before starting the updated backend. A previously rejected transaction requires an authenticated callback replay from SePay after deployment; clicking Verify only reads the persisted payment status and does not fetch bank transactions. Do not manually activate access from a screenshot or client-supplied amount.
+
+
+## AI chat task and project context (2026-09-30)
+
+Chat now retrieves user-owned tasks and planning projects, including dates, status, priority, plan details and persisted task progress. Queries can search older tasks and paginate beyond the initial 30 records. Browser timezone accompanies each message. Existing Free/Pro conversation history limits remain.
+
+Creation and updates execute through TasksService with DTO validation, project ownership and existing calendar conflict checks. Success replies and cache refreshes are based on completed writes. Chat does not delete tasks or create/change projects. Missing required times should result in a clarification. Malformed model JSON cannot trigger writes.
+
+Deployment requires the additive `20260920150000_planning_projects` migration and Prisma client regeneration. This reuses the existing local planning model; project lookup only finds projects actually persisted in that database. No project-management UI is introduced by this change.
+
+Regression checks: `npm test -- --runInBand ai-chat tasks` and backend/frontend builds. Provider responses are mocked in automated tests; these tests do not establish live model accuracy.
+
+Manual checks on a test account:
+- Ask about a task older than the initial context and about tasks in a named project.
+- Ask for today's tasks and project completion counts; compare with stored data.
+- Send “Tạo task viết báo cáo ngày mai 9h đến 10h”; verify exactly one saved task and refreshed list.
+- Send “Đổi task đó sang 14h đến 15h”; verify the same task changes.
+- Request a task without times; verify clarification and no new row.
+- Use duplicate task names, a busy calendar slot, or another user's project ID; verify no unintended writes.

@@ -1,11 +1,16 @@
-import { IsNotEmpty, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator';
+import { IsTimeZone, IsNotEmpty, IsOptional, IsString, IsUUID, Length, MaxLength } from 'class-validator';
 
 export interface ChatAction {
     type: 'create_task' | 'update_task' | 'schedule' | 'reminder';
     data: Record<string, unknown>;
+    status?: 'completed';
 }
 
 export class ChatMessageDto {
+    @IsOptional()
+    @IsTimeZone()
+    timeZone?: string;
+
     @IsString()
     @IsNotEmpty()
     @MaxLength(2000)

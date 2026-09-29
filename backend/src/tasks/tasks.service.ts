@@ -12,6 +12,7 @@ export class TasksService {
 
     async create(userId: string, createTaskDto: CreateTaskDto) {
         const { tagIds, startAt, dueAt, reminderMinutes, ...taskData } = createTaskDto;
+        await this.validateProject(userId, createTaskDto.projectId);
 
         // Validate that dueAt is after startAt
         const startDate = new Date(startAt);
@@ -144,6 +145,7 @@ export class TasksService {
         const existing = await this.findOne(id, userId); // Validates ownership
 
         const { tagIds, allowTaskOverlap, ...taskData } = updateTaskDto;
+        await this.validateProject(userId, updateTaskDto.projectId);
 
         if (taskData.startAt !== undefined || taskData.dueAt !== undefined ||
             (existing.status === 'DONE' && taskData.status && taskData.status !== 'DONE')) {
@@ -254,6 +256,12 @@ export class TasksService {
                 details: { conflictingTask: task },
             });
         }
+    }
+
+    private async validateProject(userId: string, projectId?: string) {
+        if (projectId === undefined || projectId === null) return;
+        const project = await this.prisma.planningProject.findFirst({ where: { id: projectId, userId }, select: { id: true } });
+        if (!project) throw new NotFoundException('Không tìm thấy dự án của bạn.');
     }
 
     private formatTask(task: Prisma.TaskGetPayload<{

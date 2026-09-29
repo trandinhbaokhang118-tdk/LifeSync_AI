@@ -9,9 +9,11 @@ export interface ChatContextMessage {
 export interface ChatAction {
     type: 'create_task' | 'update_task' | 'schedule' | 'reminder';
     data: Record<string, unknown>;
+    status?: 'completed';
 }
 
 export interface ChatMessage {
+    timeZone?: string;
     message: string;
     conversationId?: string;
 }

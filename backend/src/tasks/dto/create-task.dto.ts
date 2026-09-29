@@ -3,6 +3,11 @@ import { IsIn, ValidateIf, IsString, IsOptional, IsEnum, IsDateString, IsArray, 
 import { TaskStatus, TaskPriority } from '@prisma/client';
 
 export class CreateTaskDto {
+    @ApiPropertyOptional({ description: "Existing project owned by this user" })
+    @IsOptional()
+    @IsUUID()
+    projectId?: string;
+
     @ApiProperty({ example: 'Complete project report' })
     @IsString()
     @MinLength(1)

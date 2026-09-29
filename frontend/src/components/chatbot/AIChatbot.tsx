@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User, Loader2, MessageCircle, Mail, Phone, ImagePlus, Trash2 } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -13,6 +14,7 @@ interface Message {
 }
 
 export default function AIChatbot() {
+    const queryClient = useQueryClient();
     const [isOpen, setIsOpen] = useState(false);
     const [showContactMenu, setShowContactMenu] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -111,6 +113,7 @@ export default function AIChatbot() {
             const chatData = await aiChatService.sendMessage(
                 {
                     message: text,
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                     conversationId,
                 },
             );
@@ -161,9 +164,11 @@ export default function AIChatbot() {
     };
 
     const handleActions = (actions: ChatAction[]) => {
-        actions.forEach(() => {
-            // Reserved for future UI-side automation hooks.
-        });
+        if (actions.some(action => action.status === 'completed')) {
+            for (const key of ['tasks', 'planning', 'dashboard', 'reminders', 'calendar-availability']) {
+                void queryClient.invalidateQueries({ queryKey: [key] });
+            }
+        }
     };
 
     const generateImage = async (text: string) => {
