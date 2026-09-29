@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#315B82"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#173F6B" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#F8FAFC"/>
+  <text x="960" y="70" text-anchor="middle" font-family="Arial, sans-serif" font-size="42" font-weight="700" fill="#173F6B">MÔ HÌNH QUAN HỆ DỮ LIỆU RÚT GỌN</text>
+  <line x1="620" y1="92" x2="1300" y2="92" stroke="#C8D7E6" stroke-width="2"/>
+
+  <!-- User root -->
+  <rect x="650" y="120" width="620" height="170" rx="24" fill="#EAF4FF" stroke="#174A78" stroke-width="3" filter="url(#shadow)"/>
+  <text x="960" y="178" text-anchor="middle" font-family="Arial, sans-serif" fill="#172033">
+    <tspan x="960" font-size="31" font-weight="700">USER</tspan>
+    <tspan x="960" dy="42" font-size="25">Khóa gốc sở hữu</tspan>
+    <tspan x="960" dy="36" font-size="24">role + hồ sơ + liên kết 1-n / 1-1</tspan>
+  </text>
+
+  <!-- Shared bus to first row -->
+  <path d="M960 290 V350 H320 V420" fill="none" stroke="#315B82" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M960 350 V420" fill="none" stroke="#315B82" stroke-width="4" marker-end="url(#arrow)"/>
+  <path d="M960 350 H1600 V420" fill="none" stroke="#315B82" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <!-- Dedicated routes to second-row owned domains -->
+  <path d="M650 205 H34 V744 H320 V790" fill="none" stroke="#5D7894" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M1270 205 H1290 V724 H960 V790" fill="none" stroke="#5D7894" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- First row -->
+  <g font-family="Arial, sans-serif" fill="#172033">
+    <rect x="70" y="420" width="500" height="205" rx="22" fill="#EAF4FF" stroke="#174A78" stroke-width="3" filter="url(#shadow)"/>
+    <text x="320" y="486" text-anchor="middle">
+      <tspan x="320" font-size="28" font-weight="700">XÁC THỰC</tspan>
+      <tspan x="320" dy="42" font-size="22">RefreshToken • PasswordResetToken</tspan>
+      <tspan x="320" dy="36" font-size="22">SocialAccount • OAuthLoginCode</tspan>
+    </text>
+
+    <rect x="710" y="420" width="500" height="205" rx="22" fill="#EAF4FF" stroke="#174A78" stroke-width="3" filter="url(#shadow)"/>
+    <text x="960" y="486" text-anchor="middle">
+      <tspan x="960" font-size="28" font-weight="700">NĂNG SUẤT</tspan>
+      <tspan x="960" dy="42" font-size="22">Task • Tag • TaskTag</tspan>
+      <tspan x="960" dy="36" font-size="22">TimeBlock • Reminder • Notification</tspan>
+    </text>
+
+    <rect x="1350" y="420" width="500" height="205" rx="22" fill="#EAF4FF" stroke="#174A78" stroke-width="3" filter="url(#shadow)"/>
+    <text x="1600" y="486" text-anchor="middle">
+      <tspan x="1600" font-size="28" font-weight="700">TRỢ LÝ AI</tspan>
+      <tspan x="1600" dy="42" font-size="22">ChatConversation • ChatMessage</tspan>
+      <tspan x="1600" dy="36" font-size="22">suggestions / actions dạng JSON</tspan>
+    </text>
+  </g>
+
+  <!-- Second row -->
+  <g font-family="Arial, sans-serif" fill="#172033">
+    <rect x="70" y="790" width="500" height="205" rx="22" fill="#FFF6D9" stroke="#B87900" stroke-width="3" filter="url(#shadow)"/>
+    <text x="320" y="856" text-anchor="middle">
+      <tspan x="320" font-size="27" font-weight="700">THUÊ BAO / THANH TOÁN</tspan>
+      <tspan x="320" dy="42" font-size="22">Subscription • SubscriptionPlan</tspan>
+      <tspan x="320" dy="36" font-size="22">PaymentOrder • Stripe / SePay</tspan>
+    </text>
+
+    <rect x="710" y="790" width="500" height="205" rx="22" fill="#FFF6D9" stroke="#B87900" stroke-width="3" filter="url(#shadow)"/>
+    <text x="960" y="856" text-anchor="middle">
+      <tspan x="960" font-size="28" font-weight="700">SỨC KHỎE</tspan>
+      <tspan x="960" dy="42" font-size="22">FitnessProfile • Exercise</tspan>
+      <tspan x="960" dy="36" font-size="22">GpsRoute • DailyActivity</tspan>
+    </text>
+
+    <rect x="1350" y="790" width="500" height="205" rx="22" fill="#F3F0FF" stroke="#6F42C1" stroke-width="3" stroke-dasharray="10 7" filter="url(#shadow)"/>
+    <text x="1600" y="843" text-anchor="middle">
+      <tspan x="1600" font-size="27" font-weight="700">RÀNG BUỘC TOÀN HỆ THỐNG</tspan>
+      <tspan x="1600" dy="42" font-size="22">unique • composite key • index</tspan>
+      <tspan x="1600" dy="36" font-size="22">onDelete Cascade • transaction</tspan>
+      <tspan x="1600" dy="34" font-size="19" fill="#5E4A8A">Áp dụng xuyên suốt schema</tspan>
+    </text>
+  </g>
+
+  <text x="960" y="1045" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#64748B">Mũi tên liền thể hiện quan hệ sở hữu dữ liệu từ USER; ô nét đứt mô tả quy tắc schema.</text>
+</svg>
