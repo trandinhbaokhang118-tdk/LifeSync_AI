@@ -182,23 +182,6 @@ export function Header({ sidebarCollapsed, mobileMenuOpen, onMenuClick }: Header
                 </div>
             </header>
 
-            {/* Mobile Quick Add FAB (bottom-left, mirrors the chat bubble) */}
-            <button
-                onClick={() => setQuickAddOpen(true)}
-                aria-label={t('header.quickAdd')}
-                title={t('header.quickAdd')}
-                className={cn(
-                    'fixed bottom-20 left-4 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-2xl md:hidden',
-                    'transition-transform duration-300 hover:scale-110 active:scale-95'
-                )}
-                style={{
-                    background: 'var(--primary-gradient)',
-                    boxShadow: '0 8px 32px rgba(18, 194, 255, 0.4)',
-                }}
-            >
-                <Plus className="h-7 w-7" />
-            </button>
-
             {/* Command Palette */}
             <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
 

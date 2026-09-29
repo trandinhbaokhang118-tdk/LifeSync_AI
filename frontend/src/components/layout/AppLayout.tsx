@@ -1,15 +1,9 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { useLoginTransition } from '../../store/login-transition.store';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    LayoutDashboard,
-    CheckSquare,
-    Calendar,
-    Timer,
-    MoreHorizontal,
-} from 'lucide-react';
+import { MobileBottomNav } from './MobileBottomNav';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import AIChatbot from '../chatbot/AIChatbot';
@@ -138,7 +132,7 @@ export function AppLayout() {
             {/* Main Content */}
             <main
                 className={cn(
-                    'relative z-10 min-h-screen pt-16 pb-20 transition-all duration-300 md:pb-0',
+                    'relative z-10 min-h-screen pt-16 pb-28 transition-all duration-300 md:pb-0',
                     'md:pl-[60px]',
                     sidebarCollapsed ? 'lg:pl-[60px]' : 'lg:pl-56'
                 )}
@@ -163,40 +157,5 @@ export function AppLayout() {
 
             <DevicePermissionCenter />
         </div>
-    );
-}
-
-function MobileBottomNav() {
-    const navItems = [
-        { path: '/app', icon: LayoutDashboard, label: 'Home', end: true },
-        { path: '/app/tasks', icon: CheckSquare, label: 'Tasks' },
-        { path: '/app/calendar', icon: Calendar, label: 'Calendar' },
-        { path: '/app/focus', icon: Timer, label: 'Focus' },
-        { path: '/app/settings', icon: MoreHorizontal, label: 'More' },
-    ];
-
-    return (
-        <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--panel-glass)]/95 backdrop-blur-2xl safe-area-pb md:hidden">
-            <div className="flex items-center justify-around h-16">
-                {navItems.map((item) => (
-                    <NavLink
-                        key={item.path}
-                        to={item.path}
-                        className={({ isActive }) =>
-                            cn(
-                                'flex h-full w-full flex-col items-center justify-center gap-1 text-xs transition-colors',
-                                isActive
-                                    ? 'text-[var(--primary)]'
-                                    : 'text-[var(--text-3)] hover:text-[var(--text)]'
-                            )
-                        }
-                        end={item.end === true}
-                    >
-                        <item.icon className="w-5 h-5" />
-                        <span>{item.label}</span>
-                    </NavLink>
-                ))}
-            </div>
-        </nav>
     );
 }
