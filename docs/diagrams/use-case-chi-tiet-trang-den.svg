@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<defs>
+  <marker id="openArrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto">
+    <path d="M1 1 L11 6 L1 11" fill="none" stroke="#111111" stroke-width="1.8"/>
+  </marker>
+</defs>
+<rect width="1920" height="1080" fill="#FFFFFF"/>
+<text x="960" y="52" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#111111">SƠ ĐỒ USE CASE CHI TIẾT</text>
+<text x="960" y="84" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#555555">Phân hệ quản lý công việc, lịch nhắc và thông báo</text>
+<rect x="280" y="110" width="1360" height="920" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="2.5"/><text x="310" y="148" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#111111">PHÂN HỆ CÔNG VIỆC VÀ LỊCH</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="105" cy="438" r="21"/><line x1="105" y1="459" x2="105" y2="520"/>
+<line x1="68" y1="487" x2="142" y2="487"/>
+<line x1="105" y1="520" x2="71" y2="570"/><line x1="105" y1="520" x2="139" y2="570"/>
+</g><text x="105" y="602" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">NGƯỜI DÙNG</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="1815" cy="778" r="21"/><line x1="1815" y1="799" x2="1815" y2="860"/>
+<line x1="1778" y1="827" x2="1852" y2="827"/>
+<line x1="1815" y1="860" x2="1781" y2="910"/><line x1="1815" y1="860" x2="1849" y2="910"/>
+</g><text x="1815" y="942" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">BỘ LẬP LỊCH</text><ellipse cx="520" cy="245" rx="175" ry="43" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="520" y="252" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="600" fill="#111111">Tạo công việc</text><polyline points="142,465 345,245" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="520" cy="405" rx="175" ry="43" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="520" y="412" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="600" fill="#111111">Xem, tìm kiếm và lọc</text><polyline points="142,465 345,405" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="520" cy="565" rx="175" ry="43" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="520" y="572" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="600" fill="#111111">Cập nhật / hoàn thành</text><polyline points="142,465 345,565" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="520" cy="725" rx="175" ry="43" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="520" y="732" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="600" fill="#111111">Xóa công việc</text><polyline points="142,465 345,725" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="520" cy="900" rx="175" ry="43" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="520" y="907" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="600" fill="#111111">Cấu hình lịch nhắc</text><polyline points="142,465 345,900" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1010" cy="245" rx="170" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1010" y="252" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="600" fill="#111111">Kiểm tra dữ liệu</text><ellipse cx="1010" cy="405" rx="170" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1010" y="412" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="600" fill="#111111">Kiểm tra trùng lịch</text><ellipse cx="1010" cy="565" rx="170" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1010" y="572" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="600" fill="#111111">Lưu dữ liệu công việc</text><ellipse cx="1010" cy="725" rx="170" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1010" y="732" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="600" fill="#111111">Kiểm tra quyền sở hữu</text><ellipse cx="1010" cy="900" rx="170" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1010" y="907" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="600" fill="#111111">Đọc lịch nhắc đến hạn</text><ellipse cx="1395" cy="245" rx="165" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1395" y="252" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Báo lỗi dữ liệu</text><ellipse cx="1395" cy="405" rx="185" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1395" y="412" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Cảnh báo trùng lịch 409</text><ellipse cx="1395" cy="900" rx="165" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1395" y="907" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="600" fill="#111111">Tạo thông báo</text><polyline points="695,245 840,245" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="711" y="210" width="108" height="25" fill="#FFFFFF"/>
+<text x="765" y="229" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«include»</text><polyline points="691,255 800,255 800,405 840,405" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="736" y="371" width="108" height="25" fill="#FFFFFF"/>
+<text x="790" y="390" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«include»</text><polyline points="682,266 780,266 780,505 1010,505 1010,526" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="811" y="474" width="108" height="25" fill="#FFFFFF"/>
+<text x="865" y="493" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«include»</text><polyline points="695,565 840,565" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="711" y="530" width="108" height="25" fill="#FFFFFF"/>
+<text x="765" y="549" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«include»</text><polyline points="690,580 820,580 820,665 1010,665 1010,686" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="846" y="634" width="108" height="25" fill="#FFFFFF"/>
+<text x="900" y="653" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«include»</text><polyline points="695,725 840,725" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="711" y="690" width="108" height="25" fill="#FFFFFF"/>
+<text x="765" y="709" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«include»</text><polyline points="1230,245 1180,245" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="1151" y="204" width="108" height="25" fill="#FFFFFF"/>
+<text x="1205" y="223" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«extend»</text><polyline points="1210,405 1180,405" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="1141" y="364" width="108" height="25" fill="#FFFFFF"/>
+<text x="1195" y="383" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«extend»</text><polyline points="1778,805 1620,805 1620,900 1560,900" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="1230,900 1180,900" fill="none" stroke="#111111" stroke-width="2.1" stroke-dasharray="9 7" marker-end="url(#openArrow)" stroke-linejoin="round"/>
+<rect x="1151" y="859" width="108" height="25" fill="#FFFFFF"/>
+<text x="1205" y="878" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#111111">«include»</text><rect x="1230" y="650" width="300" height="92" fill="#FFFFFF" stroke="#111111" stroke-width="1.5"/>
+<text x="1250" y="678" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#111111">Ký hiệu UML</text>
+<text x="1250" y="705" font-family="Arial,sans-serif" font-size="15" fill="#111111">«include»: luôn thực hiện</text>
+<text x="1250" y="730" font-family="Arial,sans-serif" font-size="15" fill="#111111">«extend»: phát sinh theo điều kiện</text></svg>

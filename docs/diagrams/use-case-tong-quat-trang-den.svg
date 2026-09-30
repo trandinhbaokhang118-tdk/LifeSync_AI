@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<defs>
+  <marker id="openArrow" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto">
+    <path d="M1 1 L11 6 L1 11" fill="none" stroke="#111111" stroke-width="1.8"/>
+  </marker>
+</defs>
+<rect width="1920" height="1080" fill="#FFFFFF"/>
+<text x="960" y="52" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="700" fill="#111111">SƠ ĐỒ USE CASE TỔNG QUÁT</text>
+<text x="960" y="84" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#555555">Phạm vi chức năng và các tác nhân của LifeSync AI</text>
+<rect x="280" y="110" width="1360" height="920" rx="14" fill="#FFFFFF" stroke="#111111" stroke-width="2.5"/><text x="310" y="148" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#111111">HỆ THỐNG LIFESYNC AI</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="105" cy="158" r="21"/><line x1="105" y1="179" x2="105" y2="240"/>
+<line x1="68" y1="207" x2="142" y2="207"/>
+<line x1="105" y1="240" x2="71" y2="290"/><line x1="105" y1="240" x2="139" y2="290"/>
+</g><text x="105" y="322" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">KHÁCH</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="105" cy="473" r="21"/><line x1="105" y1="494" x2="105" y2="555"/>
+<line x1="68" y1="522" x2="142" y2="522"/>
+<line x1="105" y1="555" x2="71" y2="605"/><line x1="105" y1="555" x2="139" y2="605"/>
+</g><text x="105" y="637" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">NGƯỜI DÙNG</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="105" cy="793" r="21"/><line x1="105" y1="814" x2="105" y2="875"/>
+<line x1="68" y1="842" x2="142" y2="842"/>
+<line x1="105" y1="875" x2="71" y2="925"/><line x1="105" y1="875" x2="139" y2="925"/>
+</g><text x="105" y="957" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">QUẢN TRỊ VIÊN</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="1815" cy="158" r="21"/><line x1="1815" y1="179" x2="1815" y2="240"/>
+<line x1="1778" y1="207" x2="1852" y2="207"/>
+<line x1="1815" y1="240" x2="1781" y2="290"/><line x1="1815" y1="240" x2="1849" y2="290"/>
+</g><text x="1815" y="322" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">OAUTH</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="1815" cy="473" r="21"/><line x1="1815" y1="494" x2="1815" y2="555"/>
+<line x1="1778" y1="522" x2="1852" y2="522"/>
+<line x1="1815" y1="555" x2="1781" y2="605"/><line x1="1815" y1="555" x2="1849" y2="605"/>
+</g><text x="1815" y="637" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">AI PROVIDER</text><g stroke="#111111" stroke-width="3.2" fill="none" stroke-linecap="round">
+<circle cx="1815" cy="683" r="21"/><line x1="1815" y1="704" x2="1815" y2="765"/>
+<line x1="1778" y1="732" x2="1852" y2="732"/>
+<line x1="1815" y1="765" x2="1781" y2="815"/><line x1="1815" y1="765" x2="1849" y2="815"/>
+</g><text x="1815" y="847" text-anchor="middle" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#111111">CỔNG THANH TOÁN</text><ellipse cx="500" cy="205" rx="145" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="500" y="212" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="600" fill="#111111">Đăng ký tài khoản</text><ellipse cx="820" cy="205" rx="165" ry="39" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="820" y="212" text-anchor="middle" font-family="Arial,sans-serif" font-size="20" font-weight="600" fill="#111111">Đăng nhập và khôi phục</text><polyline points="142,207 355,207" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="142,270 245,270 245,270 820,270 820,244" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="985,205 1778,207" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><text x="1515" y="190" font-family="Arial,sans-serif" font-size="16" fill="#555555">Google / Facebook</text><ellipse cx="1080" cy="320" rx="185" ry="29" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1080" y="327" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Quản lý hồ sơ</text><polyline points="142,500 895,320" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1080" cy="400" rx="185" ry="29" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1080" y="407" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Quản lý công việc và lịch</text><polyline points="142,500 895,400" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1080" cy="480" rx="185" ry="29" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1080" y="487" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Dashboard, Focus và thông báo</text><polyline points="142,500 895,480" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1080" cy="560" rx="185" ry="29" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1080" y="567" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Trợ lý AI</text><polyline points="142,500 895,560" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1080" cy="640" rx="185" ry="29" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1080" y="647" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Sức khỏe và GPS</text><polyline points="142,500 895,640" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1080" cy="720" rx="185" ry="29" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1080" y="727" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Thuê bao và thanh toán</text><polyline points="142,500 895,720" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1080" cy="800" rx="185" ry="29" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1080" y="807" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="600" fill="#111111">Thiết lập cá nhân</text><polyline points="142,500 895,800" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><polyline points="1265,560 1778,500" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="1265,720 1640,720 1640,710 1778,710" fill="none" stroke="#111111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1200" cy="870" rx="180" ry="24" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1200" y="877" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="600" fill="#111111">Quản lý người dùng</text><polyline points="142,820 1020,870" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1200" cy="930" rx="180" ry="24" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1200" y="937" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="600" fill="#111111">Theo dõi vận hành</text><polyline points="142,820 1020,930" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="1200" cy="990" rx="180" ry="24" fill="#FFFFFF" stroke="#111111" stroke-width="2.6"/>
+<text x="1200" y="997" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="600" fill="#111111">Quản lý nội dung và gói</text><polyline points="142,820 1020,990" fill="none" stroke="#111111" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/></svg>
